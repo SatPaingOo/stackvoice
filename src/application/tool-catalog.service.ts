@@ -20,6 +20,8 @@ export class ToolCatalogService {
         verb: 'stack_status',
         appId: null,
         shortcutName: null,
+        slots: [],
+        phrases: [],
       },
     ];
 
@@ -35,13 +37,19 @@ export class ToolCatalogService {
     for (const shortcut of shortcuts.filter((candidate) => candidate.enabled)) {
       if (taken.has(shortcut.toolName)) continue;
       taken.add(shortcut.toolName);
+      const tools = shortcut.requiredTools();
+      const runs = tools.length === 0 ? '' : ` Runs ${listTools(tools)} and answers in one go.`;
+      const inputs =
+        shortcut.slots.length === 0 ? '' : ` Fill ${listTools(shortcut.slots)} with the words the user said in their place.`;
       specs.push({
         name: shortcut.toolName,
         title: titleCase(shortcut.name),
-        description: `${shortcut.description} Runs ${listTools(shortcut.requiredTools())} in one step and answers with all of it. Use when the user asks for "${shortcut.name}".`,
+        description: `${shortcut.description}${runs} Use when the user says ${orPhrases(shortcut.phrases())}.${inputs}`.trim(),
         verb: 'shortcut',
         appId: null,
         shortcutName: shortcut.name,
+        slots: shortcut.slots,
+        phrases: shortcut.phrases(),
       });
     }
 
@@ -59,6 +67,8 @@ export class ToolCatalogService {
         verb,
         appId: app.id,
         shortcutName: null,
+        slots: [],
+        phrases: [],
       };
     }
 
@@ -70,6 +80,8 @@ export class ToolCatalogService {
         verb,
         appId: app.id,
         shortcutName: null,
+        slots: [],
+        phrases: [],
       };
     }
 
@@ -80,12 +92,21 @@ export class ToolCatalogService {
       verb,
       appId: app.id,
       shortcutName: null,
+      slots: [],
+      phrases: [],
     };
   }
 }
 
 function titleCase(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** "a", "a" or "b", "a", "b" or "c": the phrases a shortcut listens for, quoted. */
+function orPhrases(phrases: readonly string[]): string {
+  const quoted = phrases.map((phrase) => `"${phrase}"`);
+  if (quoted.length <= 1) return quoted[0] ?? '';
+  return `${quoted.slice(0, -1).join(', ')} or ${quoted[quoted.length - 1] as string}`;
 }
 
 function listTools(tools: readonly string[]): string {

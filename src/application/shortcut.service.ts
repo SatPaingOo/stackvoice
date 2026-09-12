@@ -1,5 +1,5 @@
 import { StackVoiceError } from '../domain/errors.js';
-import type { ArgValue, AskBlock, Block, Condition } from '../domain/flow.js';
+import { MAX_SLOT_LENGTH, type ArgValue, type AskBlock, type Block, type Condition } from '../domain/flow.js';
 import type { Item } from '../domain/item.js';
 import type { Logger } from '../domain/ports/logger.js';
 import type { Shortcut } from '../domain/shortcut.js';
@@ -37,8 +37,6 @@ export interface ShortcutResult {
   readonly trace: readonly TraceEntry[];
 }
 
-/** A slot is a few spoken words. Anything longer is not what a person said. */
-const MAX_INPUT_LENGTH = 200;
 const SUMMARY_TEXT = 90;
 const NOTHING_TO_SAY = 'That shortcut finished without anything to say.';
 
@@ -60,7 +58,7 @@ export class ShortcutService {
   async run(shortcut: Shortcut, inputs: Readonly<Record<string, string>> = {}): Promise<ShortcutResult> {
     const run = new FlowRun(this.runner, this.logger, this.clock, shortcut.name);
     for (const slot of shortcut.slots) {
-      run.define(slot, { kind: 'text', text: (inputs[slot] ?? '').trim().slice(0, MAX_INPUT_LENGTH) });
+      run.define(slot, { kind: 'text', text: (inputs[slot] ?? '').trim().slice(0, MAX_SLOT_LENGTH) });
     }
     await run.execute(shortcut.blocks, []);
     return run.result();

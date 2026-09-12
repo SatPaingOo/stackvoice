@@ -18,6 +18,8 @@ export const MAX_FLOW_DEPTH = 2;
 export const MAX_TRIGGERS = 5;
 export const MAX_SLOTS = 3;
 export const MAX_FLOW_TEXT = 400;
+/** A slot holds a few spoken words. Anything longer is not what a person said. */
+export const MAX_SLOT_LENGTH = 200;
 const MAX_TRIGGER_LENGTH = 80;
 const MAX_ITEM_INDEX = 50;
 

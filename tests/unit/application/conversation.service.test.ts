@@ -164,6 +164,23 @@ describe('ConversationService.respond', () => {
     expect(turn.spoken).toBe('Here is your brief.');
   });
 
+  it('fills a shortcut slot from what was said and sends it as the tool input', async () => {
+    const caller = new RecordingCaller(() => outcome({ spoken: 'Two stories about gold.' }));
+    const news = new Shortcut({
+      name: 'news about topic',
+      description: 'd',
+      enabled: true,
+      triggers: ['news about {topic}'],
+      blocks: [{ kind: 'ask', tool: 'library_search', args: { query: '{topic}' }, as: 'found' }],
+    });
+    const service = await build(caller, [news]);
+
+    const turn = await service.respond({ utterance: 'Any news about Gold?', context: {} });
+
+    expect(caller.calls).toEqual([{ tool: 'news_about_topic', args: { topic: 'Gold' } }]);
+    expect(turn.spoken).toBe('Two stories about gold.');
+  });
+
   it('answers without calling anything when the request is unclear', async () => {
     const caller = new RecordingCaller(() => outcome());
     const service = await build(caller);

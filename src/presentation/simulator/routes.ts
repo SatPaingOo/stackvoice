@@ -27,8 +27,8 @@ const MAX_UTTERANCE_LENGTH = 400;
  */
 export function installSimulator(app: Express, deps: SimulatorDeps): void {
   app.get('/simulator', (_req, res) => {
-    const shortcutNames = deps.shortcuts.listEnabled().map((shortcut) => shortcut.name);
-    res.type('html').send(renderSimulatorPage(summarize(deps.registry), shortcutNames));
+    const phrases = deps.shortcuts.listEnabled().map((shortcut) => shortcut.phrases()[0] ?? shortcut.name);
+    res.type('html').send(renderSimulatorPage(summarize(deps.registry), phrases));
   });
 
   app.get('/simulator/api/apps', (_req, res) => {

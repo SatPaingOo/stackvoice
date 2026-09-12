@@ -5,6 +5,7 @@ import type { ShortcutRegistryService } from '../../application/shortcut-registr
 import type { ShortcutService } from '../../application/shortcut.service.js';
 import type { ToolRunner } from '../../application/tool-runner.service.js';
 import { StackVoiceError } from '../../domain/errors.js';
+import { MAX_SLOT_LENGTH } from '../../domain/flow.js';
 import { SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX } from '../../domain/item.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import type { ToolSpec } from '../../domain/tool-spec.js';
@@ -147,34 +148,54 @@ export class ToolMapper {
     );
   }
 
+  /**
+   * A shortcut's slots become its inputs: "news about {topic}" takes a `topic`,
+   * which the assistant fills from what the person said. Required, because a
+   * flow asked about nothing would answer about everything.
+   */
   private registerShortcut(server: McpServer, spec: ToolSpec): void {
     const name = spec.shortcutName as string;
-    server.registerTool(
-      spec.name,
-      {
-        title: spec.title,
-        description: spec.description,
-        outputSchema: {
-          steps: z.array(z.object({ tool: z.string(), spoken: z.string(), ok: z.boolean() })),
-        },
+    const config = {
+      title: spec.title,
+      description: spec.description,
+      outputSchema: {
+        steps: z.array(z.object({ tool: z.string(), spoken: z.string(), ok: z.boolean() })),
       },
-      async () =>
-        this.guard(spec.name, async () => {
-          const shortcut = this.deps.shortcuts
-            .listEnabled()
-            .find((candidate) => candidate.name === name);
+    };
 
-          if (shortcut === undefined) {
-            return { content: [{ type: 'text', text: 'That shortcut is no longer configured.' }], isError: true };
-          }
+    if (spec.slots.length === 0) {
+      server.registerTool(spec.name, config, async () => this.runShortcut(spec.name, name, {}));
+      return;
+    }
 
-          const result = await this.deps.shortcutService.run(shortcut);
-          return {
-            content: [{ type: 'text', text: result.spoken }],
-            structuredContent: { steps: [...result.steps] },
-          };
-        }),
+    const phrase = spec.phrases[0] ?? spec.title;
+    const inputSchema = Object.fromEntries(
+      spec.slots.map((slot) => [
+        slot,
+        z.string().min(1).max(MAX_SLOT_LENGTH).describe(`What the user said in place of {${slot}} in "${phrase}".`),
+      ]),
     );
+    server.registerTool(spec.name, { ...config, inputSchema }, async (args) =>
+      this.runShortcut(spec.name, name, args as Record<string, unknown>),
+    );
+  }
+
+  private runShortcut(tool: string, name: string, args: Record<string, unknown>): Promise<ToolResult> {
+    return this.guard(tool, async () => {
+      const shortcut = this.deps.shortcuts.listEnabled().find((candidate) => candidate.name === name);
+      if (shortcut === undefined) {
+        return { content: [{ type: 'text', text: 'That shortcut is no longer configured.' }], isError: true };
+      }
+
+      const inputs = Object.fromEntries(
+        shortcut.slots.map((slot) => [slot, typeof args[slot] === 'string' ? (args[slot] as string) : '']),
+      );
+      const result = await this.deps.shortcutService.run(shortcut, inputs);
+      return {
+        content: [{ type: 'text', text: result.spoken }],
+        structuredContent: { steps: [...result.steps] },
+      };
+    });
   }
 
   /**

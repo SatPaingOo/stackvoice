@@ -147,7 +147,8 @@ For an enabled app `{id}` with a single source:
 
 Global: `stack_status()` — one summary across all apps.
 
-Each shortcut `name` → one tool `{snake_case(name)}` that runs its blocks (§7.5).
+Each shortcut `name` → one tool `{snake_case(name)}` that runs its blocks (§7.5). Each `{slot}` in its
+phrases becomes a required text input on that tool.
 
 Tool descriptions are **generated from the app's `label`/`description`** so the
 assistant knows *when* to call them ("Use when the user asks about their
@@ -370,7 +371,7 @@ shortcuts:
 |---|---|
 | `name` | Becomes the tool name: `news about topic` → `news_about_topic` |
 | `description` | The assistant reads this to decide when to run it |
-| `triggers` | Up to five ways to say it. `{topic}` is a slot the person fills in. Every phrase needs the same slots, at most three, and words around them. Empty means the name is the phrase |
+| `triggers` | Up to five ways to say it. `{topic}` is a slot the person fills in. Every phrase needs the same slots, at most three, and words around them. Each slot becomes a required text input on the tool: the assistant fills it, and the simulator fills it from what was said. Empty means the name is the phrase |
 | `blocks` | What runs, in order |
 | `enabled` | `false` generates no tool |
 

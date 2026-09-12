@@ -1,22 +1,41 @@
-# StackVoice shortcuts — one tool that runs several.
-# Edit here or in the web console at /console.
+# StackVoice shortcuts — one tool that runs a flow of blocks.
+# Edit here or in the web console at /console/shortcuts.
 
 shortcuts:
   - name: "morning brief"          # becomes the tool morning_brief
     description: "The latest from your library plus whether the stack is healthy."
     enabled: true
-    steps:
-      - tool: library_search
-        args: {"limit":2}
-      - tool: stack_status
-        args: {}
-    reply: "Here is your brief. {1} {2}"
+    blocks:
+      - ask: "library_search"
+        with: {"limit":2}
+        as: "news"
+      - ask: "stack_status"
+        as: "health"
+      - say: "Here is your brief. {news} {health}"
   - name: "market check"          # becomes the tool market_check
     description: "How the markets feed is doing and what it just picked up."
     enabled: true
-    steps:
-      - tool: markets_status
-        args: {}
-      - tool: markets_search
-        args: {"limit":2}
-    reply: "Markets check. {1} {2}"
+    blocks:
+      - ask: "markets_status"
+        as: "health"
+      - ask: "markets_search"
+        with: {"limit":2}
+        as: "latest"
+      - say: "Markets check. {health} {latest}"
+  - name: "news about topic"          # becomes the tool news_about_topic
+    description: "What the deep-dive library has on a subject, or that it has nothing on it yet."
+    enabled: true
+    triggers: ["news about {topic}","anything new on {topic}"]
+    blocks:
+      - ask: "library_search"
+        with: {"query":"{topic}","limit":3}
+        as: "found"
+      - if: {"count_of":"found","is":0}
+        then:
+          - say: "Your library has nothing about {topic} yet."
+          - stop: true
+      - if: {"count_of":"found","is":1}
+        then:
+          - say: "One story about {topic}: {found.first.title}, from {found.first.when}."
+          - stop: true
+      - say: "{found.count} stories about {topic}. The newest is {found.first.title}, from {found.first.when}."

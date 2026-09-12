@@ -247,3 +247,12 @@ describe('save', () => {
     expect((await store().list())[0]?.description).toBe('A "quoted" description.');
   });
 });
+
+describe('the shortcuts that ship with the repo', () => {
+  it('load, including a flow that takes a slot', async () => {
+    const shortcuts = await new YamlShortcutStore('config/shortcuts.yml').list();
+
+    expect(shortcuts.map((shortcut) => shortcut.toolName)).toEqual(['morning_brief', 'market_check', 'news_about_topic']);
+    expect(shortcuts.find((shortcut) => shortcut.toolName === 'news_about_topic')?.slots).toEqual(['topic']);
+  });
+});

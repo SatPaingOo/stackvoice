@@ -19,8 +19,9 @@ export interface PlannerApp {
 
 /** A shortcut the planner can route to, flattened to what matching needs. */
 export interface PlannerShortcut {
-  readonly name: string;
   readonly toolName: string;
+  /** Phrases to listen for. `{topic}` in one captures whatever was said in its place. */
+  readonly phrases: readonly string[];
 }
 
 export interface PlannedCall {
@@ -115,9 +116,10 @@ export class IntentPlanner {
 
     // Shortcuts win over everything: a person who named one asked for exactly
     // it, and "morning brief" would otherwise be searched for as a subject.
-    const shortcut = matchShortcut(text, shortcuts);
+    // Matched against the words as spoken, so a slot keeps its capitals: "OpenAI", not "openai".
+    const shortcut = matchShortcut(clean(utterance), shortcuts);
     if (shortcut !== null) {
-      return { kind: 'call', call: { tool: shortcut.toolName, args: {} }, appId: null };
+      return { kind: 'call', call: { tool: shortcut.toolName, args: shortcut.args }, appId: null };
     }
 
     const named = this.resolveApp(text, apps);
@@ -173,26 +175,93 @@ export class IntentPlanner {
   }
 }
 
-/**
- * Matches a shortcut by its whole name.
- *
- * Whole name, not any word in it: a shortcut called "news brief" must not
- * swallow "what's the news about Iran". Speech drops small words, so "my
- * morning brief" and "morning brief please" both still match.
- */
-function matchShortcut(text: string, shortcuts: readonly PlannerShortcut[]): PlannerShortcut | null {
-  const best = shortcuts
-    .map((shortcut) => ({ shortcut, phrase: normalize(shortcut.name) }))
-    .filter((candidate) => candidate.phrase !== '' && text.includes(candidate.phrase))
-    // The longest match wins, so "morning brief" beats a shortcut called "brief".
-    .sort((a, b) => b.phrase.length - a.phrase.length)[0];
+/** Small words speech puts around a value, dropped from its edges: "the gold price please" is "gold price". */
+const EDGE_WORDS = new Set([...FILLER, 'please', 'thanks', 'thank', 'you', 's', 'some', 'now', 'today']);
 
-  return best?.shortcut ?? null;
+/**
+ * Matches a shortcut by one of its phrases.
+ *
+ * Every word of the phrase must be said, in order, as whole words: a shortcut
+ * listening for "news brief" must not swallow "what's the news about Iran".
+ * A slot takes the words said where it sits. Speech adds small words, so "my
+ * morning brief please" still matches, and a slot left with nothing after they
+ * are dropped is no match at all.
+ */
+function matchShortcut(
+  spoken: string,
+  shortcuts: readonly PlannerShortcut[],
+): { toolName: string; args: Record<string, string> } | null {
+  let best: { toolName: string; args: Record<string, string>; score: number } | null = null;
+  for (const shortcut of shortcuts) {
+    for (const phrase of shortcut.phrases) {
+      const match = matchPhrase(spoken, phrase);
+      // The phrase with the most words in it wins, so "morning brief" beats "brief".
+      if (match !== null && (best === null || match.score > best.score)) {
+        best = { toolName: shortcut.toolName, args: match.args, score: match.score };
+      }
+    }
+  }
+  return best === null ? null : { toolName: best.toolName, args: best.args };
+}
+
+function matchPhrase(spoken: string, phrase: string): { args: Record<string, string>; score: number } | null {
+  const tokens = phrase
+    .split(/(\{[a-z][a-z0-9_]*\})/)
+    .map((token) => token.trim())
+    .filter((token) => token !== '');
+  const slots: string[] = [];
+  let pattern = '';
+  let score = 0;
+
+  tokens.forEach((token, index) => {
+    const first = index === 0;
+    const last = index === tokens.length - 1;
+    const slot = /^\{([a-z][a-z0-9_]*)\}$/.exec(token);
+
+    if (slot !== null) {
+      slots.push(slot[1] as string);
+      // A slot at the end takes everything after the words before it.
+      pattern += `${first ? '^' : '\\s+'}(.+${last ? '' : '?'})${last ? '$' : ''}`;
+      return;
+    }
+
+    const words = normalize(token);
+    if (words === '') return;
+    score += words.length;
+    pattern += `${first ? '(?:^|\\s)' : '\\s+'}${escapeRegExp(words).replace(/ /g, '\\s+')}${last ? '(?=\\s|$)' : ''}`;
+  });
+
+  if (score === 0) return null;
+  const match = new RegExp(pattern, 'iu').exec(spoken);
+  if (match === null) return null;
+
+  const args: Record<string, string> = {};
+  for (const [index, slot] of slots.entries()) {
+    const value = trimEdges(match[index + 1] ?? '');
+    if (value === '') return null;
+    args[slot] = value;
+  }
+  return { args, score };
+}
+
+function trimEdges(value: string): string {
+  const words = value.split(' ').filter((word) => word !== '');
+  while (words.length > 0 && EDGE_WORDS.has((words[0] as string).toLowerCase())) words.shift();
+  while (words.length > 0 && EDGE_WORDS.has((words[words.length - 1] as string).toLowerCase())) words.pop();
+  return words.join(' ');
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function normalize(text: string): string {
+  return clean(text).toLowerCase();
+}
+
+/** Punctuation out and single spaces, with the case left as it was said. */
+function clean(text: string): string {
   return text
-    .toLowerCase()
     .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();

@@ -124,8 +124,8 @@ describe('follow-ups', () => {
 });
 
 describe('shortcuts', () => {
-  const brief: PlannerShortcut = { name: 'morning brief', toolName: 'morning_brief' };
-  const market: PlannerShortcut = { name: 'market check', toolName: 'market_check' };
+  const brief: PlannerShortcut = { toolName: 'morning_brief', phrases: ['morning brief'] };
+  const market: PlannerShortcut = { toolName: 'market_check', phrases: ['market check'] };
 
   it.each(["what's my morning brief?", 'morning brief please', 'give me the morning brief'])(
     'routes "%s" to its shortcut',
@@ -143,7 +143,7 @@ describe('shortcuts', () => {
   });
 
   it('needs the whole name, so a partial word does not hijack an ordinary question', () => {
-    const news: PlannerShortcut = { name: 'news brief', toolName: 'news_brief' };
+    const news: PlannerShortcut = { toolName: 'news_brief', phrases: ['news brief'] };
 
     expect(call(planner.plan('anything about the news in Iran', apps, {}, [news])).tool).toBe(
       'library_search',
@@ -151,13 +151,56 @@ describe('shortcuts', () => {
   });
 
   it('prefers the longer name when two shortcuts overlap', () => {
-    const short: PlannerShortcut = { name: 'brief', toolName: 'brief' };
+    const short: PlannerShortcut = { toolName: 'brief', phrases: ['brief'] };
 
     expect(call(planner.plan('my morning brief', apps, {}, [short, brief])).tool).toBe('morning_brief');
   });
 
   it('changes nothing when no shortcuts are configured', () => {
     expect(call(planner.plan('is my stack healthy?', apps, {}, [])).tool).toBe('stack_status');
+  });
+});
+
+describe('shortcuts with slots', () => {
+  const news: PlannerShortcut = { toolName: 'news_about_topic', phrases: ['news about {topic}', 'anything new on {topic}'] };
+
+  it('fills the slot with what was said, keeping its capitals', () => {
+    expect(call(planner.plan('News about OpenAI', apps, {}, [news]))).toEqual({
+      tool: 'news_about_topic',
+      args: { topic: 'OpenAI' },
+    });
+  });
+
+  it('listens for every phrase', () => {
+    expect(call(planner.plan('anything new on gold?', apps, {}, [news])).args).toEqual({ topic: 'gold' });
+  });
+
+  it('drops the small words speech adds around the value', () => {
+    expect(call(planner.plan("what's the news about the gold price please", apps, {}, [news])).args).toEqual({
+      topic: 'gold price',
+    });
+  });
+
+  it('fills a slot in the middle of a phrase', () => {
+    const check: PlannerShortcut = { toolName: 'app_check', phrases: ['is {app} still working'] };
+
+    expect(call(planner.plan('hey, is the markets feed still working?', apps, {}, [check])).args).toEqual({
+      app: 'markets feed',
+    });
+  });
+
+  it('is no match when nothing is left for the slot, so the question is still answered', () => {
+    expect(call(planner.plan('news about the', apps, {}, [news])).tool).toBe('library_search');
+  });
+
+  it('needs whole words, so "renews about" is not "news about"', () => {
+    expect(call(planner.plan('renews about gold', apps, {}, [news])).tool).toBe('library_search');
+  });
+
+  it('prefers the phrase with more words in it', () => {
+    const loose: PlannerShortcut = { toolName: 'news', phrases: ['news {topic}'] };
+
+    expect(call(planner.plan('news about gold', apps, {}, [loose, news])).tool).toBe('news_about_topic');
   });
 });
 

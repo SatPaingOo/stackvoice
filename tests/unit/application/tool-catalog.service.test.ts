@@ -86,6 +86,31 @@ describe('shortcuts in the catalog', () => {
   });
 });
 
+describe('shortcut inputs', () => {
+  it('turns each slot into an input and names the phrases to listen for', () => {
+    const news = new Shortcut({
+      name: 'news about topic',
+      description: 'What the library has on a subject.',
+      enabled: true,
+      triggers: ['news about {topic}', 'anything new on {topic}'],
+      blocks: [{ kind: 'ask', tool: 'library_search', args: { query: '{topic}' }, as: 'found' }],
+    });
+
+    const spec = catalog.generate([], [news])[1];
+
+    expect(spec?.slots).toEqual(['topic']);
+    expect(spec?.phrases).toEqual(['news about {topic}', 'anything new on {topic}']);
+    expect(spec?.description).toContain('"news about {topic}" or "anything new on {topic}"');
+    expect(spec?.description).toContain('Fill topic with the words the user said');
+  });
+
+  it('gives the generated tools no slots', () => {
+    const apps = [app('library', { search: true, read: true, status: true })];
+
+    expect(catalog.generate(apps).every((spec) => spec.slots.length === 0 && spec.phrases.length === 0)).toBe(true);
+  });
+});
+
 describe('ToolCatalogService.generate', () => {
   it('always exposes the global tool, even with no apps', () => {
     expect(names([])).toEqual(['stack_status']);

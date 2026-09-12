@@ -77,8 +77,8 @@ export class ConversationService {
   /** The enabled shortcuts, flattened to what the planner needs. */
   private plannerShortcuts(): readonly PlannerShortcut[] {
     return this.shortcuts.listEnabled().map((shortcut) => ({
-      name: shortcut.name,
       toolName: shortcut.toolName,
+      phrases: shortcut.phrases(),
     }));
   }
 

@@ -22,9 +22,9 @@ export interface SimulatorAppSummary {
  */
 export function renderSimulatorPage(
   apps: readonly SimulatorAppSummary[],
-  shortcutNames: readonly string[] = [],
+  shortcutPhrases: readonly string[] = [],
 ): string {
-  const suggestions = buildSuggestions(apps, shortcutNames);
+  const suggestions = buildSuggestions(apps, shortcutPhrases);
 
   return renderPage({
     title: 'Try it — StackVoice',
@@ -73,15 +73,20 @@ export function renderSimulatorPage(
 }
 
 /** Prompts drawn from what is configured, so the demo works for any stack. */
-function buildSuggestions(apps: readonly SimulatorAppSummary[], shortcutNames: readonly string[]): string[] {
+function buildSuggestions(apps: readonly SimulatorAppSummary[], shortcutPhrases: readonly string[]): string[] {
   const suggestions = ['Is my stack healthy?'];
   const searchable = apps.filter((app) => app.searchable);
 
   if (searchable[0] !== undefined) {
     suggestions.push(`What did you find about AI in my ${searchable[0].label.toLowerCase()}?`);
   }
-  if (shortcutNames[0] !== undefined) {
-    suggestions.push(`What's my ${shortcutNames[0]}?`);
+  // A phrase with a slot shows off the most, so it is suggested first, filled in the way it would be said.
+  const phrase = shortcutPhrases.find((candidate) => candidate.includes('{')) ?? shortcutPhrases[0];
+  if (phrase !== undefined && phrase.includes('{')) {
+    const said = phrase.replace(/\{[a-z][a-z0-9_]*\}/g, 'AI');
+    suggestions.push(said.charAt(0).toUpperCase() + said.slice(1));
+  } else if (phrase !== undefined) {
+    suggestions.push(`What's my ${phrase}?`);
   }
   if (searchable[1] !== undefined) {
     suggestions.push(`Anything on Iran in my ${searchable[1].label.toLowerCase()}?`);

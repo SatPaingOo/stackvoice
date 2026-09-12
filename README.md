@@ -25,7 +25,7 @@ npm run dev
 
 Open **http://localhost:8765/simulator** and ask it something:
 
-> "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more"
+> "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more" · "News about AI"
 
 That page is a simulated Alexa+ client. It talks to the MCP server over the same
 Streamable HTTP transport a device would use, and shows every tool call it makes
