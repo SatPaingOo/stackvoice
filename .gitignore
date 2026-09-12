@@ -29,3 +29,10 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+
+# server-side secrets such as API keys, never committed
+config/secrets.yml
+# Your own data files for file sources; never pushed by accident.
+/data/
+tests/e2e/.work/
+tests/e2e/.data/

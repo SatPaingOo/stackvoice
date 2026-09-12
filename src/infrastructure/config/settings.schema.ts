@@ -41,6 +41,12 @@ export const settingsSchema = z.object({
       enabled: z.boolean().default(true),
     })
     .default({ enabled: true }),
+  sources: z
+    .object({
+      allow_private_network: z.boolean().default(false),
+      data_dir: z.string().min(1).default('data'),
+    })
+    .default({ allow_private_network: false, data_dir: 'data' }),
   cache: z
     .object({
       ttl_seconds: z.number().int().min(0).max(86_400).default(300),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { SourceUnavailableError } from '../../../src/domain/errors.js';
+import { SourceUnavailableError, ValidationError } from '../../../src/domain/errors.js';
 import { GithubRepoInspector } from '../../../src/infrastructure/adapters/github-repo.inspector.js';
 import type { JsonFetcher } from '../../../src/infrastructure/http/http-client.js';
 
@@ -14,6 +14,8 @@ class FakeRepo implements JsonFetcher {
     throw new SourceUnavailableError('fake', `${path} not found`);
   }
 }
+
+const REPO = { type: 'github-repo', repo: 'owner/name' } as const;
 
 const article = (n: number) => ({
   key: `2026-09-0${n}-001`,
@@ -32,7 +34,7 @@ describe('GithubRepoInspector.inspect', () => {
       'data/views/stats.json': { last_date: '2026-09-03', total_items: 3 },
     });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
     expect(proposal.itemsPath).toBeNull();
     expect(proposal.itemCount).toBe(3);
@@ -48,12 +50,31 @@ describe('GithubRepoInspector.inspect', () => {
     expect(proposal.statusFields).toEqual({ lastDataDate: 'last_date', itemCount: 'total_items' });
   });
 
+  it('reports where it found the records, ready to become a source', async () => {
+    const repo = new FakeRepo({
+      'data/views/index.json': [article(1)],
+      'data/views/stats.json': { last_date: '2026-09-01', total_items: 1 },
+    });
+
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
+
+    expect(proposal.location).toEqual({
+      type: 'github-repo',
+      repo: 'owner/name',
+      branch: 'main',
+      viewsDir: 'data/views',
+      indexFile: 'data/views/index.json',
+      statsFile: 'data/views/stats.json',
+    });
+    expect(proposal.suggestedLabel).toBeNull();
+  });
+
   it('finds records nested under a key', async () => {
     const repo = new FakeRepo({
       'data/views/index.json': { updated_at: '2026-09-12', recent_events: [article(1), article(2)] },
     });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
     expect(proposal.itemsPath).toBe('recent_events');
     expect(proposal.itemCount).toBe(2);
@@ -65,7 +86,7 @@ describe('GithubRepoInspector.inspect', () => {
       'data/views/index.json': { prices, recent_events: [article(1), article(2)] },
     });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
     expect(proposal.itemsPath).toBe('recent_events');
   });
@@ -77,9 +98,9 @@ describe('GithubRepoInspector.inspect', () => {
       'data/views/status.json': { updated_at: '2026-09-12', healthy: true },
     });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
-    expect(proposal.statsFile).toBe('data/views/index.json');
+    expect(proposal.location).toMatchObject({ statsFile: 'data/views/index.json' });
     expect(proposal.statusFields).toEqual({ lastDataDate: 'updated_at', itemCount: 'stats.events' });
   });
 
@@ -90,7 +111,7 @@ describe('GithubRepoInspector.inspect', () => {
     ];
     const repo = new FakeRepo({ 'data/views/index.json': bare });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
     expect(proposal.fields.title).toBe('headline');
     expect(proposal.fields.summary).toBeNull();
@@ -103,7 +124,7 @@ describe('GithubRepoInspector.inspect', () => {
       'data/views/index.json': [{ title: 'One' }, { title: 'Two' }],
     });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
     expect(proposal.suggestedPrimitives).toEqual({ search: true, read: false, status: true });
   });
@@ -116,27 +137,37 @@ describe('GithubRepoInspector.inspect', () => {
     ];
     const repo = new FakeRepo({ 'data/views/index.json': mostlyEmpty });
 
-    const proposal = await new GithubRepoInspector(repo).inspect('owner/name');
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
 
     expect(proposal.fields.summary).toBeNull();
   });
 
-  it('refuses a source whose records have nothing to say', async () => {
+  it('combines columns into a title when records have none of their own', async () => {
     const repo = new FakeRepo({
-      'data/views/index.json': [{ asset: 'GOLD', last_close: 2400 }],
+      'data/views/index.json': [
+        { asset: 'GOLD', last_close: 2400 },
+        { asset: 'SILVER', last_close: 31 },
+      ],
     });
 
-    await expect(new GithubRepoInspector(repo).inspect('owner/name')).rejects.toThrowError(
-      /none of them carry a title or summary/,
-    );
+    const proposal = await new GithubRepoInspector(repo).inspect(REPO);
+
+    expect(proposal.fields.title).toBe('{asset}: {last_close}');
+    expect(proposal.evidence.find((row) => row.field === 'title')?.sample).toBe('GOLD: 2400');
+  });
+
+  it('refuses records with nothing in them that can be read out', async () => {
+    const repo = new FakeRepo({
+      'data/views/index.json': [{ points: [1, 2] }, { points: [3] }],
+    });
+
+    await expect(new GithubRepoInspector(repo).inspect(REPO)).rejects.toThrowError(/nothing in them can be read out/);
   });
 
   it('says what it looked for when a repo has no read model', async () => {
     const repo = new FakeRepo({});
 
-    await expect(new GithubRepoInspector(repo).inspect('owner/name')).rejects.toThrowError(
-      /no read model found/,
-    );
+    await expect(new GithubRepoInspector(repo).inspect(REPO)).rejects.toThrowError(/no read model found/);
   });
 
   it('reads a non-default branch', async () => {
@@ -149,8 +180,15 @@ describe('GithubRepoInspector.inspect', () => {
       },
     };
 
-    await new GithubRepoInspector(spy).inspect('owner/name', 'gh-pages');
+    const proposal = await new GithubRepoInspector(spy).inspect({ ...REPO, branch: 'gh-pages' });
 
     expect(seen[0]).toContain('/owner/name/gh-pages/');
+    expect(proposal.location).toMatchObject({ branch: 'gh-pages' });
+  });
+
+  it('leaves anything that is not a repository to another inspector', async () => {
+    await expect(
+      new GithubRepoInspector(new FakeRepo({})).inspect({ type: 'url', url: 'https://example.com/feed.xml' }),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 });

@@ -17,6 +17,7 @@ const settings = (over: Partial<Settings> = {}): Settings => ({
   auth: { mode: 'token', token: 'owner-secret', publicUrl: 'https://stackvoice.example.com' },
   console: { enabled: true },
   simulator: { enabled: false },
+  sources: { allowPrivateNetwork: true, dataDir: 'exports' },
   management: { cli: true },
   cache: { ttlSeconds: 120 },
   ...over,

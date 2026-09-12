@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ManagementService } from '../../../src/application/management.service.js';
 import { AppNotFoundError, SourceUnavailableError, ValidationError } from '../../../src/domain/errors.js';
 import type { Logger } from '../../../src/domain/ports/logger.js';
-import type { SourceInspector } from '../../../src/domain/ports/source-inspector.js';
+import type { SourceInspector, SourceTarget } from '../../../src/domain/ports/source-inspector.js';
 import type { SourceProposal } from '../../../src/domain/source-proposal.js';
 import { YamlConfigStore } from '../../../src/infrastructure/config/yaml-config-store.js';
 
@@ -20,10 +20,15 @@ const silentLogger: Logger = {
 };
 
 const proposal = (over: Partial<SourceProposal> = {}): SourceProposal => ({
-  repo: 'owner/name',
-  viewsDir: 'data/views',
-  indexFile: 'data/views/index.json',
-  statsFile: 'data/views/stats.json',
+  location: {
+    type: 'github-repo',
+    repo: 'owner/name',
+    branch: 'main',
+    viewsDir: 'data/views',
+    indexFile: 'data/views/index.json',
+    statsFile: 'data/views/stats.json',
+  },
+  suggestedLabel: null,
   itemsPath: null,
   itemCount: 12,
   fields: {
@@ -143,6 +148,74 @@ describe('addFromRepo', () => {
     expect(second.replaced).toBe(true);
     expect(second.backupPath).not.toBeNull();
     expect(await readFile(second.backupPath as string, 'utf8')).toContain('First');
+  });
+});
+
+describe('addFromSource', () => {
+  const feed = (): SourceProposal =>
+    proposal({
+      location: { type: 'url', url: 'https://news.example.com/rss.xml', format: 'rss', headers: {} },
+      suggestedLabel: 'Example News',
+      itemsPath: 'items',
+    });
+
+  const recording = (answer: SourceProposal, seen: SourceTarget[]): SourceInspector => ({
+    inspect: async (target) => {
+      seen.push(target);
+      return answer;
+    },
+  });
+
+  it('works out what was pasted before inspecting it', async () => {
+    const seen: SourceTarget[] = [];
+    const service = build(recording(feed(), seen));
+    const headers = { Authorization: 'Bearer {{secret:NEWS_KEY}}' };
+
+    await service.addFromSource({ id: 'news', input: 'https://news.example.com/rss.xml', headers });
+    await service.addFromSource({ id: 'hub', input: 'owner/name', branch: 'gh-pages' });
+    await service.addFromSource({ id: 'prices', input: 'exports/prices.csv', branch: 'ignored' });
+
+    expect(seen).toEqual([
+      { type: 'url', url: 'https://news.example.com/rss.xml', headers },
+      { type: 'github-repo', repo: 'owner/name', branch: 'gh-pages' },
+      { type: 'file', path: 'exports/prices.csv' },
+    ]);
+  });
+
+  it('names the app after the feed when the feed names itself', async () => {
+    const result = await build(inspectorReturning(feed())).addFromSource({
+      id: 'news',
+      input: 'https://news.example.com/rss.xml',
+    });
+
+    expect(result.app.label).toBe('Example News');
+  });
+
+  it('writes a url source that reads back through the store', async () => {
+    const service = build(inspectorReturning(feed()));
+    await service.addFromSource({ id: 'news', input: 'https://news.example.com/rss.xml' });
+
+    const source = (await service.show('news')).primarySource();
+
+    expect(source.location).toEqual({ type: 'url', url: 'https://news.example.com/rss.xml', format: 'rss', headers: {} });
+    expect(source.itemsPath).toBe('items');
+  });
+
+  it('derives a label from a file name when the data has no name of its own', async () => {
+    const file = proposal({ location: { type: 'file', path: 'gold_prices.csv', format: 'csv' } });
+
+    const result = await build(inspectorReturning(file)).addFromSource({ id: 'gold', input: 'gold_prices.csv' });
+
+    expect(result.app.label).toBe('Gold prices');
+  });
+
+  it('refuses an empty box before looking at anything', async () => {
+    const seen: SourceTarget[] = [];
+
+    await expect(build(recording(feed(), seen)).addFromSource({ id: 'news', input: '   ' })).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+    expect(seen).toEqual([]);
   });
 });
 

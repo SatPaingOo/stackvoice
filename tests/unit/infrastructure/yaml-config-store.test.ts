@@ -42,8 +42,14 @@ describe('YamlConfigStore.listApps', () => {
     expect(app?.enabled).toBe(true);
     expect(app?.enabledVerbs()).toEqual(['search']);
     const source = app?.primarySource();
-    expect(source?.viewsDir).toBe('data/views');
-    expect(source?.indexFile).toBe('data/views/index.json');
+    expect(source?.location).toEqual({
+      type: 'github-repo',
+      repo: 'owner/name',
+      branch: 'main',
+      viewsDir: 'data/views',
+      indexFile: 'data/views/index.json',
+      statsFile: 'data/views/stats.json',
+    });
     expect(source?.itemsPath).toBeNull();
     expect(source?.fields.summary).toBe('summary');
     expect(source?.statusFields.itemCount).toBe('total_items');

@@ -61,6 +61,10 @@ export class YamlSettingsStore implements SettingsStore {
       simulator: {
         enabled: raw.simulator.enabled,
       },
+      sources: {
+        allowPrivateNetwork: raw.sources.allow_private_network,
+        dataDir: raw.sources.data_dir,
+      },
       cache: {
         ttlSeconds: raw.cache.ttl_seconds,
       },
@@ -111,6 +115,10 @@ function render(settings: Settings): string {
     '',
     'simulator:',
     `  enabled: ${String(settings.simulator.enabled)}            # simulated Alexa+ page at /simulator`,
+    '',
+    'sources:',
+    `  allow_private_network: ${String(settings.sources.allowPrivateNetwork)}   # let url sources reach your own network`,
+    `  data_dir: ${JSON.stringify(settings.sources.dataDir)}           # file sources are read from here and nowhere else`,
     '',
     'management:',
     `  cli: ${String(settings.management.cli)}`,

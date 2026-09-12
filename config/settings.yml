@@ -20,6 +20,10 @@ console:
 simulator:
   enabled: true            # serves the simulated Alexa+ page at /simulator
 
+sources:
+  allow_private_network: false   # let url sources reach your own network, e.g. a home server
+  data_dir: "data"               # file sources are read from here and nowhere else
+
 management:
   cli: true                # CLI face enabled (primary)
 

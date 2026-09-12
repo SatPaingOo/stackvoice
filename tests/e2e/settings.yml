@@ -20,5 +20,9 @@ simulator:
 management:
   cli: true
 
+sources:
+  allow_private_network: false
+  data_dir: tests/e2e/.data
+
 cache:
   ttl_seconds: 300

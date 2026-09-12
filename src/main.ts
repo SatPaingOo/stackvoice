@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import process, { argv, cwd, exit } from 'node:process';
 
@@ -17,6 +18,11 @@ import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
 import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
 import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspector.js';
+import { CompositeSourceInspector } from './infrastructure/adapters/composite.inspector.js';
+import { assertDataDirIsolated } from './infrastructure/adapters/data-file.js';
+import { UrlSourceReader } from './infrastructure/adapters/url.adapter.js';
+import { UrlSourceInspector } from './infrastructure/adapters/url.inspector.js';
+import { YamlSecretStore } from './infrastructure/config/yaml-secret-store.js';
 import { ConfigWatcher } from './infrastructure/config/config-watcher.js';
 import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
@@ -53,8 +59,29 @@ async function main(): Promise<void> {
 
   // infrastructure
   const cache = new TtlCache(settings.cache.ttlSeconds * 1000);
-  const http = new HttpClient({ timeoutMs: FETCH_TIMEOUT_MS, cache, logger });
-  const readers = new Map<string, DataSourceReader>([['github-repo', new GithubRepoAdapter(http)]]);
+  const http = new HttpClient({
+    timeoutMs: FETCH_TIMEOUT_MS,
+    cache,
+    logger,
+    policy: { allowPrivateNetwork: settings.sources.allowPrivateNetwork },
+  });
+  const dataDir = resolve(cwd(), settings.sources.dataDir);
+  const secrets = new YamlSecretStore(resolve(appsDir, '..', 'secrets.yml'));
+  // File sources read anything in the data directory, so it must stay clear of config/.
+  assertDataDirIsolated(dataDir, resolve(appsDir, '..'));
+  // So the first file dropped in has somewhere to go, and the console can say where.
+  await mkdir(dataDir, { recursive: true });
+  // One reader serves links and files alike: both are "get a body, parse it".
+  const urlReader = new UrlSourceReader({ http, secrets, dataDir });
+  const readers = new Map<string, DataSourceReader>([
+    ['github-repo', new GithubRepoAdapter(http)],
+    ['url', urlReader],
+    ['file', urlReader],
+  ]);
+  const inspector = new CompositeSourceInspector(
+    new GithubRepoInspector(http),
+    new UrlSourceInspector({ http, secrets, dataDir }),
+  );
   const readerFactory = new ReaderFactory(readers);
 
   // application
@@ -109,7 +136,7 @@ async function main(): Promise<void> {
 
   const console_: ConsoleDeps | null = settings.console.enabled
     ? {
-        management: new ManagementService(store, new GithubRepoInspector(http), logger, shortcutStore),
+        management: new ManagementService(store, inspector, logger, shortcutStore),
         catalog,
         registry,
         shortcuts,
@@ -122,6 +149,7 @@ async function main(): Promise<void> {
         reload,
         settings,
         settingsStore,
+        secrets,
       }
     : null;
 

@@ -38,6 +38,17 @@ export interface ConsoleSettings {
   readonly enabled: boolean;
 }
 
+export interface SourceSettings {
+  /**
+   * Lets url sources reach addresses on a private network, such as a home server
+   * or a service on the same machine. Off by default: on a server reachable from
+   * the internet it would let anyone with console access read the local network.
+   */
+  readonly allowPrivateNetwork: boolean;
+  /** Where file sources are read from, relative to the working directory. Nothing outside it is readable. */
+  readonly dataDir: string;
+}
+
 export interface SimulatorSettings {
   /** Serves the simulated Alexa+ page at /simulator. The demo surface. */
   readonly enabled: boolean;
@@ -53,5 +64,6 @@ export interface Settings {
   readonly auth: AuthSettings;
   readonly console: ConsoleSettings;
   readonly simulator: SimulatorSettings;
+  readonly sources: SourceSettings;
   readonly cache: CacheSettings;
 }

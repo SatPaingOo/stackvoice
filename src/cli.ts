@@ -10,6 +10,11 @@ import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
 import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
 import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspector.js';
+import { CompositeSourceInspector } from './infrastructure/adapters/composite.inspector.js';
+import { assertDataDirIsolated } from './infrastructure/adapters/data-file.js';
+import { UrlSourceReader } from './infrastructure/adapters/url.adapter.js';
+import { UrlSourceInspector } from './infrastructure/adapters/url.inspector.js';
+import { YamlSecretStore } from './infrastructure/config/yaml-secret-store.js';
 import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
 import { YamlShortcutStore } from './infrastructure/config/yaml-shortcut-store.js';
@@ -60,15 +65,33 @@ async function main(): Promise<number> {
   const logger = PinoLogger.create('warn');
 
   const cache = new TtlCache(settings.cache.ttlSeconds * 1000);
-  const http = new HttpClient({ timeoutMs: FETCH_TIMEOUT_MS, cache, logger });
+  const http = new HttpClient({
+    timeoutMs: FETCH_TIMEOUT_MS,
+    cache,
+    logger,
+    policy: { allowPrivateNetwork: settings.sources.allowPrivateNetwork },
+  });
   const store = new YamlConfigStore(appsDir);
-  const readers = new Map<string, DataSourceReader>([['github-repo', new GithubRepoAdapter(http)]]);
+  const dataDir = resolve(cwd(), settings.sources.dataDir);
+  const secrets = new YamlSecretStore(resolve(appsDir, '..', 'secrets.yml'));
+  // File sources read anything in the data directory, so it must stay clear of config/.
+  assertDataDirIsolated(dataDir, resolve(appsDir, '..'));
+  const urlReader = new UrlSourceReader({ http, secrets, dataDir });
+  const readers = new Map<string, DataSourceReader>([
+    ['github-repo', new GithubRepoAdapter(http)],
+    ['url', urlReader],
+    ['file', urlReader],
+  ]);
+  const inspector = new CompositeSourceInspector(
+    new GithubRepoInspector(http),
+    new UrlSourceInspector({ http, secrets, dataDir }),
+  );
   const readerFactory = new ReaderFactory(readers);
 
   const registry = new AppRegistryService(store, logger);
   const management = new ManagementService(
     store,
-    new GithubRepoInspector(http),
+    inspector,
     logger,
     new YamlShortcutStore(shortcutsPath),
   );
@@ -130,16 +153,20 @@ async function runAppCommand(
       return runValidate(deps, target);
 
     case 'add': {
-      const repo = asString(flags['repo']);
-      if (repo === undefined) {
-        printError(`  ${cross()} "stackvoice app add" needs ${red('--repo <owner/name>')}`);
+      // --from takes anything; --url, --repo and --file read more clearly in a script.
+      const input =
+        asString(flags['from']) ?? asString(flags['url']) ?? asString(flags['repo']) ?? asString(flags['file']);
+      if (input === undefined) {
+        printError(`  ${cross()} "stackvoice app add" needs ${red('--from <link | owner/repo | file>')}`);
         return 1;
       }
+      const header = asString(flags['header']);
       return runAdd(deps, target as string, {
-        repo,
+        input,
         branch: asString(flags['branch']),
         label: asString(flags['label']),
         description: asString(flags['description']),
+        headers: header === undefined ? undefined : parseHeaderFlag(header),
       });
     }
 
@@ -156,6 +183,13 @@ async function runAppCommand(
       printError(`  ${cross()} unknown command "app ${action}"`);
       return 1;
   }
+}
+
+/** `--header "Authorization: Bearer {{secret:MY_KEY}}"` as one header. */
+function parseHeaderFlag(value: string): Record<string, string> {
+  const at = value.indexOf(':');
+  if (at <= 0) throw new ValidationError('--header must look like "Name: value"', 'header');
+  return { [value.slice(0, at).trim()]: value.slice(at + 1).trim() };
 }
 
 /** A flag given without a value is `true`, which is never a usable string. */

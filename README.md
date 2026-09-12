@@ -65,49 +65,93 @@ leaving a microphone open on an empty room.
 
 ## Point it at your own data
 
-Your data project publishes JSON somewhere in a public GitHub repo. That is the
-only requirement.
+Anything that publishes records works. Paste it into one box and StackVoice
+works out what it is:
+
+| You have | Paste |
+| --- | --- |
+| A news site, blog, podcast or YouTube channel | its RSS or Atom feed link |
+| An API that answers with JSON | its address, plus a key if it needs one |
+| A Google Sheet, or any CSV | the CSV link (File → Share → Publish to web → CSV) |
+| A data project on GitHub | `owner/repo`, or its github.com link |
+| A file on the server | its name inside the `data/` folder |
+
+The format is read from the content, not from the address or what the server
+claims, so a spreadsheet served as plain text or a feed without `.xml` in its
+name still works. A link to an ordinary web page is refused with a hint to look
+for its feed instead.
 
 ### In a browser
 
-Open **http://localhost:8765/console**, click **Add an app**, and paste your
-repository. StackVoice fetches your read models, finds the records, and works out
-which field is the title, which is the summary, which is the date, and where the
-freshness and item counts live. It shows you every guess with a sample value from
-your own data, you correct anything that looks wrong, and you click Save.
+Open **http://localhost:8765/console**, click **Add an app**, and paste. StackVoice
+fetches it, finds the records, even when an API nests them inside its response,
+and works out which field is the title, the summary, the date and the link.
+Records with no title of their own get one built from their columns, so a row of
+gold prices reads "2026-08: 4411.000".
 
-Your assistant can use it in the next sentence. No restart, no YAML, no terminal.
+Every guess is shown with a sample from your own data. To change one, click the
+field, then click a column; click two columns to combine them, like
+`{Date}: {Price}`. Then Save. Your assistant can use it in the next sentence. No
+restart, no YAML, no terminal.
 
 The same page lists what you have, shows whether each app is healthy and how
 fresh its data is, and lets you edit, disable or remove any of them. When the
 server is exposed beyond localhost it asks for your `auth.token` first.
 
+### API keys
+
+When a link needs a key, open **This needs an API key**, say which header carries
+it (most APIs use `Authorization: Bearer …`) and paste the key.
+
+- The key is kept in `config/secrets.yml` on the server. That file is git-ignored
+  and written readable by its owner only.
+- The app file only references it, as `{{secret:PROJECTS_KEY}}`, so app files can
+  be shared or committed.
+- The console never shows a saved key again. **Settings → Saved keys** lists them
+  by name, with the apps that use each.
+- Where a file is the wrong place for a key, set `STACKVOICE_SECRET_PROJECTS_KEY`
+  in the environment instead. It wins over the file.
+
+### What it refuses to read
+
+- Addresses on your own machine or network (`localhost`, `192.168.x.x`, cloud
+  metadata addresses), including by way of a redirect. If StackVoice runs beside
+  a home server you want it to read, turn this on under **Settings → Data sources**.
+- Files outside the data folder, including through a symbolic link, and a data
+  folder that overlaps `config/`.
+- Bodies over 5 MB, and XML that declares its own entities.
+
 ### From a terminal
 
 ```bash
-npm run stackvoice -- app add mynotes --repo me/my-pipeline
+npm run stackvoice -- app add news --from https://feeds.bbci.co.uk/news/world/rss.xml
+npm run stackvoice -- app add hub --from SatPaingOo/information-hub
+npm run stackvoice -- app add gold --from https://raw.githubusercontent.com/datasets/gold-prices/main/data/monthly.csv
+npm run stackvoice -- app add projects --from https://api.example.com/v1/projects \
+  --header "Authorization: Bearer {{secret:PROJECTS_KEY}}"
 ```
 
 Same inference, same output:
 
 ```
-  Found 177 records in data/views/index.json.
+  Looking at https://feeds.bbci.co.uk/news/world/rss.xml…
+  Found 25 records in this RSS under "items".
 
   Field mapping (inferred)
-  FIELD    FROM        EXAMPLE
-  key      key         2026-09-12-001
-  title    title       Houthis claim major advance in Yemen and tighten grip...
-  summary  tldr        The Iran-backed Houthis have seized the strategic...
-  date     date        2026-09-12
-  topic    topic       world
-  region   region      global
-  url      source_url  https://www.bbc.co.uk/news/articles/c23x72yx2rvo...
+  FIELD    FROM       EXAMPLE
+  key      id         https://www.bbc.co.uk/news/articles/c14dpgm0rg4o#0
+  title    title      Anthropic boss Dario Amodei calls for AI development to s...
+  summary  summary    The call comes amid growing concerns that AI models may b...
+  date     date       2026-09-12T17:42:38.000Z
+  topic    not found  -
+  region   not found  -
+  url      link       https://www.bbc.co.uk/news/articles/c14dpgm0rg4o?at_mediu...
 
-  Status reads data/views/stats.json — freshness from "last_date", count from "total_items"
+  Status counts the records and reads the newest date
 
-  ✓ wrote config/apps/mynotes.yml
+  ✓ wrote config/apps/news.yml
 
-  New tools once the server picks it up: mynotes_search, mynotes_read, mynotes_status
+  New tools once the server picks it up: news_search, news_read, news_status
 ```
 
 Any guess that is wrong is one line to change in the generated file. The server

@@ -25,15 +25,22 @@ const neverInspects: SourceInspector = {
   },
 };
 
+const GITHUB = {
+  type: 'github-repo',
+  repo: 'me/notes',
+  branch: 'main',
+  viewsDir: 'data/views',
+  indexFile: 'data/views/index.json',
+  statsFile: 'data/views/stats.json',
+} as const;
+
 const spec = (over: Partial<AppSpec> = {}): AppSpec => ({
   id: 'notes',
   label: 'My notes',
   description: 'Things I wrote down.',
   enabled: true,
   primitives: { search: true, read: true, status: true },
-  repo: 'me/notes',
-  indexFile: 'data/views/index.json',
-  statsFile: 'data/views/stats.json',
+  location: GITHUB,
   itemsPath: null,
   fields: {
     key: 'id',
@@ -71,10 +78,41 @@ describe('ManagementService.upsert', () => {
     expect(source.statusFields).toEqual({ lastDataDate: 'updated_at', itemCount: 'total' });
   });
 
-  it('derives views_dir from the index path', async () => {
-    await service.upsert(spec({ indexFile: 'docs/data/items.json' }));
+  it('writes a url source with its format and a secret header', async () => {
+    const location = {
+      type: 'url',
+      url: 'https://api.example.com/v1/notes',
+      format: 'json',
+      headers: { Authorization: 'Bearer {{secret:NOTES_KEY}}' },
+    } as const;
 
-    expect((await service.show('notes')).primarySource().viewsDir).toBe('docs/data');
+    await service.upsert(spec({ location }));
+
+    const source = (await service.show('notes')).primarySource();
+    expect(source.location).toEqual(location);
+    expect(source.secretNames()).toEqual(['NOTES_KEY']);
+  });
+
+  it('writes a file source', async () => {
+    await service.upsert(spec({ location: { type: 'file', path: 'exports/notes.csv', format: 'csv' } }));
+
+    expect((await service.show('notes')).primarySource().location).toEqual({
+      type: 'file',
+      path: 'exports/notes.csv',
+      format: 'csv',
+    });
+  });
+
+  it('keeps a template title intact through the file', async () => {
+    await service.upsert(spec({ fields: { ...spec().fields, key: 'Date', title: '{Date}: {Price}' } }));
+
+    expect((await service.show('notes')).primarySource().fields.title).toBe('{Date}: {Price}');
+  });
+
+  it('refuses a file source that climbs out of the data directory', async () => {
+    await expect(
+      service.upsert(spec({ location: { type: 'file', path: '../config/secrets.yml', format: 'csv' } })),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('round-trips a nested items path', async () => {
@@ -112,7 +150,9 @@ describe('ManagementService.upsert', () => {
   });
 
   it('rejects a repository that is not owner/name', async () => {
-    await expect(service.upsert(spec({ repo: 'not-a-repo' }))).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.upsert(spec({ location: { ...GITHUB, repo: 'not-a-repo' } }))).rejects.toBeInstanceOf(
+      ValidationError,
+    );
   });
 
   it('writes a file the loader accepts', async () => {

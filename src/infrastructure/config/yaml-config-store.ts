@@ -11,7 +11,7 @@ import {
 } from '../../domain/data-source.js';
 import { AppNotFoundError, ConfigError, StackVoiceError } from '../../domain/errors.js';
 import type { ConfigStore } from '../../domain/ports/config-store.js';
-import { appSchema, type RawApp } from './app.schema.js';
+import { appSchema, type RawApp, type RawSource } from './app.schema.js';
 
 /**
  * Loads every `config/apps/*.yml` into validated `AppDefinition`s.
@@ -144,32 +144,7 @@ export class YamlConfigStore implements ConfigStore {
 }
 
 function toDefinition(raw: RawApp): AppDefinition {
-  const sources = raw.sources.map(
-    (source) =>
-      new DataSource({
-        id: source.id,
-        type: source.type,
-        label: source.label,
-        repo: source.repo,
-        viewsDir: source.views_dir,
-        statsFile: source.stats_file,
-        indexFile: source.index_file ?? `${source.views_dir}/index.json`,
-        itemsPath: source.items_path,
-        fields: {
-          key: source.fields.key || DEFAULT_FIELD_MAP.key,
-          title: source.fields.title || DEFAULT_FIELD_MAP.title,
-          summary: source.fields.summary,
-          date: source.fields.date,
-          topic: source.fields.topic,
-          region: source.fields.region,
-          url: source.fields.url,
-        },
-        statusFields: {
-          lastDataDate: source.status_fields.last_data_date || DEFAULT_STATUS_FIELD_MAP.lastDataDate,
-          itemCount: source.status_fields.item_count || DEFAULT_STATUS_FIELD_MAP.itemCount,
-        },
-      }),
-  );
+  const sources = raw.sources.map(toSource);
 
   return new AppDefinition({
     id: raw.id,
@@ -204,32 +179,54 @@ function renderApp(app: AppDefinition): string {
   ];
 
   for (const source of app.sources) {
-    lines.push(
-      `  - id: ${source.id}`,
-      `    type: ${source.type}`,
-      `    repo: ${source.repo}`,
-      `    label: ${quote(source.label)}`,
-      `    views_dir: ${source.viewsDir}`,
-      `    index_file: ${source.indexFile}`,
-      `    stats_file: ${source.statsFile}`,
-    );
+    const { location } = source;
+    lines.push(`  - id: ${source.id}`, `    type: ${location.type}`, `    label: ${quote(source.label)}`);
+
+    switch (location.type) {
+      case 'github-repo':
+        lines.push(
+          `    repo: ${location.repo}`,
+          `    branch: ${scalar(location.branch)}`,
+          `    views_dir: ${scalar(location.viewsDir)}`,
+          `    index_file: ${scalar(location.indexFile)}`,
+          `    stats_file: ${scalar(location.statsFile)}`,
+        );
+        break;
+      case 'url': {
+        lines.push(`    url: ${JSON.stringify(location.url)}`, `    format: ${location.format}`);
+        const headers = Object.entries(location.headers);
+        if (headers.length > 0) {
+          lines.push('    # Secret values live in config/secrets.yml, never in this file.', '    headers:');
+          for (const [name, value] of headers) lines.push(`      ${name}: ${JSON.stringify(value)}`);
+        }
+        break;
+      }
+      case 'file':
+        lines.push(`    path: ${JSON.stringify(location.path)}   # inside the data directory`, `    format: ${location.format}`);
+        break;
+    }
+
     if (source.itemsPath !== null) {
-      lines.push(`    items_path: ${source.itemsPath}   # the items are nested under this key`);
+      lines.push(`    items_path: ${scalar(source.itemsPath)}   # the records are nested under this key`);
     }
     lines.push(
-      '    # Where each spoken field lives in this payload. Change any of these.',
+      '    # Where each spoken field lives: a path, or a template such as "{Date}: {Price}".',
       '    fields:',
-      `      key: ${source.fields.key}`,
-      `      title: ${source.fields.title}`,
+      `      key: ${scalar(source.fields.key)}`,
+      `      title: ${scalar(source.fields.title)}`,
       `      summary: ${yamlValue(source.fields.summary)}`,
       `      date: ${yamlValue(source.fields.date)}`,
       `      topic: ${yamlValue(source.fields.topic)}`,
       `      region: ${yamlValue(source.fields.region)}`,
       `      url: ${yamlValue(source.fields.url)}`,
-      '    status_fields:',
-      `      last_data_date: ${source.statusFields.lastDataDate}`,
-      `      item_count: ${source.statusFields.itemCount}`,
     );
+    if (location.type === 'github-repo') {
+      lines.push(
+        '    status_fields:',
+        `      last_data_date: ${scalar(source.statusFields.lastDataDate)}`,
+        `      item_count: ${scalar(source.statusFields.itemCount)}`,
+      );
+    }
   }
 
   lines.push('shortcuts: []', '');
@@ -237,7 +234,56 @@ function renderApp(app: AppDefinition): string {
 }
 
 function yamlValue(value: string | null): string {
-  return value === null ? 'null' : value;
+  return value === null ? 'null' : scalar(value);
+}
+
+/**
+ * A value bare when YAML will read it back as the same string, quoted otherwise.
+ * A template like {Date}: {Price} written bare would come back as a map, and a
+ * bare "null" or "true" would come back as something that is not a string at all.
+ */
+function scalar(value: string): string {
+  const reserved = ['null', 'true', 'false', 'yes', 'no', 'on', 'off', '~'];
+  return /^[A-Za-z0-9_./-]+$/.test(value) && !reserved.includes(value.toLowerCase()) ? value : JSON.stringify(value);
+}
+
+/** Builds a source from its raw config, whichever of the three types it is. */
+function toSource(source: RawSource): DataSource {
+  const common = {
+    id: source.id,
+    label: source.label,
+    itemsPath: source.items_path,
+    fields: {
+      key: source.fields.key || DEFAULT_FIELD_MAP.key,
+      title: source.fields.title || DEFAULT_FIELD_MAP.title,
+      summary: source.fields.summary,
+      date: source.fields.date,
+      topic: source.fields.topic,
+      region: source.fields.region,
+      url: source.fields.url,
+    },
+    statusFields: {
+      lastDataDate: source.status_fields.last_data_date || DEFAULT_STATUS_FIELD_MAP.lastDataDate,
+      itemCount: source.status_fields.item_count || DEFAULT_STATUS_FIELD_MAP.itemCount,
+    },
+  };
+
+  switch (source.type) {
+    case 'github-repo':
+      return new DataSource({
+        ...common,
+        type: 'github-repo',
+        repo: source.repo,
+        branch: source.branch,
+        viewsDir: source.views_dir,
+        statsFile: source.stats_file,
+        indexFile: source.index_file ?? `${source.views_dir}/index.json`,
+      });
+    case 'url':
+      return new DataSource({ ...common, type: 'url', url: source.url, format: source.format, headers: source.headers });
+    case 'file':
+      return new DataSource({ ...common, type: 'file', path: source.path, format: source.format });
+  }
 }
 
 function quote(value: string): string {

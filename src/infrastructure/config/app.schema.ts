@@ -21,19 +21,46 @@ const statusFieldsSchema = z
   })
   .default({ last_data_date: 'last_date', item_count: 'total_items' });
 
-const sourceSchema = z.object({
+const formatSchema = z.enum(['json', 'rss', 'atom', 'csv']);
+
+/** What every source has, whatever it reads from. */
+const common = {
   id: z.string().min(1),
-  type: z.literal('github-repo'),
   label: z.string().min(1),
-  repo: z.string().min(3),
-  views_dir: z.string().min(1).default('data/views'),
-  stats_file: z.string().min(1).default('data/views/stats.json'),
-  index_file: z.string().min(1).optional(),
-  /** Dot path to the array inside the index document; omit when it is already an array. */
+  /** Dot path to the list inside the document; omit when the document is already the list. */
   items_path: z.string().min(1).nullable().default(null),
   fields: fieldsSchema,
   status_fields: statusFieldsSchema,
+};
+
+const githubSource = z.object({
+  ...common,
+  type: z.literal('github-repo'),
+  repo: z.string().min(3),
+  branch: z.string().min(1).default('main'),
+  views_dir: z.string().min(1).default('data/views'),
+  stats_file: z.string().min(1).default('data/views/stats.json'),
+  index_file: z.string().min(1).optional(),
 });
+
+const urlSource = z.object({
+  ...common,
+  type: z.literal('url'),
+  url: z.string().min(1),
+  format: formatSchema,
+  /** Values may reference secrets as {{secret:NAME}}; the values themselves live in config/secrets.yml. */
+  headers: z.record(z.string(), z.string()).default({}),
+});
+
+const fileSource = z.object({
+  ...common,
+  type: z.literal('file'),
+  /** Relative to sources.data_dir in settings. */
+  path: z.string().min(1),
+  format: formatSchema,
+});
+
+const sourceSchema = z.discriminatedUnion('type', [githubSource, urlSource, fileSource]);
 
 export const appSchema = z.object({
   id: z.string().regex(APP_ID_PATTERN, 'must be lowercase a-z, 0-9 or "-", 2-32 characters, starting with a letter'),
@@ -60,3 +87,4 @@ export const appSchema = z.object({
 });
 
 export type RawApp = z.infer<typeof appSchema>;
+export type RawSource = z.infer<typeof sourceSchema>;

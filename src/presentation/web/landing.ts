@@ -75,8 +75,8 @@ function body(stats: LandingStats): string {
 
   <section class="shell band reveal">
     <h2>Config in. Tools out.</h2>
-    <p class="soft">Point it at a repository. It reads your JSON, works out which field is the
-      title and which is the date, and generates the tools. No code, no schema to learn.</p>
+    <p class="soft">Paste a feed, an API, a spreadsheet or a repository. It works out which field
+      is the title and which is the date, and generates the tools. No code, no schema to learn.</p>
     ${configDemo()}
   </section>
 
@@ -104,7 +104,7 @@ function body(stats: LandingStats): string {
     <div class="cta">
       <h2>Two minutes to your own data</h2>
       <ol class="steps">
-        <li><span>1</span> Open the console and paste a public GitHub repository.</li>
+        <li><span>1</span> Open the console and paste a feed, an API, a spreadsheet link or a GitHub repository.</li>
         <li><span>2</span> Check what it inferred. Fix anything that looks wrong.</li>
         <li><span>3</span> Ask your assistant about it.</li>
       </ol>

@@ -1,12 +1,13 @@
 import { AppDefinition, APP_ID_PATTERN, type Primitives } from '../domain/app-definition.js';
-import { DataSource, type FieldMap, type StatusFieldMap } from '../domain/data-source.js';
+import { DataSource, type FieldMap, type SourceLocation, type StatusFieldMap } from '../domain/data-source.js';
 import { AppNotFoundError, ValidationError } from '../domain/errors.js';
 import type { ConfigStore } from '../domain/ports/config-store.js';
 import type { Logger } from '../domain/ports/logger.js';
 import type { ShortcutStore } from '../domain/ports/shortcut-store.js';
-import type { SourceInspector } from '../domain/ports/source-inspector.js';
+import type { SourceInspector, SourceTarget } from '../domain/ports/source-inspector.js';
 import { Shortcut, type ShortcutProps } from '../domain/shortcut.js';
 import type { SourceProposal } from '../domain/source-proposal.js';
+import { parseSourceInput } from './source-input.js';
 
 export interface AddAppRequest {
   readonly id: string;
@@ -15,6 +16,19 @@ export interface AddAppRequest {
   readonly label?: string | undefined;
   readonly description?: string | undefined;
   /** Overrides the inferred verbs. By default every verb the data supports is on. */
+  readonly primitives?: Primitives | undefined;
+}
+
+/** Adding an app from whatever a person pasted into one box. */
+export interface AddSourceRequest {
+  readonly id: string;
+  /** A link, a GitHub owner/repo, or a file path inside the data directory. */
+  readonly input: string;
+  /** For a link that needs a key. Values should reference secrets, never hold them. */
+  readonly headers?: Readonly<Record<string, string>> | undefined;
+  readonly branch?: string | undefined;
+  readonly label?: string | undefined;
+  readonly description?: string | undefined;
   readonly primitives?: Primitives | undefined;
 }
 
@@ -38,9 +52,8 @@ export interface AppSpec {
   readonly description: string;
   readonly enabled: boolean;
   readonly primitives: Primitives;
-  readonly repo: string;
-  readonly indexFile: string;
-  readonly statsFile: string;
+  /** Where the data comes from, in the same shape a source keeps it. */
+  readonly location: SourceLocation;
   readonly itemsPath: string | null;
   readonly fields: FieldMap;
   readonly statusFields: StatusFieldMap;
@@ -109,28 +122,37 @@ export class ManagementService {
    * one command and a glance at what was inferred, rather than reading your own
    * JSON and hand-authoring a field map.
    */
-  async addFromRepo(request: AddAppRequest): Promise<AddAppResult> {
-    if (!APP_ID_PATTERN.test(request.id)) {
-      throw new ValidationError(
-        `"${request.id}" must be lowercase, start with a letter, and be 2-32 characters of a-z, 0-9 or "-"`,
-        'id',
-      );
-    }
+  async addFromSource(request: AddSourceRequest): Promise<AddAppResult> {
+    assertAppId(request.id);
+    const target = withBranch(parseSourceInput(request.input, request.headers ?? {}), request.branch);
+    return this.addFromTarget(request, target);
+  }
 
-    const proposal = await this.inspector.inspect(request.repo, request.branch);
-    const label = request.label ?? defaultLabel(request.repo);
+  /** The CLI's `--repo` flag, and every caller written before sources went beyond GitHub. */
+  async addFromRepo(request: AddAppRequest): Promise<AddAppResult> {
+    assertAppId(request.id);
+    return this.addFromTarget(request, { type: 'github-repo', repo: request.repo, branch: request.branch });
+  }
+
+  private async addFromTarget(
+    request: {
+      readonly id: string;
+      readonly label?: string | undefined;
+      readonly description?: string | undefined;
+      readonly primitives?: Primitives | undefined;
+    },
+    target: SourceTarget,
+  ): Promise<AddAppResult> {
+    const proposal = await this.inspector.inspect(target);
+    const label = request.label ?? proposal.suggestedLabel ?? defaultLabel(target);
 
     const source = new DataSource({
       id: request.id,
-      type: 'github-repo',
       label: label.toLowerCase(),
-      repo: request.repo,
-      viewsDir: proposal.viewsDir,
-      statsFile: proposal.statsFile ?? proposal.indexFile,
-      indexFile: proposal.indexFile,
       itemsPath: proposal.itemsPath,
       fields: proposal.fields,
       statusFields: proposal.statusFields,
+      ...proposal.location,
     });
 
     const app = new AppDefinition({
@@ -138,7 +160,7 @@ export class ManagementService {
       label,
       description:
         request.description ??
-        `Records published by ${request.repo}. Edit this description: the assistant reads it to decide when to use this app.`,
+        `Records from ${source.describe()}. Edit this description: the assistant reads it to decide when to use this app.`,
       enabled: true,
       primitives: request.primitives ?? proposal.suggestedPrimitives,
       sources: [source],
@@ -147,7 +169,12 @@ export class ManagementService {
     const existing = await this.store.getApp(request.id);
     const backupPath = await this.store.saveApp(app);
 
-    this.logger.info('app added', { appId: app.id, repo: request.repo, replaced: existing !== null });
+    this.logger.info('app added', {
+      appId: app.id,
+      type: source.type,
+      from: source.describe(),
+      replaced: existing !== null,
+    });
     return { app, proposal, backupPath, replaced: existing !== null };
   }
 
@@ -175,17 +202,11 @@ export class ManagementService {
       sources: [
         new DataSource({
           id: spec.id,
-          type: 'github-repo',
           label: spec.label.trim().toLowerCase(),
-          repo: spec.repo,
-          viewsDir: spec.indexFile.includes('/')
-            ? spec.indexFile.slice(0, spec.indexFile.lastIndexOf('/'))
-            : '.',
-          statsFile: spec.statsFile,
-          indexFile: spec.indexFile,
           itemsPath: spec.itemsPath,
           fields: spec.fields,
           statusFields: spec.statusFields,
+          ...spec.location,
         }),
       ],
     });
@@ -197,9 +218,15 @@ export class ManagementService {
     return { app, backupPath, replaced: existing !== null };
   }
 
-  /** Inspects a repository without writing anything. The console previews with this. */
-  async inspect(repo: string, branch?: string): Promise<SourceProposal> {
-    return this.inspector.inspect(repo, branch);
+  /**
+   * Inspects whatever was pasted, without writing anything. The console previews
+   * with this before a person decides to save.
+   */
+  async inspect(
+    input: string,
+    options: { branch?: string | undefined; headers?: Readonly<Record<string, string>> | undefined } = {},
+  ): Promise<SourceProposal> {
+    return this.inspector.inspect(withBranch(parseSourceInput(input, options.headers ?? {}), options.branch));
   }
 
   /** @throws {AppNotFoundError} */
@@ -269,10 +296,41 @@ export class ManagementService {
   }
 }
 
-/** "SatPaingOo/information-hub" becomes "Information hub". */
-function defaultLabel(repo: string): string {
-  const name = repo.slice(repo.indexOf('/') + 1).replace(/[-_]+/g, ' ').trim();
+function assertAppId(id: string): void {
+  if (!APP_ID_PATTERN.test(id)) {
+    throw new ValidationError(
+      `"${id}" must be lowercase, start with a letter, and be 2-32 characters of a-z, 0-9 or "-"`,
+      'id',
+    );
+  }
+}
+
+/**
+ * A readable name from where the data lives, for when the data does not name
+ * itself: "SatPaingOo/information-hub" becomes "Information hub".
+ */
+function defaultLabel(target: SourceTarget): string {
+  let raw: string;
+  switch (target.type) {
+    case 'github-repo':
+      raw = target.repo.slice(target.repo.indexOf('/') + 1);
+      break;
+    case 'url': {
+      const url = new URL(target.url);
+      const last = url.pathname.split('/').filter((part) => part !== '').pop();
+      raw = last === undefined ? url.hostname.replace(/^www\./, '') : last.replace(/\.[a-z0-9]+$/i, '');
+      break;
+    }
+    case 'file':
+      raw = (target.path.split('/').pop() ?? target.path).replace(/\.[a-z0-9]+$/i, '');
+      break;
+  }
+  const name = raw.replace(/[-_.]+/g, ' ').trim();
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function withBranch(target: SourceTarget, branch: string | undefined): SourceTarget {
+  return target.type === 'github-repo' && branch !== undefined && branch !== '' ? { ...target, branch } : target;
 }
 
 function messageOf(error: unknown): string {

@@ -59,6 +59,19 @@ export function renderSettingsPage(): string {
     </section>
 
     <section class="card" style="margin-bottom:18px">
+      <h2>Data sources</h2>
+      <p class="soft" style="margin:6px 0 16px">Where links and files can be read from.</p>
+      <label class="switch"><input type="checkbox" id="privateNet"> Let links reach this computer and your home network</label>
+      <p class="muted" style="font-size:13.5px;margin:6px 0 0 30px">For a service running next to StackVoice, such as a
+        home server. Leave it off on a server the internet can reach.</p>
+      <div class="field" style="margin-top:16px">
+        <label for="dataDir">Data folder <span class="hint">— file sources are read from here and nowhere else</span></label>
+        <input id="dataDir" type="text" placeholder="data" spellcheck="false">
+      </div>
+      <p class="restart">Takes effect when the server restarts.</p>
+    </section>
+
+    <section class="card" style="margin-bottom:18px">
       <h2>Pages</h2>
       <p class="soft" style="margin:6px 0 16px">Turn off what you do not use.</p>
       <div class="stack">
@@ -103,6 +116,19 @@ export function renderSettingsPage(): string {
       <button class="primary" id="save" type="submit">Save settings</button>
     </div>
   </form>
+
+  <section class="card" style="margin-top:18px">
+    <h2>Saved keys</h2>
+    <p class="soft" style="margin:6px 0 16px">API keys your apps send. Kept in <code>config/secrets.yml</code> on this
+      server. A saved value is never shown again, here or anywhere else.</p>
+    <div id="keys" class="keys"></div>
+    <div class="key-add">
+      <input id="newKeyName" type="text" placeholder="NAME_IN_CAPITALS" spellcheck="false" aria-label="Key name">
+      <input id="newKeyValue" type="password" placeholder="paste the key" autocomplete="new-password" aria-label="Key value">
+      <button class="small" id="addKey" type="button">Save key</button>
+    </div>
+    <div id="keysNote"></div>
+  </section>
 </main>`,
     script: CONSOLE_CLIENT + SETTINGS_SCRIPT,
   });
@@ -129,6 +155,14 @@ const SETTINGS_CSS = `
 
   section.card h2 { font-size: 18px; }
 
+  .keys { display: grid; gap: 8px; }
+  .keys > p { margin: 0; font-size: 14px; }
+  .key-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 9px 12px;
+             border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }
+  .key-row .used { flex: 1; min-width: 0; font-size: 13.5px; color: var(--muted); }
+  .key-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .key-add input { flex: 1 1 180px; min-width: 0; }
+
   @media (max-width: 760px) { .choices { grid-template-columns: 1fr; } }
 `;
 
@@ -149,6 +183,8 @@ function fill(data) {
   el('port').value = s.server.port;
   el('ttl').value = s.cache.ttlSeconds;
   el('logLevel').value = s.server.logLevel;
+  el('privateNet').checked = s.sources.allowPrivateNetwork;
+  el('dataDir').value = s.sources.dataDir;
 }
 
 el('copy').addEventListener('click', function () {
@@ -167,7 +203,8 @@ el('form').addEventListener('submit', function (event) {
     auth: { mode: mode ? mode.value : 'none', token: el('token').value, publicUrl: el('publicUrl').value.trim() },
     console: { enabled: el('console').checked },
     simulator: { enabled: el('simulator').checked },
-    cache: { ttlSeconds: Number(el('ttl').value) }
+    cache: { ttlSeconds: Number(el('ttl').value) },
+    sources: { allowPrivateNetwork: el('privateNet').checked, dataDir: el('dataDir').value.trim() }
   };
 
   busy(el('save'), true, 'Saving...');
@@ -182,6 +219,53 @@ el('form').addEventListener('submit', function (event) {
     .catch(function (error) { note('formNote', 'err', error.message); })
     .then(function () { busy(el('save'), false); });
 });
+
+function loadKeys() {
+  return api('GET', '/console/api/secrets')
+    .then(function (data) {
+      var box = el('keys');
+      box.innerHTML = '';
+      if (!data.secrets.length) {
+        box.appendChild(make('p', 'muted', 'No keys saved yet. The Apps page asks for one when a link needs it.'));
+        return;
+      }
+      data.secrets.forEach(function (secret) {
+        var row = make('div', 'key-row');
+        row.appendChild(make('code', null, secret.name));
+        row.appendChild(make('span', 'used', secret.usedBy.length ? 'used by ' + secret.usedBy.join(', ') : 'not used by any app'));
+        var remove = make('button', 'small danger', 'Remove');
+        remove.type = 'button';
+        remove.addEventListener('click', function () {
+          var warning = secret.usedBy.length ? ' ' + secret.usedBy.join(', ') + ' will stop working until it is saved again.' : '';
+          if (!window.confirm('Remove the key ' + secret.name + '?' + warning)) return;
+          busy(remove, true, '...');
+          api('DELETE', '/console/api/secrets/' + encodeURIComponent(secret.name))
+            .then(loadKeys)
+            .catch(function (error) { busy(remove, false); note('keysNote', 'err', error.message); });
+        });
+        row.appendChild(remove);
+        box.appendChild(row);
+      });
+    })
+    .catch(function (error) { note('keysNote', 'err', error.message); });
+}
+
+el('addKey').addEventListener('click', function () {
+  var name = el('newKeyName').value.trim().toUpperCase();
+  if (!name) { note('keysNote', 'err', 'Give the key a name, such as WEATHER_KEY.'); return; }
+  busy(el('addKey'), true, 'Saving...');
+  api('PUT', '/console/api/secrets/' + encodeURIComponent(name), { value: el('newKeyValue').value })
+    .then(function () {
+      el('newKeyName').value = '';
+      el('newKeyValue').value = '';
+      note('keysNote', 'ok', 'Saved ' + name + '.');
+      return loadKeys();
+    })
+    .catch(function (error) { note('keysNote', 'err', error.message); })
+    .then(function () { busy(el('addKey'), false); });
+});
+
+loadKeys();
 
 api('GET', '/console/api/settings')
   .then(fill)

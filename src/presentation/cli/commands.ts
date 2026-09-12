@@ -48,28 +48,29 @@ ${bold('Usage')}
   stackvoice shortcuts                   list shortcuts and what they run
   stackvoice app show <id>               the effective config of one app
   stackvoice app validate [<id>]         check config without starting the server
-  stackvoice app add <id> --repo <o/n>   inspect a repo and write an app file
+  stackvoice app add <id> --from <src>   inspect a link, repo or file and write an app file
   stackvoice app enable <id>             turn an app on
   stackvoice app disable <id>            turn an app off
   stackvoice app remove <id> --yes       delete an app file (a backup is kept)
 
 ${bold('Options')}
-  --repo <owner/name>   the public GitHub repository holding your read models
-  --branch <name>       branch to read (default: main)
+  --from <source>       a link to JSON, RSS, Atom or CSV; a GitHub owner/repo; or a file in the data folder
+  --header "<N: v>"     a request header, e.g. "Authorization: Bearer {{secret:MY_KEY}}"
+  --branch <name>       branch to read, for a GitHub repository (default: main)
   --label "<text>"      human name, used in the tool descriptions
   --description "<t>"   what this app holds; the assistant reads it to decide when to call it
   --config <path>       settings file (default: config/settings.yml)
   --apps <path>         apps directory (default: config/apps)
 
 ${bold('Example')}
-  stackvoice app add weather --repo me/weather-pipeline --label "Weather history"
+  stackvoice app add news --from https://feeds.bbci.co.uk/news/rss.xml
 `);
 }
 
 export async function runApps(deps: CommandDeps): Promise<number> {
   const apps = await deps.management.list();
   if (apps.length === 0) {
-    print(`  No apps configured. Add one with ${bold('stackvoice app add <id> --repo <owner/name>')}.`);
+    print(`  No apps configured. Add one with ${bold('stackvoice app add <id> --from <link>')}.`);
     return 0;
   }
 
@@ -142,9 +143,17 @@ export async function runShow(deps: CommandDeps, id: string): Promise<number> {
   for (const source of app.sources) {
     print();
     print(`  ${bold('source')} ${source.id}  ${dim(source.type)}`);
-    print(`    repo        ${source.repo}`);
-    print(`    index       ${source.indexFile}${source.itemsPath === null ? '' : dim(` → ${source.itemsPath}`)}`);
-    print(`    stats       ${source.statsFile}`);
+    print(`    from        ${source.describe()}`);
+    const { location } = source;
+    if (location.type === 'github-repo') {
+      print(`    branch      ${location.branch}`);
+      print(`    index       ${location.indexFile}${source.itemsPath === null ? '' : dim(` → ${source.itemsPath}`)}`);
+      print(`    stats       ${location.statsFile}`);
+    } else {
+      print(`    format      ${location.format}${source.itemsPath === null ? '' : dim(` → ${source.itemsPath}`)}`);
+      const secrets = source.secretNames();
+      if (secrets.length > 0) print(`    secrets     ${secrets.join(', ')}`);
+    }
     print(`    fields      ${describeFields(source.fields)}`);
   }
   return 0;
@@ -172,16 +181,23 @@ export async function runValidate(deps: CommandDeps, id?: string): Promise<numbe
 export async function runAdd(
   deps: CommandDeps,
   id: string,
-  options: { repo: string; branch?: string | undefined; label?: string | undefined; description?: string | undefined },
+  options: {
+    input: string;
+    branch?: string | undefined;
+    label?: string | undefined;
+    description?: string | undefined;
+    headers?: Readonly<Record<string, string>> | undefined;
+  },
 ): Promise<number> {
-  print(`  Looking at ${bold(options.repo)}…`);
+  print(`  Looking at ${bold(options.input)}…`);
 
-  const result = await deps.management.addFromRepo({
+  const result = await deps.management.addFromSource({
     id,
-    repo: options.repo,
+    input: options.input,
     branch: options.branch,
     label: options.label,
     description: options.description,
+    headers: options.headers,
   });
 
   printProposal(result.proposal);
@@ -214,7 +230,9 @@ export async function runRemove(deps: CommandDeps, id: string, confirmed: boolea
 
 /** Shows what was inferred, with a sample value, so the guess can be judged. */
 function printProposal(proposal: SourceProposal): void {
-  print(`  Found ${bold(String(proposal.itemCount))} records in ${proposal.indexFile}${
+  const { location } = proposal;
+  const where = location.type === 'github-repo' ? location.indexFile : `this ${location.format.toUpperCase()}`;
+  print(`  Found ${bold(String(proposal.itemCount))} records in ${where}${
     proposal.itemsPath === null ? '' : ` under "${proposal.itemsPath}"`
   }.`);
   print();
@@ -230,10 +248,14 @@ function printProposal(proposal: SourceProposal): void {
   );
 
   print();
-  print(
-    `  ${bold('Status')} reads ${proposal.statsFile ?? dim('nothing')}` +
-      dim(` — freshness from "${proposal.statusFields.lastDataDate}", count from "${proposal.statusFields.itemCount}"`),
-  );
+  if (location.type === 'github-repo') {
+    print(
+      `  ${bold('Status')} reads ${location.statsFile}` +
+        dim(` — freshness from "${proposal.statusFields.lastDataDate}", count from "${proposal.statusFields.itemCount}"`),
+    );
+  } else {
+    print(`  ${bold('Status')} ${dim('counts the records and reads the newest date')}`);
+  }
   print();
   print(`  ${dim(`other keys available: ${proposal.availableKeys.join(', ')}`)}`);
 }

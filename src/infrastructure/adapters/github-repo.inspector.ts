@@ -1,8 +1,10 @@
 import { DEFAULT_STATUS_FIELD_MAP, type FieldMap, type StatusFieldMap } from '../../domain/data-source.js';
-import { SourceUnavailableError } from '../../domain/errors.js';
-import type { FieldEvidence, SourceProposal } from '../../domain/source-proposal.js';
+import { SourceUnavailableError, ValidationError } from '../../domain/errors.js';
+import type { SourceInspector, SourceTarget } from '../../domain/ports/source-inspector.js';
+import type { SourceProposal } from '../../domain/source-proposal.js';
 import type { JsonFetcher } from '../http/http-client.js';
-import { readNumber, readPath, readString } from './dot-path.js';
+import { readNumber, readString } from './dot-path.js';
+import { buildEvidence, fallbackTitle, inferFields, locateItems } from './records.js';
 
 const RAW_BASE = 'https://raw.githubusercontent.com';
 
@@ -24,23 +26,6 @@ const STATS_CANDIDATES = [
   'data/status.json',
 ];
 
-/**
- * Candidate payload keys per normalized field, best first.
- *
- * These are the names data projects actually use. The list is ordered, not
- * scored: the first key that exists on the data wins, which keeps the guess
- * explainable — the user can see exactly why `tldr` was chosen as the summary.
- */
-const CANDIDATES: Record<keyof FieldMap, readonly string[]> = {
-  key: ['key', 'id', 'slug', 'uuid', 'guid', 'ref'],
-  title: ['title', 'headline', 'name', 'subject', 'summary'],
-  summary: ['tldr', 'summary', 'description', 'abstract', 'excerpt', 'blurb', 'snippet', 'body'],
-  date: ['date', 'date_utc', 'published_at', 'published', 'created_at', 'updated_at', 'timestamp', 'dt'],
-  topic: ['topic', 'category', 'collection', 'event_type', 'type', 'kind', 'section'],
-  region: ['region', 'country', 'market', 'location', 'place'],
-  url: ['url', 'source_url', 'link', 'permalink', 'href'],
-};
-
 const STATUS_DATE_CANDIDATES = ['last_date', 'updated_at', 'generated_at', 'last_run', 'date', 'timestamp'];
 const STATUS_COUNT_CANDIDATES = [
   'total_items',
@@ -55,15 +40,20 @@ const STATUS_COUNT_CANDIDATES = [
 /**
  * Looks at a public GitHub data project and proposes a source configuration.
  *
- * This exists because the config-driven claim is only true if configuring is
- * easy. Without it, adding an app means reading your own JSON by hand and
- * guessing which key the search tool should read. With it, adding an app is one
- * command and a glance at what was inferred.
+ * Guessing which field is which is shared with every other source type. What is
+ * GitHub-specific is where to look: the usual read-model paths, and a stats
+ * document the status verb can read freshness and counts from.
  */
-export class GithubRepoInspector {
+export class GithubRepoInspector implements SourceInspector {
   constructor(private readonly http: JsonFetcher) {}
 
-  async inspect(repo: string, branch = 'main'): Promise<SourceProposal> {
+  async inspect(target: SourceTarget): Promise<SourceProposal> {
+    if (target.type !== 'github-repo') {
+      throw new ValidationError(`a ${target.type} source is not a GitHub repository`, 'type');
+    }
+
+    const { repo } = target;
+    const branch = target.branch ?? 'main';
     const tried: string[] = [];
 
     const index = await this.findFirst(repo, branch, INDEX_CANDIDATES, tried);
@@ -82,13 +72,12 @@ export class GithubRepoInspector {
     const first = located.items[0] as Record<string, unknown>;
     const inferred = inferFields(located.items);
 
-    // Without something to say, there is nothing to read out. Refusing here
-    // beats writing a config that validates and then answers with silence.
-    const title = inferred.title ?? inferred.summary;
-    if (title === null || title === undefined) {
+    // Something to say, in order of preference: a title, a summary, whatever columns hold text.
+    const title = inferred.title ?? inferred.summary ?? fallbackTitle(located.items);
+    if (title === null) {
       throw new SourceUnavailableError(
         repo,
-        `${index.path} has records but none of them carry a title or summary. ` +
+        `${index.path} has records but nothing in them can be read out. ` +
           `Keys seen: ${Object.keys(first).sort().join(', ')}. ` +
           `Point index_file at a different view, or add the app by hand.`,
       );
@@ -103,15 +92,19 @@ export class GithubRepoInspector {
       region: inferred.region,
       url: inferred.url,
     };
-    const evidence = buildEvidence(fields, first);
 
     const stats = await this.findStats(repo, branch, index, tried);
 
     return {
-      repo,
-      viewsDir: index.path.includes('/') ? index.path.slice(0, index.path.lastIndexOf('/')) : '.',
-      indexFile: index.path,
-      statsFile: stats.path,
+      location: {
+        type: 'github-repo',
+        repo,
+        branch,
+        viewsDir: index.path.includes('/') ? index.path.slice(0, index.path.lastIndexOf('/')) : '.',
+        indexFile: index.path,
+        statsFile: stats.path,
+      },
+      suggestedLabel: null,
       itemsPath: located.path,
       itemCount: located.items.length,
       fields,
@@ -122,7 +115,7 @@ export class GithubRepoInspector {
         read: inferred.key !== null,
         status: true,
       },
-      evidence,
+      evidence: buildEvidence(fields, first),
       availableKeys: Object.keys(first).sort(),
       triedPaths: tried,
     };
@@ -193,105 +186,4 @@ export class GithubRepoInspector {
     }
     return null;
   }
-}
-
-/** How much a candidate array looks like something a person would want read out. */
-const FIELD_WEIGHT: Record<keyof FieldMap, number> = {
-  title: 4,
-  summary: 3,
-  date: 2,
-  key: 2,
-  topic: 1,
-  region: 1,
-  url: 1,
-};
-
-function readability(items: readonly unknown[]): number {
-  const fields = inferFields(items);
-  return (Object.keys(FIELD_WEIGHT) as (keyof FieldMap)[]).reduce(
-    (total, field) => (fields[field] === null ? total : total + FIELD_WEIGHT[field]),
-    0,
-  );
-}
-
-/** Every field optional, because inference is allowed to come up empty. */
-type InferredFields = { readonly [K in keyof FieldMap]: string | null };
-
-/**
- * Finds the list of records to expose.
- *
- * Picking the longest array is wrong: eventpulse publishes 39 price rows next to
- * 10 readable events, and the price rows have no title, summary or date. What
- * matters is how much of a spoken answer an array can fill, so candidates are
- * scored on that and length only breaks a tie.
- */
-function locateItems(document: unknown): { path: string | null; items: unknown[] } | null {
-  if (isRecordArray(document)) return { path: null, items: document };
-  if (document === null || typeof document !== 'object') return null;
-
-  let best: { path: string; items: unknown[]; score: number } | null = null;
-  for (const [key, value] of Object.entries(document as Record<string, unknown>)) {
-    if (!isRecordArray(value)) continue;
-    const score = readability(value);
-    if (best === null || score > best.score || (score === best.score && value.length > best.items.length)) {
-      best = { path: key, items: value, score };
-    }
-  }
-  return best;
-}
-
-function isRecordArray(value: unknown): value is unknown[] {
-  return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    typeof value[0] === 'object' &&
-    value[0] !== null &&
-    !Array.isArray(value[0])
-  );
-}
-
-/**
- * Picks a payload key per field.
- *
- * A key only counts if it holds a usable value on most of the sample, so a
- * field that exists but is empty everywhere is not proposed.
- */
-function inferFields(items: readonly unknown[]): InferredFields {
-  const sample = items.slice(0, 10);
-  const pick = (field: keyof FieldMap): string | null => {
-    for (const candidate of CANDIDATES[field]) {
-      const hits = sample.filter((item) => readString(item, candidate) !== null).length;
-      if (hits > sample.length / 2) return candidate;
-    }
-    return null;
-  };
-
-  // Never invent a path that is not in the data: a config naming a field that
-  // does not exist looks valid and then returns nothing at runtime.
-  return {
-    key: pick('key'),
-    title: pick('title'),
-    summary: pick('summary'),
-    date: pick('date'),
-    topic: pick('topic'),
-    region: pick('region'),
-    url: pick('url'),
-  };
-}
-
-function buildEvidence(fields: FieldMap, first: Record<string, unknown>): FieldEvidence[] {
-  return (Object.keys(fields) as (keyof FieldMap)[]).map((field) => {
-    const path = fields[field];
-    const raw = path === null ? null : readPath(first, path);
-    return {
-      field,
-      path,
-      sample: raw === undefined || raw === null ? null : trim(String(raw)),
-    };
-  });
-}
-
-function trim(value: string): string {
-  const clean = value.replace(/\s+/g, ' ').trim();
-  return clean.length <= 60 ? clean : `${clean.slice(0, 57)}...`;
 }
