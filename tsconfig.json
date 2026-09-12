@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    // Off deliberately: @modelcontextprotocol/sdk types `Transport.onclose` as an
+    // optional property but implements it as an accessor of type `(() => void) | undefined`,
+    // so `server.connect(transport)` does not typecheck under this flag. Everything
+    // else in CODING_STANDARDS.md §5 stays on.
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
