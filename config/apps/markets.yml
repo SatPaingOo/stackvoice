@@ -1,5 +1,9 @@
 # Demo persona app 2: eventpulse (market intelligence).
-# Example of an app that is NOT a searchable text library — read + status only.
+#
+# This app proves the config-driven claim: its payload looks nothing like the
+# library's. Its items are nested under a key rather than being the whole
+# document, and every field has a different name. Both differences are handled
+# here in config — no adapter code knows about either app.
 
 id: markets
 label: "Market intelligence"
@@ -8,7 +12,7 @@ description: >
   gold, oil and major stocks moved.
 enabled: true
 primitives:
-  search: false
+  search: true
   read: true
   status: true
 sources:
@@ -16,6 +20,20 @@ sources:
     type: github-repo
     repo: SatPaingOo/eventpulse
     views_dir: data/views
-    stats_file: data/views/status.json
+    # The status verb reads freshness and volume from here. This app publishes
+    # both inside its index document rather than a separate stats file.
+    stats_file: data/views/index.json
     label: "market intelligence"
+    items_path: recent_events   # the items are nested, not the whole document
+    fields:
+      key: id
+      title: summary            # an event's headline is its summary
+      summary: summary
+      date: date_utc
+      topic: event_type
+      region: region
+      url: url
+    status_fields:
+      last_data_date: updated_at
+      item_count: stats.events
 shortcuts: []

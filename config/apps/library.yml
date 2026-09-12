@@ -18,6 +18,19 @@ sources:
     views_dir: data/views
     stats_file: data/views/stats.json
     label: "deep-dive library"
+    # This app already publishes an array of items at data/views/index.json,
+    # so no items_path is needed.
+    fields:
+      key: key
+      title: title
+      summary: tldr          # this app calls the summary "tldr"
+      date: date
+      topic: topic
+      region: region
+      url: source_url
+    status_fields:
+      last_data_date: last_date
+      item_count: total_items
 shortcuts:
   - name: "morning brief"
     description: "Latest deep-dives plus overall stack health, in one answer."

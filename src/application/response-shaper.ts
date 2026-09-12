@@ -1,4 +1,5 @@
-import type { StackHealth } from '../domain/health.js';
+import type { AppHealth, StackHealth } from '../domain/health.js';
+import type { Item, SearchParams } from '../domain/item.js';
 
 /**
  * Turns read models into text a voice assistant can speak.
@@ -69,4 +70,70 @@ export function listPhrase(items: readonly string[]): string {
     return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1] as string}`;
   }
   return `${items.slice(0, 3).join(', ')} and ${items.length - 3} more`;
+}
+
+/**
+ * Search results as a spoken answer.
+ *
+ * A voice assistant cannot read a JSON array aloud, so this is deliberately not
+ * a list dump: it says how many there are, then reads the newest few titles.
+ */
+export function shapeSearchResults(
+  appLabel: string,
+  items: readonly Item[],
+  params: SearchParams,
+): string {
+  if (items.length === 0) {
+    const about = params.query !== undefined && params.query.trim() !== '' ? ` about ${params.query}` : '';
+    return toSpoken(`I found nothing${about} in your ${appLabel}.`);
+  }
+
+  const lead = items.length === 1 ? 'One entry' : `${items.length} entries`;
+  const titles = items.slice(0, 3).map((item) => trimTitle(item.title));
+  const more = items.length > 3 ? `, and ${items.length - 3} more` : '';
+  return toSpoken(`${lead} in your ${appLabel}. ${listPhrase(titles)}${more}.`);
+}
+
+/** One entry, read out: the title, then the summary if it adds anything. */
+export function shapeItem(item: Item): string {
+  const title = trimTitle(item.title);
+  const summary = item.summary === null ? null : item.summary.replace(/\s+/g, ' ').trim();
+  // Some apps store one line of text and map both fields to it; do not say it twice.
+  if (summary === null || summary === '' || summary.startsWith(title.replace(/…$/, ''))) {
+    return toSpoken(title);
+  }
+  return toSpoken(`${title}. ${summary}`);
+}
+
+export function shapeAppHealth(appLabel: string, health: AppHealth, now: Date): string {
+  const source = health.sources[0];
+  if (source === undefined) return toSpoken(`Your ${appLabel} has no sources configured.`);
+
+  if (!health.ok) {
+    return toSpoken(`Your ${appLabel} has a problem: ${source.lastError ?? 'the last run did not succeed'}.`);
+  }
+
+  const when = source.lastRunAt === null ? null : humanizeSince(new Date(source.lastRunAt), now);
+  const ran = when === null ? '' : ` It last ran ${when}.`;
+  const holds = source.itemCount === null ? '' : ` It holds ${source.itemCount} items`;
+  const fresh = source.lastDataDate === null ? '' : `${holds === '' ? ' Data is' : ', fresh to'} ${describeDate(source.lastDataDate)}`;
+  return toSpoken(`Your ${appLabel} is healthy.${ran}${holds}${fresh}${holds === '' && fresh === '' ? '' : '.'}`);
+}
+
+/** Turns an ISO-ish date into something speakable, without reading digits aloud. */
+function describeDate(value: string): string {
+  const date = value.length >= 10 ? value.slice(0, 10) : value;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * Titles from news feeds run long and some already end in a full stop. Both
+ * matter out loud: a long title buries the point, and a stray period turns a
+ * read-back list into "Ecuador., President Trump...".
+ */
+function trimTitle(title: string): string {
+  const clean = title.replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
+  return clean.length <= 90 ? clean : `${clean.slice(0, 87).trimEnd()}…`;
 }

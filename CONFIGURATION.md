@@ -105,23 +105,61 @@ deep-dive library, e.g. 'what did you find about AI this week?'").
 
 | type | v1? | Fields | Verbs supported |
 |---|---|---|---|
-| `github-repo` | ✅ | `repo`, `views_dir`, `stats_file` | search / read / status (Actions + commits + stats) |
+| `github-repo` | ✅ | `repo`, `views_dir`, `stats_file`, `index_file`, `items_path`, `fields`, `status_fields` | search / read / status (index views + Actions runs) |
 | `json-url` | planned | `url`, `items_path` | search / read |
 | `rss` | planned | `url`, `limit` | search (fetch → normalize items) |
 | `api` | planned | `url_template`, `auth_env` | search (GET) |
+
+### 5.1 Mapping a payload you did not design (`fields`, `status_fields`)
+
+No two data projects name their fields the same way. Rather than force every app
+into one schema — or write an adapter per app — a source declares where each
+normalized field lives. This is the whole config-driven claim in one block:
+
+```yaml
+    items_path: recent_events   # omit when the document is already a list
+    index_file: data/views/index.json   # defaults to {views_dir}/index.json
+    fields:
+      key: id                   # library calls it "key", markets calls it "id"
+      title: summary
+      summary: summary
+      date: date_utc            # library calls it "date"
+      topic: event_type
+      region: region
+      url: url
+    status_fields:
+      last_data_date: updated_at
+      item_count: stats.events  # dot paths reach into nested documents
+```
+
+Every value is a path into the source's own payload; `fields` feeds the search
+and read verbs, `status_fields` feeds the status verb. Both accept dot paths.
+An app whose entries have no topic sets `topic: null` and the topic filter simply
+never matches it.
+
+The two shipped apps prove the point: `library` publishes a flat array whose
+summary field is called `tldr`, `markets` publishes its events nested under
+`recent_events` with entirely different names. One adapter serves both, and it
+contains no reference to either app.
 
 ## 6. Worked examples (shipped defaults = demo persona)
 
 ### `config/apps/library.yml` (information-hub)
 
 ```yaml
+# Demo persona app 1: information-hub (deep-dive library).
+# See CONFIGURATION.md §3 for the full reference.
+
 id: library
 label: "Deep-dive library"
 description: >
   Daily deep-dive articles on world news, tech, politics and products,
   verified and classified by region and topic.
 enabled: true
-primitives: {search: true, read: true, status: true}
+primitives:
+  search: true
+  read: true
+  status: true
 sources:
   - id: library
     type: github-repo
@@ -129,9 +167,22 @@ sources:
     views_dir: data/views
     stats_file: data/views/stats.json
     label: "deep-dive library"
+    # This app already publishes an array of items at data/views/index.json,
+    # so no items_path is needed.
+    fields:
+      key: key
+      title: title
+      summary: tldr          # this app calls the summary "tldr"
+      date: date
+      topic: topic
+      region: region
+      url: source_url
+    status_fields:
+      last_data_date: last_date
+      item_count: total_items
 shortcuts:
   - name: "morning brief"
-    description: "Latest deep-dives plus overall stack health."
+    description: "Latest deep-dives plus overall stack health, in one answer."
     steps:
       - {tool: library_search, args: {limit: 3}}
       - {tool: stack_status, args: {}}
@@ -141,26 +192,54 @@ shortcuts:
 ### `config/apps/markets.yml` (eventpulse)
 
 ```yaml
+# Demo persona app 2: eventpulse (market intelligence).
+#
+# This app proves the config-driven claim: its payload looks nothing like the
+# library's. Its items are nested under a key rather than being the whole
+# document, and every field has a different name. Both differences are handled
+# here in config — no adapter code knows about either app.
+
 id: markets
 label: "Market intelligence"
 description: >
-  Event-driven market intelligence: tracks global events and explains
-  why gold, oil and major stocks moved.
+  Event-driven market intelligence: tracks global events and explains why
+  gold, oil and major stocks moved.
 enabled: true
-primitives: {search: false, read: true, status: true}
+primitives:
+  search: true
+  read: true
+  status: true
 sources:
   - id: markets
     type: github-repo
     repo: SatPaingOo/eventpulse
     views_dir: data/views
-    stats_file: data/views/status.json
+    # The status verb reads freshness and volume from here. This app publishes
+    # both inside its index document rather than a separate stats file.
+    stats_file: data/views/index.json
     label: "market intelligence"
+    items_path: recent_events   # the items are nested, not the whole document
+    fields:
+      key: id
+      title: summary            # an event's headline is its summary
+      summary: summary
+      date: date_utc
+      topic: event_type
+      region: region
+      url: url
+    status_fields:
+      last_data_date: updated_at
+      item_count: stats.events
 shortcuts: []
 ```
 
-> `markets` enables `read`/`status` only — a realistic example of an app that is
-> *not* a searchable text library. The registry + catalog handle asymmetric
-> primitives per app.
+> The two apps look nothing alike on the wire: `library` is a flat array of
+> articles, `markets` nests its events under `recent_events` and names every
+> field differently. Both expose the same three tools, and the difference lives
+> entirely in `items_path` and `fields`.
+>
+> Primitives stay per-app: set any of `search`/`read`/`status` to `false` and the
+> catalog simply generates fewer tools for that app.
 
 ## 7. Adding your own app (the "no code" story)
 

@@ -1,14 +1,28 @@
 import { resolve } from 'node:path';
 import process, { argv, cwd, exit } from 'node:process';
 
+import { AppRegistryService } from './application/app-registry.service.js';
 import { HealthService } from './application/health.service.js';
+import { ReadService } from './application/read.service.js';
+import { SearchService } from './application/search.service.js';
+import { StatusService } from './application/status.service.js';
+import { ToolCatalogService } from './application/tool-catalog.service.js';
 import { StackVoiceError } from './domain/errors.js';
+import type { DataSourceReader } from './domain/ports/data-source-reader.js';
+import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
+import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
+import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
+import { HttpClient } from './infrastructure/http/http-client.js';
+import { TtlCache } from './infrastructure/http/ttl-cache.js';
 import { PinoLogger } from './infrastructure/logging/pino.logger.js';
 import { SystemClock } from './infrastructure/system-clock.js';
 import { createHttpServer } from './presentation/mcp/http-server.js';
+import { ToolMapper } from './presentation/mcp/tool-mapper.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
+
+const FETCH_TIMEOUT_MS = 8000;
 
 /**
  * Composition root. The only place that knows every concrete class: it builds
@@ -18,20 +32,55 @@ export const VERSION = '0.1.0';
  */
 async function main(): Promise<void> {
   const settingsPath = resolve(cwd(), argv[2] ?? 'config/settings.yml');
+  const appsDir = resolve(cwd(), argv[3] ?? 'config/apps');
 
   const settings = await new YamlSettingsStore(settingsPath).load();
   const logger = PinoLogger.create(settings.server.logLevel);
-  const health = new HealthService(VERSION, new SystemClock());
+  const clock = new SystemClock();
 
-  const http = createHttpServer({ version: VERSION, health, logger, settings });
-  const server = await http.listen();
+  // infrastructure
+  const cache = new TtlCache(settings.cache.ttlSeconds * 1000);
+  const http = new HttpClient({ timeoutMs: FETCH_TIMEOUT_MS, cache, logger });
+  const readers = new Map<string, DataSourceReader>([['github-repo', new GithubRepoAdapter(http)]]);
+  const readerFactory = new ReaderFactory(readers);
+
+  // application
+  const registry = new AppRegistryService(new YamlConfigStore(appsDir), logger);
+  await registry.load();
+
+  const search = new SearchService(registry, readerFactory);
+  const read = new ReadService(registry, readerFactory);
+  const status = new StatusService(registry, readerFactory);
+  const health = new HealthService(VERSION, clock, registry, status);
+  const catalog = new ToolCatalogService();
+
+  // presentation
+  const mapper = new ToolMapper({
+    registry,
+    search,
+    read,
+    status,
+    health,
+    logger,
+    now: () => clock.now(),
+  });
+
+  const http_ = createHttpServer({ version: VERSION, registry, catalog, mapper, logger, settings });
+  const server = await http_.listen();
 
   logger.info('stackvoice listening', {
     host: settings.server.host,
     port: settings.server.port,
     endpoint: '/mcp',
+    apps: registry.listEnabled().map((app) => app.id),
     authRequired: settings.management.authToken !== '',
   });
+
+  // Warm the cache so the first tool call does not pay for a cold fetch: the
+  // Alexa+ round-trip budget is 500 ms and a cold GitHub fetch alone exceeds it.
+  void Promise.all(registry.listEnabled().map((app) => status.report(app)))
+    .then(() => logger.info('cache warmed', { entries: cache.size }))
+    .catch((error: unknown) => logger.warn('cache warm failed', { reason: String(error) }));
 
   const shutdown = (signal: string): void => {
     logger.info('shutting down', { signal });
