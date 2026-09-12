@@ -25,15 +25,43 @@ server:
   port: 8765
   log_level: info          # debug | info | warn | error
 
+auth:
+  mode: none               # none | token | oauth
+  token: ""                # shared token in "token" mode; consent secret in "oauth" mode
+  public_url: ""           # required in "oauth" mode, e.g. https://stackvoice.example.com
+
 management:
   cli: true                # CLI face enabled (primary)
-  web_console: false       # local dashboard (planned, stage 5)
-  admin_mcp_tools: false   # expose admin_* tools over MCP (opt-in; see MANAGEMENT.md)
-  auth_token: ""           # optional shared token required when server is public
 
 cache:
   ttl_seconds: 300         # per-URL cache for fetched JSON / API calls
 ```
+
+### Auth modes
+
+| `mode` | What it does | Use when |
+|---|---|---|
+| `none` | No check at all | Local development, bound to `127.0.0.1` |
+| `token` | One shared bearer token on every request | Behind a private tunnel you control |
+| `oauth` | Full OAuth 2.1 authorization server with PKCE (S256) | Connecting a real client such as Alexa+ |
+
+`oauth` mode is what the Alexa+ MCP Toolkit requires. The server then also
+publishes:
+
+| Endpoint | Purpose |
+|---|---|
+| `/.well-known/oauth-authorization-server` | Authorization server metadata, advertising `S256` |
+| `/.well-known/oauth-protected-resource/mcp` | Protected resource metadata (RFC 9728) |
+| `/authorize` `/token` `/register` `/revoke` | The flow itself, including dynamic client registration |
+
+An unauthenticated request to `/mcp` returns `401` with a `WWW-Authenticate`
+header naming the resource metadata URL, which is how a client discovers where
+to authenticate.
+
+Because StackVoice is self-hosted there is no identity provider to delegate to
+and only one user — you. The consent screen therefore asks for `auth.token`
+rather than a username and password. Tokens live in memory: restarting the
+server signs every client out.
 
 ## 3. App file — `config/apps/{id}.yml`
 

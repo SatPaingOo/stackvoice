@@ -63,6 +63,6 @@ describe('YamlSettingsStore.load', () => {
     const settings = await new YamlSettingsStore('config/settings.yml').load();
 
     expect(settings.server.port).toBe(8765);
-    expect(settings.management.authToken).toBe('');
+    expect(settings.auth.mode).toBe('none');
   });
 });

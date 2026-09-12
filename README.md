@@ -21,9 +21,9 @@ npm run dev              # starts the MCP server on http://127.0.0.1:8765/mcp
 npx @modelcontextprotocol/inspector   # point it at that URL to list and call tools
 ```
 
-`npm test` runs the unit suite. Settings live in `config/settings.yml`; set
-`management.auth_token` there to require `Authorization: Bearer <token>` on every
-request.
+`npm test` runs the unit suite. Settings live in `config/settings.yml`. Set
+`auth.mode` to `token` for a shared bearer token, or to `oauth` for the full
+OAuth 2.1 + PKCE flow that Alexa+ requires — see CONFIGURATION.md §2.
 
 ## What's inside (scope — decided before any code)
 

@@ -44,7 +44,11 @@ export class YamlSettingsStore implements SettingsStore {
       },
       management: {
         cli: raw.management.cli,
-        authToken: raw.management.auth_token,
+      },
+      auth: {
+        mode: raw.auth.mode,
+        token: raw.auth.token,
+        publicUrl: raw.auth.public_url.replace(/\/+$/, ''),
       },
       cache: {
         ttlSeconds: raw.cache.ttl_seconds,

@@ -16,9 +16,21 @@ export const settingsSchema = z.object({
   management: z
     .object({
       cli: z.boolean().default(true),
-      auth_token: z.string().default(''),
     })
-    .default({ cli: true, auth_token: '' }),
+    .default({ cli: true }),
+  auth: z
+    .object({
+      mode: z.enum(['none', 'token', 'oauth']).default('none'),
+      token: z.string().default(''),
+      public_url: z.string().default(''),
+    })
+    .default({ mode: 'none', token: '', public_url: '' })
+    .refine((value) => value.mode !== 'oauth' || value.public_url.startsWith('http'), {
+      message: 'auth.public_url is required when auth.mode is "oauth"',
+    })
+    .refine((value) => value.mode !== 'token' || value.token !== '', {
+      message: 'auth.token is required when auth.mode is "token"',
+    }),
   cache: z
     .object({
       ttl_seconds: z.number().int().min(0).max(86_400).default(300),

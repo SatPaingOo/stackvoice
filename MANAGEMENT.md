@@ -127,11 +127,15 @@ if time allows.
 
 ## 5. Security model
 
-- Default bind: `127.0.0.1` (localhost only).
-- When exposed publicly (tunnel/proxy for the demo): require `auth_token` from
-  `settings.yml` — checked by the HTTP transport for *all* requests, including
-  MCP.
-- Admin MCP tools ship disabled; enable explicitly.
+- Default bind: `127.0.0.1` (localhost only), with `auth.mode: none`.
+- Exposed publicly: set `auth.mode` to `token` (one shared bearer token) or
+  `oauth` (OAuth 2.1 with PKCE, which Alexa+ requires). Both are enforced on
+  every request to `/mcp`; `/healthz` stays open as a liveness probe.
+- In `oauth` mode the consent screen asks for `auth.token`, because a
+  self-hosted server has one user and no identity provider. Tokens are held in
+  memory, so a restart signs every client out.
+- Admin MCP tools are cut from scope (FRAMEWORK.md §7), so no tool can mutate
+  config.
 - Logs never include tokens, file contents, or full query payloads.
 
 ## 6. Staged rollout

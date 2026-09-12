@@ -73,7 +73,7 @@ async function main(): Promise<void> {
     port: settings.server.port,
     endpoint: '/mcp',
     apps: registry.listEnabled().map((app) => app.id),
-    authRequired: settings.management.authToken !== '',
+    auth: settings.auth.mode,
   });
 
   // Warm the cache so the first tool call does not pay for a cold fetch: the

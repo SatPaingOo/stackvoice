@@ -6,11 +6,16 @@ server:
   port: 8765
   log_level: info          # debug | info | warn | error
 
+auth:
+  # none  — localhost development only (default)
+  # token — one shared bearer token, enough for a private tunnel
+  # oauth — OAuth 2.1 with PKCE, which Alexa+ requires
+  mode: none
+  token: ""                # shared token in "token" mode; consent secret in "oauth" mode
+  public_url: ""           # required in "oauth" mode, e.g. https://stackvoice.example.com
+
 management:
   cli: true                # CLI face enabled (primary)
-  web_console: false       # local dashboard (planned, stage 5)
-  admin_mcp_tools: false   # expose admin_* tools over MCP (opt-in; see MANAGEMENT.md)
-  auth_token: ""           # optional shared token required when server is public
 
 cache:
   ttl_seconds: 300         # per-URL cache for fetched JSON / API calls
