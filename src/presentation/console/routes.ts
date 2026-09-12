@@ -1,6 +1,6 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 
-import type { Express, NextFunction, Request, RequestHandler, Response } from 'express';
+import express, { type Express, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 
 import type { AppRegistryService } from '../../application/app-registry.service.js';
 import type { HealthService } from '../../application/health.service.js';
@@ -17,6 +17,7 @@ import type { AuthMode, LogLevel, Settings } from '../../domain/settings.js';
 import type { Shortcut, ShortcutProps, ShortcutStep } from '../../domain/shortcut.js';
 import type { SourceProposal } from '../../domain/source-proposal.js';
 import { renderLandingPage } from '../web/landing.js';
+import { ASSETS_PATH } from '../web/layout.js';
 import { renderAppsPage } from './apps-page.js';
 import { renderSettingsPage } from './settings-page.js';
 import { renderShortcutsPage } from './shortcuts-page.js';
@@ -38,6 +39,8 @@ export interface ConsoleDeps {
   readonly settingsStore: SettingsStore;
   /** API keys for url sources. The console stores and lists them; it never reads a value back. */
   readonly secrets: SecretStore;
+  /** The compiled browser modules (dist/public), served at /assets. */
+  readonly assetsDir: string;
 }
 
 const SESSION_COOKIE = 'stackvoice_console';
@@ -93,6 +96,9 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     };
 
   // ---- pages -------------------------------------------------------------
+
+  // The console's component modules. Public: they carry code, never data or keys.
+  app.use(ASSETS_PATH, express.static(deps.assetsDir, { index: false, dotfiles: 'ignore', fallthrough: false }));
 
   app.get('/', async (_req, res) => {
     const health = await deps.health.reportStack().catch(() => null);

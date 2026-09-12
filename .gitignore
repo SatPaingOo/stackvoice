@@ -15,6 +15,13 @@ logs/
 .env.*
 !.env.example
 
+# AI tool working folders
+.claude/
+.cursor/
+.zcode/
+.windsurf/
+.aider*
+
 # editor / OS
 .DS_Store
 Thumbs.db

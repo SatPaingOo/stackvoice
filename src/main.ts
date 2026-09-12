@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { access, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import process, { argv, cwd, exit } from 'node:process';
 
@@ -134,6 +134,14 @@ async function main(): Promise<void> {
     await shortcuts.load();
   };
 
+  // The console's browser code is compiled separately. Without it the pages load and do nothing.
+  const assetsDir = resolve(cwd(), 'dist', 'public');
+  if (settings.console.enabled) {
+    await access(resolve(assetsDir, 'apps', 'apps-page.js')).catch(() =>
+      logger.warn('console assets missing: run npm run build:client', { assetsDir }),
+    );
+  }
+
   const console_: ConsoleDeps | null = settings.console.enabled
     ? {
         management: new ManagementService(store, inspector, logger, shortcutStore),
@@ -150,6 +158,7 @@ async function main(): Promise<void> {
         settings,
         settingsStore,
         secrets,
+        assetsDir,
       }
     : null;
 

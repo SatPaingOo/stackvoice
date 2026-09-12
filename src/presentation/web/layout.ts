@@ -11,9 +11,14 @@ export interface PageOptions {
   readonly body: string;
   /** Page script, run after the markup is parsed. */
   readonly script?: string;
+  /** Compiled client modules under /assets, such as `apps/apps-page.js`. */
+  readonly modules?: readonly string[];
   /** Landing pages own their whole viewport and skip the app chrome. */
   readonly chrome?: boolean;
 }
+
+/** Where the compiled client modules are served. */
+export const ASSETS_PATH = '/assets';
 
 const NAV_ITEMS: { key: NavKey; href: string; label: string }[] = [
   { key: 'apps', href: '/console', label: 'Apps' },
@@ -48,6 +53,7 @@ ${chrome ? topbar(options.nav) : ''}
 ${options.body}
 ${chrome ? footer() : ''}
 <script>${REVEAL_SCRIPT}${options.script ?? ''}</script>
+${(options.modules ?? []).map((path) => `<script type="module" src="${ASSETS_PATH}/${escapeHtml(path)}"></script>`).join('\n')}
 </body>
 </html>`;
 }

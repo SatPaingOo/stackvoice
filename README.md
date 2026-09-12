@@ -20,6 +20,9 @@ npm install
 npm run dev
 ```
 
+`npm run dev` compiles the console's browser code into `dist/public` first. While changing files under
+`src/presentation/web/client`, keep `npm run dev:client` running beside it.
+
 Open **http://localhost:8765/simulator** and ask it something:
 
 > "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more"
@@ -83,7 +86,7 @@ for its feed instead.
 
 ### In a browser
 
-Open **http://localhost:8765/console**, click **Add an app**, and paste. StackVoice
+Open **http://localhost:8765/console**, click **Add an app**, and paste into the dialog that opens. StackVoice
 fetches it, finds the records, even when an API nests them inside its response,
 and works out which field is the title, the summary, the date and the link.
 Records with no title of their own get one built from their columns, so a row of

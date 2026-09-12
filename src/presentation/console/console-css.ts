@@ -1,64 +1,7 @@
 /**
- * The JavaScript every console page shares: fetch, notices, and small DOM
- * helpers. Inlined per page rather than served as a file, so the console keeps
- * working from a clone with no build step and no network.
+ * Styles shared by the console pages: lists, cards, field maps and step rows.
+ * Component styles live in web/components-css.ts.
  */
-export const CONSOLE_CLIENT = `
-function el(id) { return document.getElementById(id); }
-
-function make(tag, cls, text) {
-  var node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined && text !== null) node.textContent = text;
-  return node;
-}
-
-function note(target, kind, text) {
-  var box = typeof target === 'string' ? el(target) : target;
-  if (!box) return;
-  box.innerHTML = '';
-  if (!text) return;
-  box.appendChild(make('div', 'note ' + kind, text));
-}
-
-function api(method, path, body) {
-  return fetch(path, {
-    method: method,
-    headers: body ? { 'content-type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined
-  }).then(function (response) {
-    if (response.status === 401) {
-      window.location.href = '/console/signin?next=' + encodeURIComponent(window.location.pathname);
-      throw new Error('Sign in first.');
-    }
-    return response.json().catch(function () { return {}; }).then(function (data) {
-      if (!response.ok) throw new Error(data.error || 'That did not work.');
-      return data;
-    });
-  });
-}
-
-function busy(button, on, label) {
-  if (!button) return;
-  button.disabled = on;
-  if (on) {
-    button.dataset.label = button.textContent;
-    button.textContent = label || 'Working...';
-  } else if (button.dataset.label) {
-    button.textContent = button.dataset.label;
-  }
-}
-`;
-
-/** An empty-state card, used wherever a list can be legitimately empty. */
-export function emptyState(title: string, body: string, action?: { href: string; label: string }): string {
-  return `<div class="card empty">
-  <h3>${title}</h3>
-  <p class="soft">${body}</p>
-  ${action === undefined ? '' : `<a class="btn primary" href="${action.href}">${action.label}</a>`}
-</div>`;
-}
-
 export const CONSOLE_CSS = `
   .empty { text-align: center; padding: 46px 24px; }
   .empty h3 { font-size: 17px; }

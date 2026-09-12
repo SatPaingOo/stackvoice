@@ -1,5 +1,4 @@
 import { renderPage } from '../web/layout.js';
-import { CONSOLE_CLIENT } from './client.js';
 
 /** The one screen shown when the console needs a token and has none. */
 export function renderSigninPage(): string {
@@ -25,27 +24,6 @@ export function renderSigninPage(): string {
     <button class="primary" id="go" type="submit" style="margin-top:18px;width:100%;justify-content:center">Sign in</button>
   </form>
 </main>`,
-    script:
-      CONSOLE_CLIENT +
-      `
-el('form').addEventListener('submit', function (event) {
-  event.preventDefault();
-  busy(el('go'), true, 'Signing in...');
-  fetch('/console/api/login', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token: el('token').value })
-  })
-    .then(function (response) {
-      return response.json().then(function (data) {
-        if (!response.ok) throw new Error(data.error || 'That did not work.');
-        var next = new URLSearchParams(window.location.search).get('next');
-        // Only follow a path on this server, never an absolute URL from the query string.
-        window.location.href = next && next.charAt(0) === '/' && next.charAt(1) !== '/' ? next : '/console';
-      });
-    })
-    .catch(function (error) { note('formNote', 'err', error.message); busy(el('go'), false); });
-});
-`,
+    modules: ['signin/signin-page.js'],
   });
 }

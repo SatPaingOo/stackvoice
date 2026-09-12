@@ -110,7 +110,8 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 | CLI | `cli.ts`, `cli/commands/*.ts` | management operations from a terminal |
 | Web design system | `web/theme.ts`, `web/layout.ts` | shared tokens, page shell and navigation; every page renders through one layout so they stay one product |
 | Landing | `web/landing.ts` | the idea in ten seconds, with live numbers read from the running stack |
-| Web console | `console/routes.ts`, `console/apps-page.ts`, `console/shortcuts-page.ts`, `console/settings-page.ts`, `console/signin-page.ts` | one route per concern over the same ManagementService, plus a settings write path |
+| Web console | `console/routes.ts`, `console/apps-page.ts`, `console/shortcuts-page.ts`, `console/settings-page.ts`, `console/signin-page.ts` | one route per concern over the same ManagementService, plus a settings write path. The server renders each page's frame; adding and editing happen in client dialogs |
+| Web client | `web/client/`, compiled by `tsconfig.client.json` to `dist/public` and served at `/assets` | browser components as classes with no framework: `Modal`, `ConfirmDialog`, form controls, and per-screen forms such as `AppFormModal`. Each screen's entry file is its composition root. Forms depend on gateway interfaces such as `AppsGateway`, never on `fetch`, and a new source type is a new `LocationEditor` |
 | Simulator | `simulator/routes.ts`, `simulator/page.ts` | simulated Alexa+ client; drives the server as a real MCP client |
 
 ## 4. Multi-app design (P2)

@@ -1,0 +1,23 @@
+{
+  // The browser half of the console: component classes compiled to ES modules
+  // in dist/public, served at /assets. Kept apart from tsconfig.json because it
+  // needs the DOM types and the server must never see them.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "rootDir": "src/presentation/web/client",
+    "outDir": "dist/public",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src/presentation/web/client/**/*.ts"]
+}

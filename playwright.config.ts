@@ -25,7 +25,8 @@ export default defineConfig({
   projects: [{ name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge', headless: true } }],
   webServer: {
     // A scratch copy of config/apps and a data folder of its own, so tests can add apps and keys.
-    command: 'node tests/e2e/prepare.mjs && npx tsx src/main.ts tests/e2e/settings.yml tests/e2e/.work/apps',
+    command:
+      'node tests/e2e/prepare.mjs && npm run build:client && npx tsx src/main.ts tests/e2e/settings.yml tests/e2e/.work/apps',
     url: `http://127.0.0.1:${PORT}/healthz`,
     reuseExistingServer: false,
     timeout: 60_000,

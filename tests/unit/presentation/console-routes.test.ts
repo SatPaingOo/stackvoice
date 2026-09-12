@@ -99,6 +99,7 @@ beforeEach(async () => {
       },
     },
     secrets,
+    assetsDir: root,
   } as unknown as ConsoleDeps;
 
   const app = express();
@@ -114,17 +115,25 @@ afterEach(async () => {
   await stop();
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Json = any;
+/** The fields of an app these tests read. */
+interface AppBody {
+  location: { url?: string; headers?: unknown };
+  from: string;
+  missingSecrets: string[];
+}
 
-async function call(method: string, path: string, body?: unknown): Promise<{ status: number; text: string; json: Json }> {
+async function call<T = Record<string, unknown>>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; text: string; json: T }> {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: body === undefined ? {} : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await response.text();
-  return { status: response.status, text, json: text === '' ? null : JSON.parse(text) };
+  return { status: response.status, text, json: (text === '' ? null : JSON.parse(text)) as T };
 }
 
 const urlApp = (location: Record<string, unknown>, label = 'Projects') => ({
@@ -138,7 +147,8 @@ const urlApp = (location: Record<string, unknown>, label = 'Projects') => ({
   statusFields: {},
 });
 
-const firstApp = async (): Promise<Json> => (await call('GET', '/console/api/apps')).json.apps[0];
+const firstApp = async (): Promise<AppBody> =>
+  (await call<{ apps: AppBody[] }>('GET', '/console/api/apps')).json.apps[0] as AppBody;
 
 describe('keys', () => {
   it('stores a key and lists its name, never its value', async () => {
@@ -177,7 +187,7 @@ describe('apps with a url source', () => {
     expect((await call('PUT', '/console/api/apps/projects', urlApp(withKey))).status).toBe(200);
 
     const app = await firstApp();
-    const keys = await call('GET', '/console/api/secrets');
+    const keys = await call<{ secrets: unknown }>('GET', '/console/api/secrets');
 
     expect(app.location).toEqual({
       type: 'url',
@@ -193,9 +203,9 @@ describe('apps with a url source', () => {
   it('never sends back a header value written as plain text', async () => {
     await call('PUT', '/console/api/apps/projects', urlApp({ ...withKey, headers: { 'X-Api-Key': 'raw-value-999' } }));
 
-    const listed = await call('GET', '/console/api/apps');
+    const listed = await call<{ apps: AppBody[] }>('GET', '/console/api/apps');
 
-    expect(listed.json.apps[0].location.headers).toEqual([{ name: 'X-Api-Key', prefix: null, secret: null }]);
+    expect(listed.json.apps[0]?.location.headers).toEqual([{ name: 'X-Api-Key', prefix: null, secret: null }]);
     expect(listed.text).not.toContain('raw-value-999');
   });
 
@@ -220,7 +230,7 @@ describe('apps with a url source', () => {
   it('will not carry a key to a different site', async () => {
     await call('PUT', '/console/api/apps/projects', urlApp(withKey));
 
-    const moved = await call('PUT', '/console/api/apps/projects', urlApp({ type: 'url', url: 'https://elsewhere.example.net/x', format: 'json' }));
+    const moved = await call<{ error: string }>('PUT', '/console/api/apps/projects', urlApp({ type: 'url', url: 'https://elsewhere.example.net/x', format: 'json' }));
 
     expect(moved.status).toBe(400);
     expect(moved.json.error).toMatch(/different site/);
@@ -246,7 +256,10 @@ describe('inspect', () => {
   it('passes the pasted headers on and describes them back without values', async () => {
     const headers = { Authorization: 'Token {{secret:PROJECTS_KEY}}' };
 
-    const result = await call('POST', '/console/api/inspect', { input: PROJECTS, headers });
+    const result = await call<{ proposal: { location: { headers: unknown } } }>('POST', '/console/api/inspect', {
+      input: PROJECTS,
+      headers,
+    });
 
     expect(inspected).toEqual([{ type: 'url', url: PROJECTS, headers }]);
     expect(result.json.proposal.location.headers).toEqual([
@@ -270,14 +283,18 @@ describe('settings: data sources', () => {
   });
 
   it('sends the data source settings to the page', async () => {
-    expect((await call('GET', '/console/api/settings')).json.settings.sources).toEqual({
+    expect((await call<{ settings: { sources: unknown } }>('GET', '/console/api/settings')).json.settings.sources).toEqual({
       allowPrivateNetwork: false,
       dataDir: 'data',
     });
   });
 
   it('saves a new data folder and private network access', async () => {
-    const saved = await call('PUT', '/console/api/settings', body({ dataDir: 'exports/', allowPrivateNetwork: true }));
+    const saved = await call<{ restartRequired: boolean }>(
+      'PUT',
+      '/console/api/settings',
+      body({ dataDir: 'exports/', allowPrivateNetwork: true }),
+    );
 
     expect(saved.status).toBe(200);
     expect(saved.json.restartRequired).toBe(true);
