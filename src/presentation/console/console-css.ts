@@ -29,14 +29,6 @@ export const CONSOLE_CSS = `
   .map .sample { font: 12.5px var(--mono); color: var(--muted);
                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .step { display: flex; gap: 9px; align-items: center; margin-top: 9px; }
-  .step .num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--bg-alt);
-               color: var(--muted); font-size: 12px; font-weight: 600;
-               display: inline-flex; align-items: center; justify-content: center; }
-  .step select { flex: 1.2; min-width: 0; }
-  .step input { flex: 1; min-width: 0; font: 13.5px var(--mono); }
-  .step .drop { flex: none; padding: 9px 12px; }
-
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .stat { font: 13.5px var(--mono); color: var(--ink-soft); }
 
@@ -45,7 +37,5 @@ export const CONSOLE_CSS = `
     .map .head, .map .sample { display: none; }
     .map .name { margin-top: 8px; font-size: 13px; }
     .two { grid-template-columns: 1fr; }
-    .step { flex-wrap: wrap; }
-    .step select, .step input { flex-basis: 100%; }
   }
 `;

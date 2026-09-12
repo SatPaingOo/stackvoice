@@ -1,6 +1,6 @@
-import { ENDPOINTS } from '../config.js';
+import { ENDPOINTS, TIMEOUTS } from '../config.js';
 import type { JsonRequester } from '../core/api-client.js';
-import type { ShortcutInput, ShortcutWire, ToolWire } from './shortcut-types.js';
+import type { ShortcutInput, ShortcutWire, ToolWire, TryResult } from './shortcut-types.js';
 
 /** Everything the shortcuts screen asks of the server. */
 export interface ShortcutsGateway {
@@ -10,6 +10,8 @@ export interface ShortcutsGateway {
   /** Replaces the shortcut currently called `name`, which is how a rename keeps its place. */
   update(name: string, shortcut: ShortcutInput): Promise<void>;
   remove(name: string): Promise<void>;
+  /** Runs a draft with a value for each slot, and saves nothing. */
+  tryRun(shortcut: ShortcutInput, inputs: Readonly<Record<string, string>>): Promise<TryResult>;
 }
 
 export class ShortcutsApi implements ShortcutsGateway {
@@ -33,5 +35,13 @@ export class ShortcutsApi implements ShortcutsGateway {
 
   async remove(name: string): Promise<void> {
     await this.http.request('DELETE', `${ENDPOINTS.shortcuts}/${encodeURIComponent(name)}`);
+  }
+
+  tryRun(shortcut: ShortcutInput, inputs: Readonly<Record<string, string>>): Promise<TryResult> {
+    // A flow can ask several tools in turn, so it gets the longer time limit.
+    return this.http.request<TryResult>('POST', ENDPOINTS.shortcutTry, {
+      body: { shortcut, inputs },
+      timeoutMs: TIMEOUTS.inspectMs,
+    });
   }
 }

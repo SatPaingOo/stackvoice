@@ -66,9 +66,10 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 
 | File | Responsibility (SRP) |
 |---|---|
-| `app-definition.ts` | Aggregate for one app: `id`, `label`, `description`, `enabled`, `primitives`, `sources[]`, `shortcuts[]`; owns invariants (id format, unique source ids) |
+| `app-definition.ts` | Aggregate for one app: `id`, `label`, `description`, `enabled`, `primitives`, `sources[]`; owns invariants (id format, unique source ids) |
 | `data-source.ts` | One data source inside an app: `type`, connection fields (`repo`, `views_dir`, `stats_file`…) |
-| `shortcut.ts` | Macro aggregate: name, ordered steps, reply template; owns the name-to-tool-name rule and the step limit |
+| `shortcut.ts` | A shortcut: name, phrases with slots, and a flow of blocks; owns the name-to-tool-name rule and knows its slots |
+| `flow.ts` | The six kinds of block. Parses untrusted blocks with field paths and validates what a flow means: limits, shared slots, and that every name used is set |
 | `tool-spec.ts` | Neutral description of a tool to expose: name, description, input schema, output shape (what the catalog produces) |
 | `ports/config-store.ts` | `listApps() / getApp(id) / saveApp(def) / removeApp(id) / listAppFiles()` |
 | `ports/data-source-reader.ts` | Per-source read verbs: `search(def, params) / read(def, key) / status(def)` |
@@ -88,7 +89,8 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 | `management.service.ts` | Add / remove / enable / disable / validate / export apps; enforces safety rules; writes via ConfigStore port |
 | `response-shaper.ts` | Read model → spoken-friendly text (length caps, date phrasing, "and N more"); the Design differentiator |
 | `tool-runner.service.ts` | Runs any generated tool by name. Both the MCP layer and shortcuts dispatch through it, so neither owns the mapping |
-| `shortcut.service.ts` | Runs a shortcut's steps in order and stitches the answers into one |
+| `shortcut.service.ts` | Interprets a flow block by block with an injected clock and returns the answer with a trace of every block that ran |
+| `flow-values.ts` | What a flow's variables hold and the functions that read them, for templates and conditions |
 
 ### infrastructure/ — adapters (the "common" layer)
 
@@ -111,13 +113,13 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 | Web design system | `web/theme.ts`, `web/layout.ts` | shared tokens, page shell and navigation; every page renders through one layout so they stay one product |
 | Landing | `web/landing.ts` | the idea in ten seconds, with live numbers read from the running stack |
 | Web console | `console/routes.ts`, `console/apps-page.ts`, `console/shortcuts-page.ts`, `console/settings-page.ts`, `console/signin-page.ts` | one route per concern over the same ManagementService, plus a settings write path. The server renders each page's frame; adding and editing happen in client dialogs |
-| Web client | `web/client/`, compiled by `tsconfig.client.json` to `dist/public` and served at `/assets` | browser components as classes with no framework: `Modal`, `ConfirmDialog`, form controls, and per-screen forms such as `AppFormModal`. Each screen's entry file is its composition root. Forms depend on gateway interfaces such as `AppsGateway`, never on `fetch`, and a new source type is a new `LocationEditor` |
+| Web client | `web/client/`, compiled by `tsconfig.client.json` to `dist/public` and served at `/assets` | browser components as classes with no framework: `Modal`, `ConfirmDialog`, form controls, and per-screen forms such as `AppFormModal`. Each screen's entry file is its composition root. Forms depend on gateway interfaces such as `AppsGateway`, never on `fetch`, and a new source type is a new `LocationEditor`. The shortcut builder holds one editor class per kind of block, chosen in `createBlockEditor`, and an If gets its branches from a `FlowContext`, so no editor imports another |
 | Simulator | `simulator/routes.ts`, `simulator/page.ts` | simulated Alexa+ client; drives the server as a real MCP client |
 
 ## 4. Multi-app design (P2)
 
 - An **app** = a named, enabled/disabled bundle: label, primitives, one or more
-  data sources, optional shortcuts. Files live in `config/apps/*.yml`; filename
+  data sources. Files live in `config/apps/*.yml`; filename
   must match the app `id`.
 - **Registry** loads *all* files at startup into `AppDefinition[]` (fail-fast on
   validation error, with the offending file named).
@@ -126,14 +128,14 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
   `stack_status()`.
 - **Adding an app** = drop a validated file in `config/apps/` (or run
   `stackvoice app add`) and restart. Core code untouched → OCP demonstration.
-- **Per-app shortcuts** compile to `{shortcut_name}` tools with deterministic
-  step order.
+- **Shortcuts** live in `config/shortcuts.yml` because they span apps. Each compiles to one
+  `{shortcut_name}` tool that runs its flow of blocks, and each `{slot}` in its phrases
+  becomes a required input on that tool.
 
 ```
 AppDefinition (aggregate)
  ├─ sources[]   → each resolved by adapter factory (type → adapter)
- ├─ primitives  → which verbs generate tools
- └─ shortcuts[] → each compiles to one deterministic tool
+ └─ primitives  → which verbs generate tools
 ```
 
 ## 5. Management subsystem (P3)

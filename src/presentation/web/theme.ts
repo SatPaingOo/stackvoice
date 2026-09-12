@@ -29,6 +29,8 @@ export const THEME_CSS = `
     --ok: #3f7d58;
     --bad: #b5372a;
     --warn: #9a6b18;
+    --info: #3b6fb6;
+    --violet: #7b5cc4;
 
     --radius: 14px;
     --radius-sm: 9px;
@@ -59,6 +61,8 @@ export const THEME_CSS = `
       --ok: #6cc08b;
       --bad: #e0705f;
       --warn: #d9a441;
+      --info: #7fa8e6;
+      --violet: #b59cf2;
       --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px -12px rgba(0, 0, 0, .5);
       --shadow-lg: 0 2px 4px rgba(0, 0, 0, .35), 0 24px 48px -20px rgba(0, 0, 0, .6);
     }

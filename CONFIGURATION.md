@@ -415,8 +415,10 @@ Shortcuts live in their own file because they span apps: `morning brief` calls a
 library tool and a global one, and belongs to neither. A shortcut can never
 shadow a generated tool; if the names collide, the app's own tool wins.
 
-**Easiest way to write one:** the web console at `/console` has a Shortcuts
-section with a tool picker per step and a live preview of the tool name.
+**Easiest way to write one:** the Shortcuts page in the console builds the flow
+block by block. Phrases show the slots they leave, every text field has an Insert
+menu of the names that exist so far, and Try it runs the draft with a value for
+each slot and lists every block that ran, before anything is saved.
 
 ## 8. Validation & failure semantics
 

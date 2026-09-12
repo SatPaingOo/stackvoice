@@ -142,37 +142,6 @@ test('a dialog closes at once when nothing changed, and asks first when somethin
   await expect(modal).toBeHidden();
 });
 
-test('adds, renames and removes a shortcut in a dialog', async ({ page }) => {
-  await page.goto('/console/shortcuts');
-  await page.getByRole('button', { name: 'Add a shortcut' }).click();
-  await expect(page.locator('#shortcutModal')).toBeVisible();
-
-  await page.fill('#name', 'e2e brief');
-  await expect(page.locator('#toolName')).toHaveText('Becomes the tool e2e_brief');
-  await page.locator('#steps select').first().selectOption('stack_status');
-  await page.locator('#steps input').first().fill('{limit: 2}');
-  await page.click('#save');
-  await expect(page.locator('#shortcutNote')).toContainText('is not valid JSON');
-
-  await page.locator('#steps input').first().fill('{}');
-  await page.fill('#reply', 'Brief. {results}');
-  await page.click('#save');
-  await expect(page.locator('#shortcutModal')).toBeHidden();
-  const card = page.locator('.item', { hasText: 'e2e_brief' });
-  await expect(card).toContainText('stack_status');
-
-  await card.getByRole('button', { name: 'Edit' }).click();
-  await expect(page.locator('#name')).toHaveValue('e2e brief');
-  await page.fill('#name', 'e2e briefing');
-  await page.click('#save');
-  const renamed = page.locator('.item', { hasText: 'e2e_briefing' });
-  await expect(renamed).toBeVisible();
-
-  await renamed.getByRole('button', { name: 'Remove' }).click();
-  await confirmDialog(page).getByRole('button', { name: 'Remove' }).click();
-  await expect(page.locator('.item', { hasText: 'e2e_brief' })).toHaveCount(0);
-});
-
 test('the settings page adds a key in a dialog and lists it by name only', async ({ page }) => {
   await page.goto('/console/settings');
   await expect(page.locator('#dataDir')).toHaveValue('tests/e2e/.data');

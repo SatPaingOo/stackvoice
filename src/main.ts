@@ -159,6 +159,7 @@ async function main(): Promise<void> {
         settingsStore,
         secrets,
         assetsDir,
+        shortcutRunner: shortcutService,
       }
     : null;
 

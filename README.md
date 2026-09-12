@@ -162,14 +162,19 @@ watches `config/apps/` and reloads on its own.
 
 ## Shortcuts
 
-A shortcut is one tool that runs several, so "what's my morning brief" is a
-single question instead of three. Build one in the console's Shortcuts section:
-name it the way you would say it, pick the tools, and choose how the answers are
-stitched together.
+A shortcut is one tool that runs a flow of blocks, like a shortcut on a phone.
+Build one on the console's Shortcuts page:
 
-The name is what makes it work by voice. "Morning brief" becomes the tool
-`morning_brief`, and both the simulator and a real assistant route the phrase
-straight to it.
+- **Say it your way.** Write the phrases it answers to. A word in braces is a
+  slot the person fills in, so "news about {topic}" answers "news about gold".
+- **Add blocks.** Ask a tool, check the answer with If and Otherwise, Say a
+  sentence, Get a value such as the first title, Set a name, or Stop.
+- **Try it** before saving. It runs the draft with a value for each slot and
+  lists every block that ran.
+
+Each shortcut becomes one tool. "News about topic" becomes `news_about_topic`
+with a required `topic` input, so a real assistant fills the slot and the
+simulator fills it from what you said. The file format is in CONFIGURATION.md §7.5.
 
 ### The rest of the CLI
 

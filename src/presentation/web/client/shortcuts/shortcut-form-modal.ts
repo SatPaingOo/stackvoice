@@ -5,54 +5,96 @@ import { Notice } from '../components/notice.js';
 import { messageOf } from '../core/api-client.js';
 import { whileBusy } from '../core/busy.js';
 import { h } from '../core/dom.js';
-import { toolNameFor } from './shortcut-hints.js';
-import type { ShortcutInput, ShortcutWire, ToolWire } from './shortcut-types.js';
+import { BlockListEditor } from './block-list-editor.js';
+import type { FlowContext } from './flow-context.js';
+import {
+  answerNames,
+  countAsks,
+  countBlocks,
+  describeProblem,
+  insertableTokens,
+  savedNames,
+  starterBlock,
+  toolNameFor,
+} from './flow-hints.js';
+import type { BlockWire, FlowLimits, ShortcutInput, ShortcutWire, ToolWire } from './shortcut-types.js';
 import type { ShortcutsGateway } from './shortcuts-api.js';
-import { StepList } from './step-list.js';
+import { TriggerListEditor } from './trigger-list-editor.js';
+import { TryPanel } from './try-panel.js';
 
 export interface ShortcutFormDeps {
   readonly shortcuts: ShortcutsGateway;
   readonly confirm: ConfirmDialog;
-  /** The most steps the server accepts. */
-  readonly maxSteps: number;
+  readonly limits: FlowLimits;
 }
 
-/** Adds or edits one shortcut, in a dialog. */
+/**
+ * Builds or edits one shortcut in a dialog: its name, the ways to say it, and
+ * its flow, block by block, with Try it to run the draft before it is saved.
+ *
+ * The form is the flow's context: it answers what the block editors ask, such
+ * as which names exist, and it is the only piece that talks to the server.
+ */
 export class ShortcutFormModal {
   private readonly modal: Modal;
   private readonly notice = new Notice();
-  private readonly name = new TextField({ label: 'Name', hint: 'say it the way you would out loud', placeholder: 'morning brief', id: 'name' });
+  private readonly name = new TextField({ label: 'Name', hint: 'becomes the tool', placeholder: 'news about topic', id: 'name' });
   private readonly toolName = h('p', { className: 'hint-line', attrs: { id: 'toolName' } });
-  private readonly reply = new TextField({ label: 'How to answer', hint: '{1}, {2} or {results}', placeholder: 'Here is your brief. {results}', id: 'reply' });
   private readonly description = new TextAreaField({
     label: 'What it does',
     hint: 'your assistant reads this to decide when to run it',
     id: 'description',
   });
-  private readonly steps: StepList;
+  private readonly triggers: TriggerListEditor;
+  private readonly flowSlot = h('div');
+  private readonly counts = h('p', { className: 'flow-counts', attrs: { id: 'flowCounts' } });
+  private readonly tryPanel: TryPanel;
   private readonly saveButton = h('button', { className: 'primary', text: 'Save shortcut', attrs: { type: 'button', id: 'save' } });
   private readonly cancelButton = h('button', { className: 'ghost', text: 'Cancel', attrs: { type: 'button', id: 'cancel' } });
   private readonly savedListeners: (() => void)[] = [];
+  private readonly context: FlowContext;
+  private tools: readonly ToolWire[] = [];
+  private root: BlockListEditor | null = null;
   private editing: ShortcutWire | null = null;
   private dirty = false;
 
   constructor(private readonly deps: ShortcutFormDeps) {
-    this.steps = new StepList(deps.maxSteps);
-    this.modal = new Modal({ title: 'Add a shortcut', canDismiss: () => this.canDismiss() });
+    this.context = {
+      limits: deps.limits,
+      tools: () => this.tools,
+      tokens: () => insertableTokens(this.triggers.slots(), this.blocks()),
+      answers: () => answerNames(this.blocks()),
+      values: () => [...this.triggers.slots(), ...savedNames(this.blocks())],
+      createList: (depth, blocks) => new BlockListEditor(this.context, depth, blocks),
+      starter: (kind) => starterBlock(kind, { tools: this.tools, slots: this.triggers.slots(), blocks: this.blocks() }),
+      changed: () => this.flowChanged(),
+    };
+    this.triggers = new TriggerListEditor(deps.limits.maxTriggers, () => this.flowChanged());
+    this.tryPanel = new TryPanel((inputs) => this.deps.shortcuts.tryRun(this.draft(), inputs));
+
+    this.modal = new Modal({ title: 'Add a shortcut', size: 'lg', canDismiss: () => this.canDismiss() });
     this.modal.element.id = 'shortcutModal';
     this.notice.element.id = 'shortcutNote';
 
     this.modal.body.append(
       this.notice.element,
-      h('div', { className: 'two' }, [h('div', {}, [this.name.element, this.toolName]), this.reply.element]),
-      this.description.element,
-      this.steps.element,
+      h('div', { className: 'two' }, [h('div', {}, [this.name.element, this.toolName]), this.description.element]),
+      this.triggers.element,
+      h('div', { className: 'field' }, [
+        h('label', {}, ['Blocks', h('span', { className: 'hint', text: ' — they run from top to bottom' })]),
+        this.counts,
+        this.flowSlot,
+      ]),
+      this.tryPanel.element,
     );
     this.modal.footer.append(h('span', { className: 'spacer' }), this.cancelButton, this.saveButton);
 
-    this.modal.body.addEventListener('input', () => {
-      this.dirty = true;
-    });
+    // Typing a test value is not a change to the shortcut, so the Try it panel does not count.
+    for (const type of ['input', 'change'] as const) {
+      this.modal.body.addEventListener(type, (event) => {
+        if (!this.tryPanel.element.contains(event.target as Node)) this.dirty = true;
+      });
+    }
     this.name.onInput(() => this.showToolName());
     this.saveButton.addEventListener('click', () => void this.save());
     this.cancelButton.addEventListener('click', () => void this.modal.dismiss());
@@ -63,12 +105,12 @@ export class ShortcutFormModal {
   }
 
   setTools(tools: readonly ToolWire[]): void {
-    this.steps.setTools(tools);
+    this.tools = tools;
   }
 
   openNew(): void {
     this.fill(null);
-    this.modal.setTitle('Add a shortcut', 'Steps run in order, so the answer is the same every time.');
+    this.modal.setTitle('Add a shortcut', 'Blocks run from top to bottom. Try it before you save.');
     this.modal.open();
     this.name.focus();
   }
@@ -83,37 +125,53 @@ export class ShortcutFormModal {
     this.editing = shortcut;
     this.notice.clear();
     this.name.value = shortcut?.name ?? '';
-    this.reply.value = shortcut?.reply ?? '';
     this.description.value = shortcut?.description ?? '';
-    this.steps.value = shortcut?.steps ?? [];
+    this.triggers.value = shortcut?.triggers ?? [];
+    this.root = new BlockListEditor(this.context, 1, shortcut?.blocks ?? []);
+    this.root.element.id = 'flow';
+    this.flowSlot.replaceChildren(this.root.element);
+    this.tryPanel.reset();
     this.showToolName();
+    this.flowChanged();
     this.dirty = false;
   }
 
-  private async save(): Promise<void> {
-    const steps = this.steps.read();
-    if (!steps.ok) {
-      this.notice.show('err', steps.problem);
-      return;
-    }
+  private blocks(): BlockWire[] {
+    return this.root?.read() ?? [];
+  }
 
-    const shortcut: ShortcutInput = {
+  private draft(): ShortcutInput {
+    return {
       name: this.name.value,
       description: this.description.value,
-      reply: this.reply.value,
       enabled: this.editing?.enabled ?? true,
-      steps: steps.steps,
+      triggers: this.triggers.value,
+      blocks: this.blocks(),
     };
+  }
 
+  private flowChanged(): void {
+    const blocks = this.blocks();
+    const total = countBlocks(blocks);
+    const asks = countAsks(blocks);
+    const { maxBlocks, maxAsks } = this.deps.limits;
+    this.counts.textContent = `${total} of ${maxBlocks} blocks · ${asks} of ${maxAsks} tool calls`;
+    this.counts.classList.toggle('over', total > maxBlocks || asks > maxAsks);
+    this.tryPanel.setSlots(this.triggers.slots());
+    this.dirty = true;
+  }
+
+  private async save(): Promise<void> {
+    const draft = this.draft();
     await whileBusy(this.saveButton, 'Saving...', async () => {
       try {
-        if (this.editing === null) await this.deps.shortcuts.create(shortcut);
-        else await this.deps.shortcuts.update(this.editing.name, shortcut);
+        if (this.editing === null) await this.deps.shortcuts.create(draft);
+        else await this.deps.shortcuts.update(this.editing.name, draft);
         this.dirty = false;
         this.modal.close();
         for (const listener of this.savedListeners) listener();
       } catch (error) {
-        this.notice.show('err', messageOf(error));
+        this.notice.show('err', describeProblem(messageOf(error)));
         this.modal.body.scrollTop = 0;
       }
     });

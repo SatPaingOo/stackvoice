@@ -7,6 +7,7 @@ export const ENDPOINTS = {
   inspect: '/console/api/inspect',
   secrets: '/console/api/secrets',
   shortcuts: '/console/api/shortcuts',
+  shortcutTry: '/console/api/shortcuts/try',
   tools: '/console/api/tools',
   settings: '/console/api/settings',
   login: '/console/api/login',

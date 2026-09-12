@@ -7,9 +7,14 @@ import express from 'express';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ManagementService } from '../../../src/application/management.service.js';
+import { ShortcutService } from '../../../src/application/shortcut.service.js';
+import { ToolCatalogService } from '../../../src/application/tool-catalog.service.js';
+import type { ToolRunner } from '../../../src/application/tool-runner.service.js';
 import type { Logger } from '../../../src/domain/ports/logger.js';
+import type { ShortcutStore } from '../../../src/domain/ports/shortcut-store.js';
 import type { SourceInspector, SourceTarget } from '../../../src/domain/ports/source-inspector.js';
 import type { Settings } from '../../../src/domain/settings.js';
+import type { Shortcut } from '../../../src/domain/shortcut.js';
 import type { SourceProposal } from '../../../src/domain/source-proposal.js';
 import { YamlConfigStore } from '../../../src/infrastructure/config/yaml-config-store.js';
 import { YamlSecretStore } from '../../../src/infrastructure/config/yaml-secret-store.js';
@@ -45,6 +50,7 @@ let stop: () => Promise<void>;
 let secrets: YamlSecretStore;
 let inspected: SourceTarget[];
 let savedSettings: Settings[];
+let savedShortcuts: Shortcut[];
 
 /** Answers every inspection with the target's own location, so the wire format can be checked. */
 const inspector: SourceInspector = {
@@ -75,17 +81,25 @@ beforeEach(async () => {
   secrets = new YamlSecretStore(join(root, 'secrets.yml'), {});
   inspected = [];
   savedSettings = [];
+  savedShortcuts = [];
+  const shortcutStore: ShortcutStore = {
+    list: async () => savedShortcuts,
+    save: async (next) => {
+      savedShortcuts = [...next];
+      return null;
+    },
+  };
 
   const deps = {
     management: new ManagementService(
       new YamlConfigStore(join(root, 'apps'), join(root, 'backups')),
       inspector,
       silentLogger,
-      undefined as never,
+      shortcutStore,
     ),
     health: { reportStack: async () => ({ apps: [] }) },
-    catalog: {},
-    registry: {},
+    catalog: new ToolCatalogService(),
+    registry: { list: () => [] },
     shortcuts: {},
     logger: silentLogger,
     ownerToken: '',
@@ -100,6 +114,12 @@ beforeEach(async () => {
     },
     secrets,
     assetsDir: root,
+    // Flows in these tests ask no tools, so a runner that would answer is never reached.
+    shortcutRunner: new ShortcutService(
+      { run: async () => ({ spoken: 'unused', structured: null }) } as unknown as ToolRunner,
+      silentLogger,
+      () => new Date('2026-09-13T10:00:00Z'),
+    ),
   } as unknown as ConsoleDeps;
 
   const app = express();
@@ -310,4 +330,69 @@ describe('settings: data sources', () => {
       expect(savedSettings).toEqual([]);
     },
   );
+});
+
+describe('shortcuts', () => {
+  const greet = {
+    name: 'greet person',
+    description: 'Says hello.',
+    enabled: true,
+    triggers: ['greet {person}'],
+    blocks: [
+      {
+        kind: 'if',
+        condition: { kind: 'text', template: '{person}', op: 'contains', value: 'sat' },
+        then: [{ kind: 'say', text: 'Hello boss.' }],
+        otherwise: [{ kind: 'say', text: 'Hello {person}.' }],
+      },
+    ],
+  };
+
+  it('saves a flow and sends it back with its slots and the tools it asks', async () => {
+    expect((await call('POST', '/console/api/shortcuts', greet)).status).toBe(200);
+
+    const listed = await call<{ shortcuts: Record<string, unknown>[] }>('GET', '/console/api/shortcuts');
+
+    expect(listed.json.shortcuts[0]).toMatchObject({
+      toolName: 'greet_person',
+      triggers: ['greet {person}'],
+      slots: ['person'],
+      blocks: greet.blocks,
+      tools: [],
+    });
+  });
+
+  it('tries a draft with a value for each slot and returns the trace, saving nothing', async () => {
+    const tried = await call<{ spoken: string; trace: { at: string; kind: string }[] }>('POST', '/console/api/shortcuts/try', {
+      shortcut: { ...greet, name: '' },
+      inputs: { person: 'Sat Paing' },
+    });
+
+    expect(tried.json.spoken).toBe('Hello boss.');
+    expect(tried.json.trace.map((entry) => [entry.at, entry.kind])).toEqual([
+      ['1', 'if'],
+      ['1 › Then › 1', 'say'],
+    ]);
+    expect(savedShortcuts).toEqual([]);
+  });
+
+  it('names the block a mistake is in', async () => {
+    const tried = await call<{ error: string }>('POST', '/console/api/shortcuts/try', {
+      shortcut: { ...greet, blocks: [{ kind: 'say', text: '{nobody}' }] },
+      inputs: {},
+    });
+
+    expect(tried.status).toBe(400);
+    expect(tried.json.error).toMatch(/^blocks\.0\.text: \{nobody\} is used/);
+  });
+
+  it('refuses a shortcut sent without blocks', async () => {
+    expect((await call('POST', '/console/api/shortcuts', { name: 'empty' })).status).toBe(400);
+  });
+
+  it('tells the builder what each tool is', async () => {
+    const tools = await call<{ tools: { name: string; verb: string }[] }>('GET', '/console/api/tools');
+
+    expect(tools.json.tools).toContainEqual(expect.objectContaining({ name: 'stack_status', verb: 'stack_status' }));
+  });
 });

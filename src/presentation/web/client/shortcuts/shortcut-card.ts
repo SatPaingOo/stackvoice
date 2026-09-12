@@ -1,5 +1,6 @@
 import { whileBusy } from '../core/busy.js';
-import { h, type Child } from '../core/dom.js';
+import { h } from '../core/dom.js';
+import { countBlocks, phraseParts } from './flow-hints.js';
 import type { ShortcutWire } from './shortcut-types.js';
 
 export interface ShortcutCardActions {
@@ -7,24 +8,31 @@ export interface ShortcutCardActions {
   remove(shortcut: ShortcutWire): Promise<void>;
 }
 
-/** One shortcut: the phrase, what it is for, and the tools it runs in order. */
+/** One shortcut: the ways to say it with its slots marked, and what its flow asks. */
 export class ShortcutCard {
   readonly element: HTMLDivElement;
 
   constructor(shortcut: ShortcutWire, actions: ShortcutCardActions) {
-    const runs: Child[] = [];
-    shortcut.steps.forEach((step, index) => {
-      if (index > 0) runs.push(h('span', { className: 'muted', text: '→' }));
-      runs.push(h('span', { className: 'chip', text: step.tool }));
-    });
+    const phrases = (shortcut.triggers.length > 0 ? shortcut.triggers : [shortcut.name]).map((phrase) =>
+      h(
+        'span',
+        { className: 'chip phrase-chip' },
+        phraseParts(phrase).map((part) => (part.slot ? h('span', { className: 'slot', text: part.text }) : part.text)),
+      ),
+    );
+    const blocks = countBlocks(shortcut.blocks);
 
     const main = h('div', { className: 'main' }, [
       h('h3', { text: shortcut.name }),
       h('p', { className: 'soft', text: shortcut.description === '' ? 'No description' : shortcut.description }),
+      h('div', { className: 'chips' }, [h('span', { className: 'muted', text: 'Say' }), ...phrases]),
       h('div', { className: 'chips' }, [
         h('span', { className: 'chip', text: shortcut.toolName }),
-        h('span', { className: 'muted', text: 'runs' }),
-        ...runs,
+        h('span', {
+          className: 'muted',
+          text: `${blocks} ${blocks === 1 ? 'block' : 'blocks'}${shortcut.tools.length === 0 ? '' : ', asking'}`,
+        }),
+        ...shortcut.tools.map((tool) => h('span', { className: 'chip', text: tool })),
       ]),
     ]);
 

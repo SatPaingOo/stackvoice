@@ -6,16 +6,17 @@ import type { AppRegistryService } from '../../application/app-registry.service.
 import type { HealthService } from '../../application/health.service.js';
 import type { AppSpec, ManagementService } from '../../application/management.service.js';
 import type { ShortcutRegistryService } from '../../application/shortcut-registry.service.js';
+import type { ShortcutService } from '../../application/shortcut.service.js';
 import type { ToolCatalogService } from '../../application/tool-catalog.service.js';
 import type { AppDefinition } from '../../domain/app-definition.js';
 import { DEFAULT_STATUS_FIELD_MAP, type DataFormat, type SourceLocation } from '../../domain/data-source.js';
 import { StackVoiceError, ValidationError } from '../../domain/errors.js';
-import { blocksFromSteps, eachBlock, parseBlocks, type Block, type LegacyStep } from '../../domain/flow.js';
+import { parseBlocks } from '../../domain/flow.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import type { SecretStore } from '../../domain/ports/secret-store.js';
 import type { SettingsStore } from '../../domain/ports/settings-store.js';
 import type { AuthMode, LogLevel, Settings } from '../../domain/settings.js';
-import type { Shortcut, ShortcutProps } from '../../domain/shortcut.js';
+import { Shortcut, type ShortcutProps } from '../../domain/shortcut.js';
 import type { SourceProposal } from '../../domain/source-proposal.js';
 import { renderLandingPage } from '../web/landing.js';
 import { ASSETS_PATH } from '../web/layout.js';
@@ -30,6 +31,8 @@ export interface ConsoleDeps {
   readonly catalog: ToolCatalogService;
   readonly registry: AppRegistryService;
   readonly shortcuts: ShortcutRegistryService;
+  /** Runs a draft shortcut for the console's Try it, without saving it. */
+  readonly shortcutRunner: ShortcutService;
   readonly logger: Logger;
   /** Empty means no sign-in: only ever the case when the server is bound to localhost. */
   readonly ownerToken: string;
@@ -221,6 +224,7 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
       tools: specs.map((spec) => ({
         name: spec.name,
         title: spec.title,
+        verb: spec.verb,
         takesQuery: spec.verb === 'search',
         needsKey: spec.verb === 'read',
       })),
@@ -239,6 +243,18 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
       const saved = await deps.management.saveShortcut(readShortcut(req.body));
       await deps.reload();
       return { shortcut: toShortcutWire(saved) };
+    });
+  });
+
+  /** Runs a draft as it stands, with sample slot values, and saves nothing. */
+  app.post('/console/api/shortcuts/try', guardApi, async (req, res) => {
+    await handle(res, deps, async () => {
+      const body = (req.body ?? {}) as { shortcut?: unknown; inputs?: unknown };
+      const props = readShortcut(body.shortcut);
+      // A draft may not have a name yet, and trying it should not wait for one.
+      const draft = new Shortcut({ ...props, name: props.name.trim() === '' ? 'test run' : props.name });
+      const result = await deps.shortcutRunner.run(draft, readInputs(body.inputs));
+      return { spoken: result.spoken, trace: result.trace };
     });
   });
 
@@ -568,10 +584,7 @@ function originOf(url: string): string | null {
   }
 }
 
-/**
- * A shortcut from the page. Blocks are the current shape; a body with steps and
- * a reply is one written before flows, and runs exactly as it did.
- */
+/** A shortcut from the page. Its blocks are checked for shape here, and for meaning by the domain. */
 function readShortcut(body: unknown): ShortcutProps {
   if (body === null || typeof body !== 'object') throw new ValidationError('expected an object', 'body');
   const raw = body as Record<string, unknown>;
@@ -581,44 +594,24 @@ function readShortcut(body: unknown): ShortcutProps {
     throw new ValidationError('must be a list of phrases', 'triggers');
   }
 
-  const blocks: Block[] =
-    raw['blocks'] !== undefined
-      ? parseBlocks(raw['blocks'])
-      : blocksFromSteps(readSteps(raw['steps']), typeof raw['reply'] === 'string' ? raw['reply'] : '');
-
   return {
     name: typeof raw['name'] === 'string' ? raw['name'] : '',
     description: typeof raw['description'] === 'string' ? raw['description'] : '',
     enabled: raw['enabled'] !== false,
     triggers: triggers as string[],
-    blocks,
+    blocks: parseBlocks(raw['blocks']),
   };
 }
 
-function readSteps(value: unknown): LegacyStep[] {
-  const rawSteps = Array.isArray(value) ? value : [];
-  return rawSteps.map((entry, index) => {
-    if (entry === null || typeof entry !== 'object') {
-      throw new ValidationError(`step ${index + 1} is not a step`, 'steps');
-    }
-    const step = entry as Record<string, unknown>;
-    const tool = typeof step['tool'] === 'string' ? step['tool'].trim() : '';
-    if (tool === '') throw new ValidationError(`step ${index + 1} has no tool`, 'steps');
-
-    const args = step['args'];
-    if (args !== undefined && (args === null || typeof args !== 'object' || Array.isArray(args))) {
-      throw new ValidationError(`step ${index + 1} has arguments that are not an object`, 'steps');
-    }
-    return { tool, args: (args as Record<string, unknown> | undefined) ?? {} };
-  });
+/** Sample values for a draft's slots. Anything that is not text is ignored. */
+function readInputs(value: unknown): Record<string, string> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+  );
 }
 
 function toShortcutWire(shortcut: Shortcut): Record<string, unknown> {
-  const steps: { tool: string; args: unknown }[] = [];
-  eachBlock(shortcut.blocks, (block) => {
-    if (block.kind === 'ask') steps.push({ tool: block.tool, args: block.args });
-  });
-
   return {
     name: shortcut.name,
     description: shortcut.description,
@@ -628,9 +621,6 @@ function toShortcutWire(shortcut: Shortcut): Record<string, unknown> {
     slots: shortcut.slots,
     blocks: shortcut.blocks,
     tools: shortcut.requiredTools(),
-    // What the step list in the console reads until it can edit blocks.
-    reply: '',
-    steps,
   };
 }
 
