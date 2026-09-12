@@ -14,8 +14,11 @@ export interface SimulatorAppSummary {
  * talks to a speaker, until you say stop or go quiet.
  *
  * Speech in and out come from the browser's own Web Speech API, so the $0 budget
- * holds and no audio leaves the machine. Every answer shows the tool call that
- * produced it, because the point of the demo is the mechanism, not the magic.
+ * holds. That does not make speech local: Chrome sends recognition audio to
+ * Google and Edge to Microsoft. What stays on this server is the data.
+ *
+ * Every answer shows the tool call that produced it, because the point of the
+ * demo is the mechanism, not the magic.
  */
 export function renderSimulatorPage(
   apps: readonly SimulatorAppSummary[],
@@ -492,7 +495,7 @@ const SIMULATOR_SCRIPT = `
     talk.classList.add('hidden');
     hint.textContent = 'This browser cannot listen. Type instead — everything else works.';
   } else {
-    hint.textContent = 'Speech runs in your browser. Nothing is sent anywhere but your own server.';
+    hint.textContent = 'Your browser turns speech into text, and may use its maker’s speech service to do it. Your records stay on your server.';
   }
 
   talk.addEventListener('click', function () {

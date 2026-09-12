@@ -26,8 +26,9 @@ Open **http://localhost:8765/simulator** and ask it something:
 
 That page is a simulated Alexa+ client. It talks to the MCP server over the same
 Streamable HTTP transport a device would use, and shows every tool call it makes
-underneath the answer. Speech in and out run in your browser, so nothing leaves
-your machine.
+underneath the answer. Speech in and out use your browser's built-in speech
+features, which may send your voice to the browser maker's speech service —
+Google in Chrome, Microsoft in Edge. Your records never leave your server.
 
 Out of the box it is pointed at two real, live pipelines —
 [information-hub](https://github.com/SatPaingOo/information-hub) (177 verified
