@@ -1,31 +1,23 @@
 import { ValidationError } from './errors.js';
-
-export const MAX_SHORTCUT_STEPS = 4;
-
-export interface ShortcutStep {
-  readonly tool: string;
-  readonly args: Readonly<Record<string, unknown>>;
-}
+import { eachBlock, validateFlow, type Block } from './flow.js';
 
 export interface ShortcutProps {
   readonly name: string;
   readonly description: string;
-  readonly steps: readonly ShortcutStep[];
-  /**
-   * How the answers are stitched together. `{results}` is every step joined;
-   * `{1}`, `{2}` are individual steps. Empty means join them with a space.
-   */
-  readonly reply: string;
   readonly enabled: boolean;
+  /** Ways to say it, such as "news about {topic}". Empty means the name itself is the phrase. */
+  readonly triggers: readonly string[];
+  readonly blocks: readonly Block[];
 }
 
 /**
- * A macro over several tools, exposed as one tool.
+ * A flow over the stack's tools, exposed as one tool.
  *
  * "What's my morning brief" is two questions in a trench coat: what did my
- * library find, and is my stack healthy. Asking an assistant to chain those is
- * two round trips and a chance to get the order wrong. A shortcut makes it one
- * deterministic call, which is also what makes it demonstrable.
+ * library find, and is my stack healthy. A shortcut makes that one deterministic
+ * call, and its blocks decide what gets said: ask a tool, check the answer, say
+ * something, stop. A phrase with slots lets the person fill in part of it, and
+ * each slot becomes an input the assistant fills.
  *
  * Shortcuts are cross-app by nature, so they live in `config/shortcuts.yml`
  * rather than inside any one app's file.
@@ -33,9 +25,10 @@ export interface ShortcutProps {
 export class Shortcut {
   readonly name: string;
   readonly description: string;
-  readonly steps: readonly ShortcutStep[];
-  readonly reply: string;
   readonly enabled: boolean;
+  readonly triggers: readonly string[];
+  readonly blocks: readonly Block[];
+  private readonly slotNames: readonly string[];
 
   constructor(props: ShortcutProps) {
     const name = props.name.trim();
@@ -48,24 +41,17 @@ export class Shortcut {
         'name',
       );
     }
-    if (props.steps.length === 0) {
-      throw new ValidationError(`"${name}" has no steps`, 'steps');
-    }
-    if (props.steps.length > MAX_SHORTCUT_STEPS) {
-      throw new ValidationError(
-        `"${name}" has ${props.steps.length} steps; at most ${MAX_SHORTCUT_STEPS} keeps the answer speakable`,
-        'steps',
-      );
-    }
-    for (const step of props.steps) {
-      if (step.tool.trim() === '') throw new ValidationError(`"${name}" has a step with no tool`, 'steps');
-    }
 
+    const triggers = props.triggers
+      .map((trigger) => trigger.replace(/\s+/g, ' ').trim())
+      .filter((trigger) => trigger !== '');
+
+    this.slotNames = validateFlow({ triggers, blocks: props.blocks });
     this.name = name;
     this.description = props.description.trim();
-    this.steps = props.steps;
-    this.reply = props.reply;
     this.enabled = props.enabled;
+    this.triggers = triggers;
+    this.blocks = props.blocks;
   }
 
   /** The MCP tool this shortcut becomes: "morning brief" → `morning_brief`. */
@@ -80,25 +66,22 @@ export class Shortcut {
       .replace(/^_+|_+$/g, '');
   }
 
-  /** The tools this shortcut depends on, so a broken reference can be reported. */
-  requiredTools(): readonly string[] {
-    return [...new Set(this.steps.map((step) => step.tool))];
+  /** What a person says to run it. With no phrases written, the name is the phrase. */
+  phrases(): readonly string[] {
+    return this.triggers.length > 0 ? this.triggers : [this.name];
   }
-}
 
-/**
- * Fills the reply template with each step's spoken answer.
- *
- * Deliberately not a template engine: a shortcut that can compute is a shortcut
- * that can fail in ways the person who wrote it cannot see.
- */
-export function renderReply(reply: string, answers: readonly string[]): string {
-  const joined = answers.filter((answer) => answer.trim() !== '').join(' ');
-  if (reply.trim() === '') return joined;
+  /** What the person fills in, such as `topic` in "news about {topic}". Each becomes a tool input. */
+  get slots(): readonly string[] {
+    return this.slotNames;
+  }
 
-  return reply
-    .replace(/\{results\}/g, joined)
-    .replace(/\{(\d+)\}/g, (_match, index: string) => answers[Number(index) - 1] ?? '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  /** The tools this shortcut can ask, each once, in the order they first appear. */
+  requiredTools(): readonly string[] {
+    const tools: string[] = [];
+    eachBlock(this.blocks, (block) => {
+      if (block.kind === 'ask' && !tools.includes(block.tool)) tools.push(block.tool);
+    });
+    return tools;
+  }
 }

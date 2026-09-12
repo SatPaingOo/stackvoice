@@ -10,11 +10,12 @@ import type { ToolCatalogService } from '../../application/tool-catalog.service.
 import type { AppDefinition } from '../../domain/app-definition.js';
 import { DEFAULT_STATUS_FIELD_MAP, type DataFormat, type SourceLocation } from '../../domain/data-source.js';
 import { StackVoiceError, ValidationError } from '../../domain/errors.js';
+import { blocksFromSteps, eachBlock, parseBlocks, type Block, type LegacyStep } from '../../domain/flow.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import type { SecretStore } from '../../domain/ports/secret-store.js';
 import type { SettingsStore } from '../../domain/ports/settings-store.js';
 import type { AuthMode, LogLevel, Settings } from '../../domain/settings.js';
-import type { Shortcut, ShortcutProps, ShortcutStep } from '../../domain/shortcut.js';
+import type { Shortcut, ShortcutProps } from '../../domain/shortcut.js';
 import type { SourceProposal } from '../../domain/source-proposal.js';
 import { renderLandingPage } from '../web/landing.js';
 import { ASSETS_PATH } from '../web/layout.js';
@@ -567,12 +568,36 @@ function originOf(url: string): string | null {
   }
 }
 
+/**
+ * A shortcut from the page. Blocks are the current shape; a body with steps and
+ * a reply is one written before flows, and runs exactly as it did.
+ */
 function readShortcut(body: unknown): ShortcutProps {
   if (body === null || typeof body !== 'object') throw new ValidationError('expected an object', 'body');
   const raw = body as Record<string, unknown>;
 
-  const rawSteps = Array.isArray(raw['steps']) ? raw['steps'] : [];
-  const steps: ShortcutStep[] = rawSteps.map((entry, index) => {
+  const triggers = raw['triggers'] ?? [];
+  if (!Array.isArray(triggers) || triggers.some((trigger) => typeof trigger !== 'string')) {
+    throw new ValidationError('must be a list of phrases', 'triggers');
+  }
+
+  const blocks: Block[] =
+    raw['blocks'] !== undefined
+      ? parseBlocks(raw['blocks'])
+      : blocksFromSteps(readSteps(raw['steps']), typeof raw['reply'] === 'string' ? raw['reply'] : '');
+
+  return {
+    name: typeof raw['name'] === 'string' ? raw['name'] : '',
+    description: typeof raw['description'] === 'string' ? raw['description'] : '',
+    enabled: raw['enabled'] !== false,
+    triggers: triggers as string[],
+    blocks,
+  };
+}
+
+function readSteps(value: unknown): LegacyStep[] {
+  const rawSteps = Array.isArray(value) ? value : [];
+  return rawSteps.map((entry, index) => {
     if (entry === null || typeof entry !== 'object') {
       throw new ValidationError(`step ${index + 1} is not a step`, 'steps');
     }
@@ -586,24 +611,26 @@ function readShortcut(body: unknown): ShortcutProps {
     }
     return { tool, args: (args as Record<string, unknown> | undefined) ?? {} };
   });
-
-  return {
-    name: typeof raw['name'] === 'string' ? raw['name'] : '',
-    description: typeof raw['description'] === 'string' ? raw['description'] : '',
-    reply: typeof raw['reply'] === 'string' ? raw['reply'] : '',
-    enabled: raw['enabled'] !== false,
-    steps,
-  };
 }
 
 function toShortcutWire(shortcut: Shortcut): Record<string, unknown> {
+  const steps: { tool: string; args: unknown }[] = [];
+  eachBlock(shortcut.blocks, (block) => {
+    if (block.kind === 'ask') steps.push({ tool: block.tool, args: block.args });
+  });
+
   return {
     name: shortcut.name,
     description: shortcut.description,
     enabled: shortcut.enabled,
-    reply: shortcut.reply,
     toolName: shortcut.toolName,
-    steps: shortcut.steps.map((step) => ({ tool: step.tool, args: step.args })),
+    triggers: shortcut.triggers,
+    slots: shortcut.slots,
+    blocks: shortcut.blocks,
+    tools: shortcut.requiredTools(),
+    // What the step list in the console reads until it can edit blocks.
+    reply: '',
+    steps,
   };
 }
 

@@ -44,10 +44,10 @@ const shortcut = (name: string, enabled = true): Shortcut =>
     name,
     description: 'What it does.',
     enabled,
-    reply: '',
-    steps: [
-      { tool: 'library_search', args: {} },
-      { tool: 'stack_status', args: {} },
+    triggers: [],
+    blocks: [
+      { kind: 'ask', tool: 'library_search', args: {}, as: 'news' },
+      { kind: 'ask', tool: 'stack_status', args: {}, as: 'health' },
     ],
   });
 

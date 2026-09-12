@@ -98,7 +98,7 @@ export async function runShortcuts(deps: CommandDeps): Promise<number> {
     shortcuts.map((shortcut) => [
       shortcut.toolName,
       shortcut.name,
-      shortcut.steps.map((step) => step.tool).join(' → '),
+      shortcut.requiredTools().join(' → '),
       shortcut.enabled ? green('yes') : dim('no'),
     ]),
   );

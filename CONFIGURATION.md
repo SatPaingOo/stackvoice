@@ -122,14 +122,8 @@ sources:
     stats_file: data/views/stats.json
     label: "deep-dive library"   # used in descriptions ("search the deep-dive library")
 
-# ── shortcuts (optional macro layer) ──────────────────────
-shortcuts:
-  - name: "morning brief"
-    description: "Top library items plus overall stack health in one answer."
-    steps:
-      - {tool: library_search, args: {limit: 3}}
-      - {tool: stack_status, args: {}}
-    reply: "Here is your brief: {results}"
+# ── shortcuts live in config/shortcuts.yml (§7.5) ─────────
+shortcuts: []
 ```
 
 ### Rules
@@ -153,7 +147,7 @@ For an enabled app `{id}` with a single source:
 
 Global: `stack_status()` — one summary across all apps.
 
-Each shortcut `name` → one tool `{snake_case(name)}` running its steps in order.
+Each shortcut `name` → one tool `{snake_case(name)}` that runs its blocks (§7.5).
 
 Tool descriptions are **generated from the app's `label`/`description`** so the
 assistant knows *when* to call them ("Use when the user asks about their
@@ -238,13 +232,7 @@ sources:
     status_fields:
       last_data_date: last_date
       item_count: total_items
-shortcuts:
-  - name: "morning brief"
-    description: "Latest deep-dives plus overall stack health, in one answer."
-    steps:
-      - {tool: library_search, args: {limit: 3}}
-      - {tool: stack_status, args: {}}
-    reply: "Here is your brief: {results}"
+shortcuts: []   # shortcuts live in config/shortcuts.yml (§7.5)
 ```
 
 ### `config/apps/markets.yml` (eventpulse)
@@ -355,35 +343,72 @@ server keeps the config it already validated rather than going dark.
 
 ## 7.5 Shortcuts — `config/shortcuts.yml`
 
-A shortcut is one tool that runs several. "What's my morning brief" is two
-questions — what did my library find, and is my stack healthy — and asking an
-assistant to chain them is two round trips and a chance to get the order wrong.
+A shortcut is one tool that runs a flow of blocks, the way a shortcut on a phone
+does. "What's my morning brief" is two questions (what did my library find, and
+is my stack healthy), and a shortcut answers both in one call, in the same order
+every time. Its blocks decide what gets said: ask a tool, check the answer, say
+something, stop.
 
 ```yaml
 shortcuts:
-  - name: "morning brief"          # becomes the tool morning_brief
-    description: "The latest from your library plus whether the stack is healthy."
+  - name: "news about topic"          # becomes the tool news_about_topic
+    description: "What the library has on a subject, or that it has nothing yet."
     enabled: true
-    steps:
-      - tool: library_search
-        args: {"limit": 2}
-      - tool: stack_status
-        args: {}
-    reply: "Here is your brief. {1} {2}"
+    triggers: ["news about {topic}", "anything on {topic}"]
+    blocks:
+      - ask: "library_search"
+        with: {"query": "{topic}", "limit": 3}
+        as: "found"
+      - if: {"count_of": "found", "is": 0}
+        then:
+          - say: "Nothing about {topic} yet."
+          - stop: true
+      - say: "{found.count} stories about {topic}. The newest is {found.first.title}, from {found.first.when}."
 ```
 
 | Field | Meaning |
 |---|---|
-| `name` | What you would say out loud. Becomes the tool name: `morning brief` → `morning_brief` |
+| `name` | Becomes the tool name: `news about topic` → `news_about_topic` |
 | `description` | The assistant reads this to decide when to run it |
-| `steps` | Run in order, at most four, each naming a tool this server exposes |
-| `reply` | `{1}`, `{2}` insert one step; `{results}` inserts all of them; empty joins them with a space |
+| `triggers` | Up to five ways to say it. `{topic}` is a slot the person fills in. Every phrase needs the same slots, at most three, and words around them. Empty means the name is the phrase |
+| `blocks` | What runs, in order |
 | `enabled` | `false` generates no tool |
 
-Steps run in order, not in parallel: a brief that reads the news before the
-weather one morning and after it the next is a worse brief. A step that fails
-does not sink the answer — being told the library is fine and the market feed is
-down beats being told nothing.
+### Blocks
+
+| Block | What it does |
+|---|---|
+| `ask: "tool"`, `with: {…}`, `as: "name"` | Calls a tool this server exposes and saves its answer. Text arguments are templates, and one that comes out empty is left out, so `{topic}` with no topic searches everything |
+| `if: {…}`, `then: […]`, `otherwise: […]` | Runs one branch. An If can sit inside another If, but no deeper |
+| `say: "text"` | Adds a sentence to the answer |
+| `get: "function"`, `from: "name"`, `as: "name"` | Saves one thing read from a value. `index` picks the entry for `item`, counted from 1 |
+| `set: "name"`, `to: "text"` | Saves text under a name |
+| `stop: true` | Ends the flow and answers with what has been said |
+
+**Conditions.** `{"count_of": "found", "is": 0}`, or `more_than` / `less_than`.
+`{"text": "{found.first.title}", "contains": "gold"}`, or `is`, `is_empty: true`,
+`is_not_empty: true`; case and surrounding spaces do not matter. `{"failed": "found"}`
+is true when that Ask block's tool failed.
+
+**Templates.** `{name}` is a slot or something a block saved, and dots read from
+it. An answer on its own reads as what the tool said; `count`, `first`, `last`,
+`titles`, `title`, `summary`, `date`, `when`, `link`, `topic`, `region` and `key`
+read from its entries. `{found.first.when}` says "yesterday" or "on September 1"
+rather than a timestamp, and `{found.titles}` says "a, b and c".
+
+**Limits.** At most 16 blocks and 4 Ask blocks, counted across every branch, so
+the slowest answer is still quick. No block runs code and nothing loops. A name
+that nothing sets, or a function that does not exist, is refused when the file
+loads or the console saves, so a typo is caught before anyone hears a gap.
+
+A tool that fails does not sink the answer. Its failure is saved like any other
+answer, so `{"failed": "found"}` can speak around it. A flow that says nothing
+answers with what its tools said.
+
+**Written before flows?** A shortcut with `steps` and a `reply` still loads and
+answers exactly as it did: each step becomes an Ask block saved as `step1`,
+`step2`, and `{1}`, `{2}` or `{results}` in the reply become a Say. The next save
+writes it as blocks, and the old file is kept in `config/backups/`.
 
 Shortcuts live in their own file because they span apps: `morning brief` calls a
 library tool and a global one, and belongs to neither. A shortcut can never

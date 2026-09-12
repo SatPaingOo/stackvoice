@@ -153,8 +153,8 @@ describe('ConversationService.respond', () => {
       name: 'morning brief',
       description: 'd',
       enabled: true,
-      reply: '',
-      steps: [{ tool: 'stack_status', args: {} }],
+      triggers: [],
+      blocks: [{ kind: 'ask', tool: 'stack_status', args: {}, as: 'health' }],
     });
     const service = await build(caller, [brief]);
 

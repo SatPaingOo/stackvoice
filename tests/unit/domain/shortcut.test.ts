@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import { ValidationError } from '../../../src/domain/errors.js';
-import { renderReply, Shortcut, type ShortcutProps } from '../../../src/domain/shortcut.js';
+import type { Block } from '../../../src/domain/flow.js';
+import { Shortcut, type ShortcutProps } from '../../../src/domain/shortcut.js';
+
+const ask = (tool: string, as: string, args: Record<string, string | number> = {}): Block => ({
+  kind: 'ask',
+  tool,
+  args,
+  as,
+});
 
 const props = (over: Partial<ShortcutProps> = {}): ShortcutProps => ({
   name: 'morning brief',
   description: 'Latest items plus stack health.',
   enabled: true,
-  reply: '',
-  steps: [{ tool: 'library_search', args: { limit: 2 } }],
+  triggers: [],
+  blocks: [ask('library_search', 'news', { limit: 2 })],
   ...over,
 });
 
@@ -40,18 +48,12 @@ describe('invariants', () => {
     expect(() => new Shortcut(props({ name: '2nd brief' }))).toThrowError(/usable tool name/);
   });
 
-  it('rejects a shortcut with no steps', () => {
-    expect(() => new Shortcut(props({ steps: [] }))).toThrowError(/no steps/);
+  it('rejects a shortcut with no blocks', () => {
+    expect(() => new Shortcut(props({ blocks: [] }))).toThrowError(/at least one block/);
   });
 
-  it('rejects more steps than an answer can carry', () => {
-    const steps = Array.from({ length: 5 }, () => ({ tool: 'stack_status', args: {} }));
-
-    expect(() => new Shortcut(props({ steps }))).toThrowError(/at most 4/);
-  });
-
-  it('rejects a step with no tool', () => {
-    expect(() => new Shortcut(props({ steps: [{ tool: '  ', args: {} }] }))).toThrowError(/no tool/);
+  it('rejects a flow that does not hold together, naming the field', () => {
+    expect(() => new Shortcut(props({ blocks: [{ kind: 'say', text: '{nobody}' }] }))).toThrowError(/blocks\.0\.text/);
   });
 
   it('trims the name it stores', () => {
@@ -59,44 +61,49 @@ describe('invariants', () => {
   });
 });
 
-describe('requiredTools', () => {
-  it('lists each tool once, in order', () => {
+describe('phrases and slots', () => {
+  it('uses its name as the phrase when none are written', () => {
+    const shortcut = new Shortcut(props());
+
+    expect(shortcut.phrases()).toEqual(['morning brief']);
+    expect(shortcut.slots).toEqual([]);
+  });
+
+  it('takes its slots from its phrases', () => {
     const shortcut = new Shortcut(
       props({
-        steps: [
-          { tool: 'library_search', args: {} },
-          { tool: 'stack_status', args: {} },
-          { tool: 'library_search', args: {} },
+        triggers: ['news about {topic}', 'anything on {topic}'],
+        blocks: [ask('library_search', 'found', { query: '{topic}' })],
+      }),
+    );
+
+    expect(shortcut.phrases()).toEqual(['news about {topic}', 'anything on {topic}']);
+    expect(shortcut.slots).toEqual(['topic']);
+  });
+
+  it('tidies its phrases and drops empty ones', () => {
+    const shortcut = new Shortcut(props({ triggers: ['  news   about {topic} ', '   '], blocks: [ask('library_search', 'found')] }));
+
+    expect(shortcut.triggers).toEqual(['news about {topic}']);
+  });
+});
+
+describe('requiredTools', () => {
+  it('lists each tool once, in order, including the ones inside an If', () => {
+    const shortcut = new Shortcut(
+      props({
+        blocks: [
+          ask('library_search', 'a'),
+          {
+            kind: 'if',
+            condition: { kind: 'failed', variable: 'a' },
+            then: [ask('stack_status', 'b'), ask('library_search', 'c')],
+            otherwise: [],
+          },
         ],
       }),
     );
 
     expect(shortcut.requiredTools()).toEqual(['library_search', 'stack_status']);
-  });
-});
-
-describe('renderReply', () => {
-  it('joins the answers when there is no template', () => {
-    expect(renderReply('', ['One.', 'Two.'])).toBe('One. Two.');
-  });
-
-  it('fills {results} with everything', () => {
-    expect(renderReply('Here you go: {results}', ['One.', 'Two.'])).toBe('Here you go: One. Two.');
-  });
-
-  it('fills numbered placeholders with individual steps', () => {
-    expect(renderReply('{2} And before that, {1}', ['One.', 'Two.'])).toBe('Two. And before that, One.');
-  });
-
-  it('leaves an out-of-range placeholder empty rather than printing a marker', () => {
-    expect(renderReply('{1} {9}', ['One.'])).toBe('One.');
-  });
-
-  it('skips an empty answer when joining', () => {
-    expect(renderReply('', ['One.', '   ', 'Three.'])).toBe('One. Three.');
-  });
-
-  it('collapses the whitespace a template leaves behind', () => {
-    expect(renderReply('  {1}    {2}  ', ['One.', 'Two.'])).toBe('One. Two.');
   });
 });

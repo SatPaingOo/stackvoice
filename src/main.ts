@@ -98,7 +98,7 @@ async function main(): Promise<void> {
   const health = new HealthService(VERSION, clock, registry, status);
   const catalog = new ToolCatalogService();
   const runner = new ToolRunner({ registry, search, read, status, health, now: () => clock.now() });
-  const shortcutService = new ShortcutService(runner, logger);
+  const shortcutService = new ShortcutService(runner, logger, () => clock.now());
 
   // presentation
   const mapper = new ToolMapper({ runner, shortcuts, shortcutService, logger });

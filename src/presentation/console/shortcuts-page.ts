@@ -1,4 +1,4 @@
-import { MAX_SHORTCUT_STEPS } from '../../domain/shortcut.js';
+import { MAX_FLOW_ASKS } from '../../domain/flow.js';
 import { COMPONENTS_CSS } from '../web/components-css.js';
 import { renderPage } from '../web/layout.js';
 import { CONSOLE_CSS } from './console-css.js';
@@ -23,7 +23,7 @@ export function renderShortcutsPage(): string {
     <button class="primary" id="new" type="button">Add a shortcut</button>
   </div>
   <div id="listNote"></div>
-  <div id="shortcuts" class="list" data-max-steps="${MAX_SHORTCUT_STEPS}" aria-live="polite"></div>
+  <div id="shortcuts" class="list" data-max-steps="${MAX_FLOW_ASKS}" aria-live="polite"></div>
 </main>`,
     modules: ['shortcuts/shortcuts-page.js'],
   });
