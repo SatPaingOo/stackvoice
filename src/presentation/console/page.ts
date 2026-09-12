@@ -85,6 +85,13 @@ export function renderConsolePage(state: ConsolePageState): string {
   .hidden { display: none !important; }
   .spin { color: var(--muted); font-size: 14px; }
   h2 { font-size: 16px; margin: 0 0 4px; }
+  .step { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .step select { flex: 1; min-width: 170px; padding: 8px 10px; border-radius: 8px;
+                 border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; }
+  .step input { flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+                background: var(--bg); color: var(--ink); font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .step .num { color: var(--muted); font-size: 13px; width: 16px; flex: none; }
+  .step .drop { flex: none; padding: 8px 11px; }
   .hint { color: var(--muted); font-size: 13px; margin: 0 0 4px; }
 </style>
 </head>
@@ -163,6 +170,39 @@ export function renderConsolePage(state: ConsolePageState): string {
     </div>
 
     <div id="apps"></div>
+
+    <h2 style="margin:30px 0 4px">Shortcuts</h2>
+    <p class="hint" style="margin-bottom:12px">One tool that runs several, so "what's my morning brief" is a single question.</p>
+
+    <div class="row" style="margin-bottom:14px">
+      <button class="primary" id="newShortcut">Add a shortcut</button>
+    </div>
+
+    <div id="shortcutEditor" class="card hidden">
+      <h2 id="shortcutTitle">Add a shortcut</h2>
+      <p class="hint">Name it the way you would ask for it out loud.</p>
+
+      <label for="sName">Name <span class="hint">— becomes the tool <code id="sToolName">—</code></span></label>
+      <input id="sName" type="text" placeholder="morning brief">
+
+      <label for="sDescription">What it does <span class="hint">— the assistant reads this to decide when to run it</span></label>
+      <textarea id="sDescription"></textarea>
+
+      <label>Steps <span class="hint">— run in this order, at most four</span></label>
+      <div id="steps"></div>
+      <div class="row" style="margin-top:8px"><button id="addStep">Add a step</button></div>
+
+      <label for="sReply">How to answer <span class="hint">— <code>{1}</code> is the first step, <code>{results}</code> is all of them. Leave empty to just join them.</span></label>
+      <input id="sReply" type="text" placeholder="Here is your brief. {results}">
+
+      <div id="shortcutNote"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="saveShortcut">Save</button>
+        <button id="cancelShortcut">Cancel</button>
+      </div>
+    </div>
+
+    <div id="shortcuts"></div>
   </div>
 </div>
 
@@ -447,10 +487,234 @@ export function renderConsolePage(state: ConsolePageState): string {
     });
   }
 
+  // ---- shortcuts ----------------------------------------------------------
+
+  var availableTools = [];
+  var editingShortcut = null;
+
+  function toolName(name) {
+    return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  }
+
+  function stepRow(step) {
+    var row = document.createElement('div');
+    row.className = 'step';
+
+    var num = document.createElement('span');
+    num.className = 'num';
+    row.appendChild(num);
+
+    var select = document.createElement('select');
+    availableTools.forEach(function (tool) {
+      var option = document.createElement('option');
+      option.value = tool.name;
+      option.textContent = tool.name;
+      select.appendChild(option);
+    });
+    if (step && step.tool) select.value = step.tool;
+    row.appendChild(select);
+
+    var args = document.createElement('input');
+    args.type = 'text';
+    args.placeholder = '{}';
+    args.value = step && step.args ? JSON.stringify(step.args) : '{}';
+    row.appendChild(args);
+
+    var drop = document.createElement('button');
+    drop.className = 'drop';
+    drop.type = 'button';
+    drop.textContent = 'x';
+    drop.title = 'Remove this step';
+    drop.addEventListener('click', function () { row.remove(); renumber(); });
+    row.appendChild(drop);
+
+    // A search step with no arguments answers with everything; give it a default.
+    select.addEventListener('change', function () {
+      var picked = availableTools.filter(function (t) { return t.name === select.value; })[0];
+      if (picked && picked.takesQuery && args.value.trim() === '{}') args.value = '{"limit": 2}';
+    });
+
+    return row;
+  }
+
+  function renumber() {
+    Array.prototype.forEach.call(el('steps').children, function (row, index) {
+      row.querySelector('.num').textContent = String(index + 1);
+    });
+    el('addStep').disabled = el('steps').children.length >= 4;
+  }
+
+  function openShortcutEditor(shortcut) {
+    editingShortcut = shortcut;
+    el('shortcutEditor').classList.remove('hidden');
+    note('shortcutNote', 'info', '');
+    el('shortcutTitle').textContent = shortcut ? 'Edit ' + shortcut.name : 'Add a shortcut';
+    el('sName').value = shortcut ? shortcut.name : '';
+    el('sDescription').value = shortcut ? shortcut.description : '';
+    el('sReply').value = shortcut ? shortcut.reply : '';
+    el('sToolName').textContent = shortcut ? shortcut.toolName : '-';
+
+    var steps = el('steps');
+    steps.innerHTML = '';
+    (shortcut && shortcut.steps.length ? shortcut.steps : [null]).forEach(function (step) {
+      steps.appendChild(stepRow(step));
+    });
+    renumber();
+    el('shortcutEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  el('sName').addEventListener('input', function () {
+    el('sToolName').textContent = toolName(el('sName').value) || '-';
+  });
+
+  el('addStep').addEventListener('click', function () {
+    el('steps').appendChild(stepRow(null));
+    renumber();
+  });
+
+  el('newShortcut').addEventListener('click', function () { openShortcutEditor(null); });
+  el('cancelShortcut').addEventListener('click', function () {
+    el('shortcutEditor').classList.add('hidden');
+    editingShortcut = null;
+  });
+
+  el('saveShortcut').addEventListener('click', function () {
+    var steps = [];
+    var bad = null;
+
+    Array.prototype.forEach.call(el('steps').children, function (row, index) {
+      var select = row.querySelector('select');
+      var text = row.querySelector('input').value.trim() || '{}';
+      var args;
+      try {
+        args = JSON.parse(text);
+      } catch (error) {
+        bad = 'Step ' + (index + 1) + ' has arguments that are not valid JSON.';
+        return;
+      }
+      steps.push({ tool: select.value, args: args });
+    });
+
+    if (bad) { note('shortcutNote', 'err', bad); return; }
+    if (!steps.length) { note('shortcutNote', 'err', 'A shortcut needs at least one step.'); return; }
+
+    var body = {
+      name: el('sName').value,
+      description: el('sDescription').value,
+      reply: el('sReply').value,
+      enabled: editingShortcut ? editingShortcut.enabled : true,
+      steps: steps
+    };
+
+    el('saveShortcut').disabled = true;
+    note('shortcutNote', 'info', 'Saving...');
+
+    var request = editingShortcut
+      ? api('PUT', '/console/api/shortcuts/' + encodeURIComponent(editingShortcut.name), body)
+      : api('POST', '/console/api/shortcuts', body);
+
+    request
+      .then(function () {
+        el('shortcutEditor').classList.add('hidden');
+        editingShortcut = null;
+        return load();
+      })
+      .catch(function (error) { note('shortcutNote', 'err', error.message); })
+      .then(function () { el('saveShortcut').disabled = false; });
+  });
+
+  function renderShortcuts(shortcuts) {
+    var list = el('shortcuts');
+    list.innerHTML = '';
+
+    if (!shortcuts.length) {
+      var empty = document.createElement('div');
+      empty.className = 'card';
+      var hint = document.createElement('p');
+      hint.className = 'hint';
+      hint.style.margin = '0';
+      hint.textContent = 'No shortcuts yet. Add one to answer several questions at once.';
+      empty.appendChild(hint);
+      list.appendChild(empty);
+      return;
+    }
+
+    shortcuts.forEach(function (shortcut) {
+      var card = document.createElement('div');
+      card.className = 'card app';
+
+      var main = document.createElement('div');
+      main.className = 'main';
+
+      var title = document.createElement('h3');
+      title.textContent = shortcut.name;
+      main.appendChild(title);
+
+      var meta = document.createElement('p');
+      meta.className = 'meta';
+      meta.textContent = shortcut.description || 'No description';
+      main.appendChild(meta);
+
+      var tools = document.createElement('div');
+      tools.className = 'tools';
+
+      var own = document.createElement('span');
+      own.className = 'tool';
+      own.textContent = shortcut.toolName;
+      tools.appendChild(own);
+
+      var arrow = document.createElement('span');
+      arrow.className = 'health';
+      arrow.textContent = 'runs';
+      tools.appendChild(arrow);
+
+      shortcut.steps.forEach(function (step) {
+        var chip = document.createElement('span');
+        chip.className = 'tool';
+        chip.textContent = step.tool;
+        tools.appendChild(chip);
+      });
+      main.appendChild(tools);
+      card.appendChild(main);
+
+      var actions = document.createElement('div');
+      actions.className = 'row';
+
+      var edit = document.createElement('button');
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', function () { openShortcutEditor(shortcut); });
+      actions.appendChild(edit);
+
+      var remove = document.createElement('button');
+      remove.className = 'danger';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', function () {
+        if (!window.confirm('Remove the ' + shortcut.name + ' shortcut?')) return;
+        spin('Removing...');
+        api('DELETE', '/console/api/shortcuts/' + encodeURIComponent(shortcut.name))
+          .then(load)
+          .catch(function (error) { spin(error.message); });
+      });
+      actions.appendChild(remove);
+
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+
   function load() {
-    spin('Loading…');
-    return api('GET', '/console/api/apps')
-      .then(function (data) { render(data.apps); spin(''); })
+    spin('Loading...');
+    return Promise.all([
+      api('GET', '/console/api/apps'),
+      api('GET', '/console/api/tools'),
+      api('GET', '/console/api/shortcuts')
+    ])
+      .then(function (results) {
+        render(results[0].apps);
+        availableTools = results[1].tools;
+        renderShortcuts(results[2].shortcuts);
+        spin('');
+      })
       .catch(function (error) { spin(error.message); });
   }
 

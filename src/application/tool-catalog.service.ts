@@ -1,4 +1,5 @@
 import type { AppDefinition } from '../domain/app-definition.js';
+import type { Shortcut } from '../domain/shortcut.js';
 import type { ToolSpec } from '../domain/tool-spec.js';
 
 /**
@@ -9,7 +10,7 @@ import type { ToolSpec } from '../domain/tool-spec.js';
  * because the description is how the assistant decides *when* to call a tool.
  */
 export class ToolCatalogService {
-  generate(apps: readonly AppDefinition[]): readonly ToolSpec[] {
+  generate(apps: readonly AppDefinition[], shortcuts: readonly Shortcut[] = []): readonly ToolSpec[] {
     const specs: ToolSpec[] = [
       {
         name: 'stack_status',
@@ -18,6 +19,7 @@ export class ToolCatalogService {
           "Report whether the user's own data stack is healthy: which apps are configured, whether their most recent runs succeeded, and how fresh the data is. Use when the user asks about the state of their stack, for example \"is everything running?\" or \"did my pipelines work last night?\".",
         verb: 'stack_status',
         appId: null,
+        shortcutName: null,
       },
     ];
 
@@ -25,6 +27,22 @@ export class ToolCatalogService {
       for (const verb of app.enabledVerbs()) {
         specs.push(this.specFor(app, verb));
       }
+    }
+
+    // Shortcuts come last so a shortcut can never shadow a generated tool: the
+    // MCP layer registers in order and an app's own tools are the ground truth.
+    const taken = new Set(specs.map((spec) => spec.name));
+    for (const shortcut of shortcuts.filter((candidate) => candidate.enabled)) {
+      if (taken.has(shortcut.toolName)) continue;
+      taken.add(shortcut.toolName);
+      specs.push({
+        name: shortcut.toolName,
+        title: titleCase(shortcut.name),
+        description: `${shortcut.description} Runs ${listTools(shortcut.requiredTools())} in one step and answers with all of it. Use when the user asks for "${shortcut.name}".`,
+        verb: 'shortcut',
+        appId: null,
+        shortcutName: shortcut.name,
+      });
     }
 
     return specs;
@@ -40,6 +58,7 @@ export class ToolCatalogService {
         description: `Search the user's own "${app.label}". ${what} Use when the user asks what their ${app.label} has on a subject, or what it found recently. Returns the most recent matching entries, newest first.`,
         verb,
         appId: app.id,
+        shortcutName: null,
       };
     }
 
@@ -50,6 +69,7 @@ export class ToolCatalogService {
         description: `Read one full entry from the user's own "${app.label}" by its key. ${what} Use after a search, when the user asks for the detail of a specific entry.`,
         verb,
         appId: app.id,
+        shortcutName: null,
       };
     }
 
@@ -59,6 +79,16 @@ export class ToolCatalogService {
       description: `Report the health of the user's "${app.label}": whether its most recent run succeeded, how fresh its data is, and how much it holds. ${what} Use when the user asks whether this particular app is working or up to date.`,
       verb,
       appId: app.id,
+      shortcutName: null,
     };
   }
+}
+
+function titleCase(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function listTools(tools: readonly string[]): string {
+  if (tools.length <= 1) return tools[0] ?? 'nothing';
+  return `${tools.slice(0, -1).join(', ')} and ${tools[tools.length - 1] as string}`;
 }

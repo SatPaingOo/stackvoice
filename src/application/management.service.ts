@@ -3,7 +3,9 @@ import { DataSource, type FieldMap, type StatusFieldMap } from '../domain/data-s
 import { AppNotFoundError, ValidationError } from '../domain/errors.js';
 import type { ConfigStore } from '../domain/ports/config-store.js';
 import type { Logger } from '../domain/ports/logger.js';
+import type { ShortcutStore } from '../domain/ports/shortcut-store.js';
 import type { SourceInspector } from '../domain/ports/source-inspector.js';
+import { Shortcut, type ShortcutProps } from '../domain/shortcut.js';
 import type { SourceProposal } from '../domain/source-proposal.js';
 
 export interface AddAppRequest {
@@ -62,6 +64,7 @@ export class ManagementService {
     private readonly store: ConfigStore,
     private readonly inspector: SourceInspector,
     private readonly logger: Logger,
+    private readonly shortcuts: ShortcutStore,
   ) {}
 
   async list(): Promise<readonly AppDefinition[]> {
@@ -214,6 +217,47 @@ export class ManagementService {
     await this.store.saveApp(updated);
     this.logger.info('app enabled state changed', { appId: id, enabled });
     return updated;
+  }
+
+  async listShortcuts(): Promise<readonly Shortcut[]> {
+    return this.shortcuts.list();
+  }
+
+  /**
+   * Creates or replaces one shortcut, matched by the tool name it produces.
+   *
+   * Renaming "morning brief" to "morning briefing" keeps the same tool name and
+   * so replaces it, which is what a person editing a shortcut means.
+   *
+   * @throws {ValidationError} when the shortcut or one of its steps is invalid.
+   */
+  async saveShortcut(props: ShortcutProps, replacing?: string): Promise<Shortcut> {
+    const shortcut = new Shortcut(props);
+    const target = replacing === undefined ? shortcut.toolName : Shortcut.toolNameFor(replacing);
+
+    const existing = await this.shortcuts.list();
+    const kept = existing.filter((candidate) => candidate.toolName !== target);
+    if (kept.some((candidate) => candidate.toolName === shortcut.toolName)) {
+      throw new ValidationError(`another shortcut already becomes the tool "${shortcut.toolName}"`, 'name');
+    }
+
+    await this.shortcuts.save([...kept, shortcut]);
+    this.logger.info('shortcut saved', { tool: shortcut.toolName, replaced: kept.length !== existing.length });
+    return shortcut;
+  }
+
+  /** @throws {ValidationError} when no shortcut has that name. */
+  async removeShortcut(name: string): Promise<void> {
+    const target = Shortcut.toolNameFor(name);
+    const existing = await this.shortcuts.list();
+    const kept = existing.filter((candidate) => candidate.toolName !== target);
+
+    if (kept.length === existing.length) {
+      throw new ValidationError(`no shortcut called "${name}"`, 'name');
+    }
+
+    await this.shortcuts.save(kept);
+    this.logger.info('shortcut removed', { tool: target });
   }
 
   /** @throws {AppNotFoundError} */

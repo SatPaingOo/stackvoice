@@ -2,12 +2,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import type { ToolCatalogService } from '../../application/tool-catalog.service.js';
 import type { AppRegistryService } from '../../application/app-registry.service.js';
+import type { ShortcutRegistryService } from '../../application/shortcut-registry.service.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import { ToolMapper } from './tool-mapper.js';
 
 export interface McpServerDeps {
   readonly version: string;
   readonly registry: AppRegistryService;
+  readonly shortcuts: ShortcutRegistryService;
   readonly catalog: ToolCatalogService;
   readonly mapper: ToolMapper;
   readonly logger: Logger;
@@ -25,7 +27,7 @@ export function createMcpServer(deps: McpServerDeps): McpServer {
     { capabilities: { tools: {} } },
   );
 
-  const specs = deps.catalog.generate(deps.registry.list());
+  const specs = deps.catalog.generate(deps.registry.list(), deps.shortcuts.list());
   for (const spec of specs) {
     deps.mapper.register(server, spec);
   }

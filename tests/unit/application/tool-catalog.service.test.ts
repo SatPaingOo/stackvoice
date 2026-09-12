@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ToolCatalogService } from '../../../src/application/tool-catalog.service.js';
 import { AppDefinition } from '../../../src/domain/app-definition.js';
+import { Shortcut } from '../../../src/domain/shortcut.js';
 import {
   DataSource,
   DEFAULT_FIELD_MAP,
@@ -37,6 +38,53 @@ const app = (
 
 const catalog = new ToolCatalogService();
 const names = (apps: AppDefinition[]): string[] => catalog.generate(apps).map((spec) => spec.name);
+
+const shortcut = (name: string, enabled = true): Shortcut =>
+  new Shortcut({
+    name,
+    description: 'What it does.',
+    enabled,
+    reply: '',
+    steps: [
+      { tool: 'library_search', args: {} },
+      { tool: 'stack_status', args: {} },
+    ],
+  });
+
+describe('shortcuts in the catalog', () => {
+  it('adds one tool per enabled shortcut, after the generated ones', () => {
+    const apps = [app('library', { search: true, read: false, status: false })];
+
+    expect(catalog.generate(apps, [shortcut('morning brief')]).map((spec) => spec.name)).toEqual([
+      'stack_status',
+      'library_search',
+      'morning_brief',
+    ]);
+  });
+
+  it('skips a disabled shortcut', () => {
+    expect(catalog.generate([], [shortcut('morning brief', false)]).map((s) => s.name)).toEqual([
+      'stack_status',
+    ]);
+  });
+
+  it('never lets a shortcut shadow a generated tool', () => {
+    const apps = [app('library', { search: true, read: false, status: false })];
+
+    const specs = catalog.generate(apps, [shortcut('library search')]);
+
+    expect(specs.filter((spec) => spec.name === 'library_search')).toHaveLength(1);
+    expect(specs.find((spec) => spec.name === 'library_search')?.verb).toBe('search');
+  });
+
+  it('tells the assistant what the shortcut runs and when to use it', () => {
+    const spec = catalog.generate([], [shortcut('morning brief')])[1];
+
+    expect(spec?.description).toContain('library_search and stack_status');
+    expect(spec?.description).toContain('"morning brief"');
+    expect(spec?.shortcutName).toBe('morning brief');
+  });
+});
 
 describe('ToolCatalogService.generate', () => {
   it('always exposes the global tool, even with no apps', () => {

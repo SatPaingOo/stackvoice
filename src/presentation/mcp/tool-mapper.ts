@@ -1,30 +1,19 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
-import type { AppRegistryService } from '../../application/app-registry.service.js';
-import type { HealthService } from '../../application/health.service.js';
-import type { ReadService } from '../../application/read.service.js';
-import {
-  shapeAppHealth,
-  shapeItem,
-  shapeSearchResults,
-  shapeStackHealth,
-} from '../../application/response-shaper.js';
-import type { SearchService } from '../../application/search.service.js';
-import type { StatusService } from '../../application/status.service.js';
+import type { ShortcutRegistryService } from '../../application/shortcut-registry.service.js';
+import type { ShortcutService } from '../../application/shortcut.service.js';
+import type { ToolRunner } from '../../application/tool-runner.service.js';
 import { StackVoiceError } from '../../domain/errors.js';
 import { SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX } from '../../domain/item.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import type { ToolSpec } from '../../domain/tool-spec.js';
 
 export interface ToolMapperDeps {
-  readonly registry: AppRegistryService;
-  readonly search: SearchService;
-  readonly read: ReadService;
-  readonly status: StatusService;
-  readonly health: HealthService;
+  readonly runner: ToolRunner;
+  readonly shortcuts: ShortcutRegistryService;
+  readonly shortcutService: ShortcutService;
   readonly logger: Logger;
-  readonly now: () => Date;
 }
 
 type TextContent = { type: 'text'; text: string };
@@ -57,9 +46,9 @@ const sourceHealthShape = {
 /**
  * Maps a neutral `ToolSpec` onto an MCP registration.
  *
- * The MCP SDK stops here: application services never see a tool result shape,
- * and this file holds no business logic. It is also the single place where a
- * typed domain error becomes an MCP error result.
+ * The MCP SDK stops here. Running a tool is `ToolRunner`'s job, so this file
+ * holds only the translation — the input schema, the result shape, and the
+ * single place where a typed domain error becomes an MCP error result.
  */
 export class ToolMapper {
   constructor(private readonly deps: ToolMapperDeps) {}
@@ -67,33 +56,45 @@ export class ToolMapper {
   register(server: McpServer, spec: ToolSpec): void {
     switch (spec.verb) {
       case 'stack_status':
-        return this.registerStackStatus(server, spec);
+        return this.registerNoArgs(server, spec);
+      case 'status':
+        return this.registerNoArgs(server, spec, {
+          appId: z.string(),
+          enabled: z.boolean(),
+          ok: z.boolean(),
+          sources: z.array(z.object(sourceHealthShape)),
+        });
       case 'search':
         return this.registerSearch(server, spec);
       case 'read':
         return this.registerRead(server, spec);
-      case 'status':
-        return this.registerStatus(server, spec);
+      case 'shortcut':
+        return this.registerShortcut(server, spec);
     }
   }
 
-  private registerStackStatus(server: McpServer, spec: ToolSpec): void {
+  private registerNoArgs(
+    server: McpServer,
+    spec: ToolSpec,
+    outputSchema?: Record<string, z.ZodTypeAny>,
+  ): void {
     server.registerTool(
       spec.name,
-      { title: spec.title, description: spec.description },
+      outputSchema === undefined
+        ? { title: spec.title, description: spec.description }
+        : { title: spec.title, description: spec.description, outputSchema },
       async () =>
         this.guard(spec.name, async () => {
-          const health = await this.deps.health.reportStack();
+          const output = await this.deps.runner.run(spec.name);
           return {
-            content: [{ type: 'text', text: shapeStackHealth(health) }],
-            structuredContent: asRecord(health),
+            content: [{ type: 'text', text: output.spoken }],
+            ...(output.structured === null ? {} : { structuredContent: output.structured }),
           };
         }),
     );
   }
 
   private registerSearch(server: McpServer, spec: ToolSpec): void {
-    const appId = spec.appId as string;
     server.registerTool(
       spec.name,
       {
@@ -115,24 +116,16 @@ export class ToolMapper {
       },
       async (args) =>
         this.guard(spec.name, async () => {
-          const params = {
-            query: args.query,
-            topic: args.topic,
-            region: args.region,
-            limit: args.limit ?? SEARCH_LIMIT_DEFAULT,
-          };
-          const items = await this.deps.search.search(appId, params);
-          const label = this.deps.registry.get(appId).label;
+          const output = await this.deps.runner.run(spec.name, args as Record<string, unknown>);
           return {
-            content: [{ type: 'text', text: shapeSearchResults(label, items, params) }],
-            structuredContent: { items: [...items] } as Record<string, unknown>,
+            content: [{ type: 'text', text: output.spoken }],
+            ...(output.structured === null ? {} : { structuredContent: output.structured }),
           };
         }),
     );
   }
 
   private registerRead(server: McpServer, spec: ToolSpec): void {
-    const appId = spec.appId as string;
     server.registerTool(
       spec.name,
       {
@@ -145,39 +138,40 @@ export class ToolMapper {
       },
       async (args) =>
         this.guard(spec.name, async () => {
-          const item = await this.deps.read.read(appId, args.key);
-          const label = this.deps.registry.get(appId).label;
-          const text =
-            item === null ? 'Your ' + label + ' has no entry with that key.' : shapeItem(item);
+          const output = await this.deps.runner.run(spec.name, args as Record<string, unknown>);
           return {
-            content: [{ type: 'text', text }],
-            structuredContent: { found: item !== null, item } as Record<string, unknown>,
+            content: [{ type: 'text', text: output.spoken }],
+            ...(output.structured === null ? {} : { structuredContent: output.structured }),
           };
         }),
     );
   }
 
-  private registerStatus(server: McpServer, spec: ToolSpec): void {
-    const appId = spec.appId as string;
+  private registerShortcut(server: McpServer, spec: ToolSpec): void {
+    const name = spec.shortcutName as string;
     server.registerTool(
       spec.name,
       {
         title: spec.title,
         description: spec.description,
         outputSchema: {
-          appId: z.string(),
-          enabled: z.boolean(),
-          ok: z.boolean(),
-          sources: z.array(z.object(sourceHealthShape)),
+          steps: z.array(z.object({ tool: z.string(), spoken: z.string(), ok: z.boolean() })),
         },
       },
       async () =>
         this.guard(spec.name, async () => {
-          const health = await this.deps.status.statusOf(appId);
-          const label = this.deps.registry.get(appId).label;
+          const shortcut = this.deps.shortcuts
+            .listEnabled()
+            .find((candidate) => candidate.name === name);
+
+          if (shortcut === undefined) {
+            return { content: [{ type: 'text', text: 'That shortcut is no longer configured.' }], isError: true };
+          }
+
+          const result = await this.deps.shortcutService.run(shortcut);
           return {
-            content: [{ type: 'text', text: shapeAppHealth(label, health, this.deps.now()) }],
-            structuredContent: asRecord(health),
+            content: [{ type: 'text', text: result.spoken }],
+            structuredContent: { steps: [...result.steps] },
           };
         }),
     );
@@ -206,9 +200,4 @@ export class ToolMapper {
       return { content: [{ type: 'text', text: message }], isError: true };
     }
   }
-}
-
-/** Structured content must be a plain record; the domain models already are. */
-function asRecord(value: unknown): Record<string, unknown> {
-  return value as Record<string, unknown>;
 }

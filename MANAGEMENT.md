@@ -31,6 +31,7 @@ Companion: ARCHITECTURE.md §5 (subsystem design), CONFIGURATION.md (schemas).
 | `stackvoice apps list` | id, label, enabled, source count, shortcut count |
 | `stackvoice status` | per-app + stack health summary (JSON/table) |
 | `stackvoice app show <id>` | full effective config of one app |
+| `stackvoice shortcuts` | each shortcut, the phrase that triggers it, and the tools it runs |
 | `stackvoice logs [--app <id>] [--tail N]` | recent structured logs |
 
 ### Change

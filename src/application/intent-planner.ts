@@ -17,6 +17,12 @@ export interface PlannerApp {
   readonly status: boolean;
 }
 
+/** A shortcut the planner can route to, flattened to what matching needs. */
+export interface PlannerShortcut {
+  readonly name: string;
+  readonly toolName: string;
+}
+
 export interface PlannedCall {
   readonly tool: string;
   readonly args: Record<string, unknown>;
@@ -93,13 +99,25 @@ const FILLER = [
 ];
 
 export class IntentPlanner {
-  plan(utterance: string, apps: readonly PlannerApp[], context: PlannerContext = {}): Plan {
+  plan(
+    utterance: string,
+    apps: readonly PlannerApp[],
+    context: PlannerContext = {},
+    shortcuts: readonly PlannerShortcut[] = [],
+  ): Plan {
     const text = normalize(utterance);
     if (text === '') {
       return { kind: 'unclear', spoken: 'I did not catch that.' };
     }
     if (apps.length === 0) {
       return { kind: 'unclear', spoken: 'You have no apps configured yet.' };
+    }
+
+    // Shortcuts win over everything: a person who named one asked for exactly
+    // it, and "morning brief" would otherwise be searched for as a subject.
+    const shortcut = matchShortcut(text, shortcuts);
+    if (shortcut !== null) {
+      return { kind: 'call', call: { tool: shortcut.toolName, args: {} }, appId: null };
     }
 
     const named = this.resolveApp(text, apps);
@@ -153,6 +171,23 @@ export class IntentPlanner {
     }
     return null;
   }
+}
+
+/**
+ * Matches a shortcut by its whole name.
+ *
+ * Whole name, not any word in it: a shortcut called "news brief" must not
+ * swallow "what's the news about Iran". Speech drops small words, so "my
+ * morning brief" and "morning brief please" both still match.
+ */
+function matchShortcut(text: string, shortcuts: readonly PlannerShortcut[]): PlannerShortcut | null {
+  const best = shortcuts
+    .map((shortcut) => ({ shortcut, phrase: normalize(shortcut.name) }))
+    .filter((candidate) => candidate.phrase !== '' && text.includes(candidate.phrase))
+    // The longest match wins, so "morning brief" beats a shortcut called "brief".
+    .sort((a, b) => b.phrase.length - a.phrase.length)[0];
+
+  return best?.shortcut ?? null;
 }
 
 function normalize(text: string): string {

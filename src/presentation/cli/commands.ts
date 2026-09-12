@@ -45,6 +45,7 @@ export function printUsage(): void {
 ${bold('Usage')}
   stackvoice apps                        list configured apps
   stackvoice status                      health of every app
+  stackvoice shortcuts                   list shortcuts and what they run
   stackvoice app show <id>               the effective config of one app
   stackvoice app validate [<id>]         check config without starting the server
   stackvoice app add <id> --repo <o/n>   inspect a repo and write an app file
@@ -79,6 +80,25 @@ export async function runApps(deps: CommandDeps): Promise<number> {
       app.label,
       app.enabled ? green('yes') : dim('no'),
       app.enabled ? toolNames(app).join(', ') : dim('none'),
+    ]),
+  );
+  return 0;
+}
+
+export async function runShortcuts(deps: CommandDeps): Promise<number> {
+  const shortcuts = await deps.management.listShortcuts();
+  if (shortcuts.length === 0) {
+    print(`  No shortcuts. Build one in the console at ${bold('/console')}.`);
+    return 0;
+  }
+
+  table(
+    ['TOOL', 'SAY', 'RUNS', 'ENABLED'],
+    shortcuts.map((shortcut) => [
+      shortcut.toolName,
+      shortcut.name,
+      shortcut.steps.map((step) => step.tool).join(' → '),
+      shortcut.enabled ? green('yes') : dim('no'),
     ]),
   );
   return 0;

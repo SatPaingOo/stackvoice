@@ -48,8 +48,15 @@ export const appSchema = z.object({
     })
     .default({ search: false, read: false, status: false }),
   sources: z.array(sourceSchema).min(1),
-  /** Accepted and ignored until the shortcut macro layer ships (FRAMEWORK.md §7 stretch). */
-  shortcuts: z.array(z.unknown()).default([]),
+  /**
+   * Shortcuts moved to `config/shortcuts.yml` because they span apps. An empty
+   * list is still accepted so older files keep loading; a populated one is
+   * rejected rather than silently ignored.
+   */
+  shortcuts: z
+    .array(z.unknown())
+    .max(0, 'shortcuts now live in config/shortcuts.yml, not in an app file')
+    .default([]),
 });
 
 export type RawApp = z.infer<typeof appSchema>;

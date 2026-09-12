@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { IntentPlanner, type Plan, type PlannerApp } from '../../../src/application/intent-planner.js';
+import {
+  IntentPlanner,
+  type Plan,
+  type PlannerApp,
+  type PlannerShortcut,
+} from '../../../src/application/intent-planner.js';
 
 const library: PlannerApp = {
   id: 'library',
@@ -115,6 +120,44 @@ describe('follow-ups', () => {
 
   it('treats a follow-up as a search when there is nothing to follow up on', () => {
     expect(call(planner.plan('tell me more', apps)).tool).toBe('library_search');
+  });
+});
+
+describe('shortcuts', () => {
+  const brief: PlannerShortcut = { name: 'morning brief', toolName: 'morning_brief' };
+  const market: PlannerShortcut = { name: 'market check', toolName: 'market_check' };
+
+  it.each(["what's my morning brief?", 'morning brief please', 'give me the morning brief'])(
+    'routes "%s" to its shortcut',
+    (utterance) => {
+      expect(call(planner.plan(utterance, apps, {}, [brief])).tool).toBe('morning_brief');
+    },
+  );
+
+  it('picks the shortcut that was named', () => {
+    expect(call(planner.plan('market check', apps, {}, [brief, market])).tool).toBe('market_check');
+  });
+
+  it('wins over a search, so the name is not treated as a subject', () => {
+    expect(call(planner.plan('morning brief', apps, {}, [brief])).tool).not.toBe('library_search');
+  });
+
+  it('needs the whole name, so a partial word does not hijack an ordinary question', () => {
+    const news: PlannerShortcut = { name: 'news brief', toolName: 'news_brief' };
+
+    expect(call(planner.plan('anything about the news in Iran', apps, {}, [news])).tool).toBe(
+      'library_search',
+    );
+  });
+
+  it('prefers the longer name when two shortcuts overlap', () => {
+    const short: PlannerShortcut = { name: 'brief', toolName: 'brief' };
+
+    expect(call(planner.plan('my morning brief', apps, {}, [short, brief])).tool).toBe('morning_brief');
+  });
+
+  it('changes nothing when no shortcuts are configured', () => {
+    expect(call(planner.plan('is my stack healthy?', apps, {}, [])).tool).toBe('stack_status');
   });
 });
 

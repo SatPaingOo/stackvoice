@@ -104,10 +104,11 @@ the Potential Impact criterion, not a nice-to-have. With `ManagementService`
 already built, the console was a thin adapter over it, exactly as
 ARCHITECTURE.md §5 predicted.
 
-**Stretch (only if Stage 6 lands early):** shortcut macro layer, `json-url` /
-`rss` source types. `library.yml` ships a `morning brief` shortcut — if the
-stretch is not reached, remove it from the default config before submitting
-rather than shipping config the server ignores.
+**Shortcut macro layer: done 2026-09-13.** Shortcuts moved out of app files into
+`config/shortcuts.yml`, because one spans apps and belongs to none. They are
+editable in the console and routable by voice.
+
+**Stretch remaining:** `json-url` and `rss` source types.
 
 ## 8. Open risks / next verifications
 

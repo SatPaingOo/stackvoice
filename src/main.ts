@@ -4,11 +4,14 @@ import process, { argv, cwd, exit } from 'node:process';
 import { AppRegistryService } from './application/app-registry.service.js';
 import { ConversationService } from './application/conversation.service.js';
 import { ManagementService } from './application/management.service.js';
+import { ShortcutRegistryService } from './application/shortcut-registry.service.js';
+import { ShortcutService } from './application/shortcut.service.js';
 import { HealthService } from './application/health.service.js';
 import { ReadService } from './application/read.service.js';
 import { SearchService } from './application/search.service.js';
 import { StatusService } from './application/status.service.js';
 import { ToolCatalogService } from './application/tool-catalog.service.js';
+import { ToolRunner } from './application/tool-runner.service.js';
 import { StackVoiceError } from './domain/errors.js';
 import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
@@ -17,6 +20,7 @@ import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspe
 import { ConfigWatcher } from './infrastructure/config/config-watcher.js';
 import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
+import { YamlShortcutStore } from './infrastructure/config/yaml-shortcut-store.js';
 import { HttpClient } from './infrastructure/http/http-client.js';
 import { TtlCache } from './infrastructure/http/ttl-cache.js';
 import { PinoLogger } from './infrastructure/logging/pino.logger.js';
@@ -40,6 +44,7 @@ const FETCH_TIMEOUT_MS = 8000;
 async function main(): Promise<void> {
   const settingsPath = resolve(cwd(), argv[2] ?? 'config/settings.yml');
   const appsDir = resolve(cwd(), argv[3] ?? 'config/apps');
+  const shortcutsPath = resolve(appsDir, '..', 'shortcuts.yml');
 
   const settings = await new YamlSettingsStore(settingsPath).load();
   const logger = PinoLogger.create(settings.server.logLevel);
@@ -53,25 +58,22 @@ async function main(): Promise<void> {
 
   // application
   const store = new YamlConfigStore(appsDir);
+  const shortcutStore = new YamlShortcutStore(shortcutsPath);
   const registry = new AppRegistryService(store, logger);
+  const shortcuts = new ShortcutRegistryService(shortcutStore, logger);
   await registry.load();
+  await shortcuts.load();
 
   const search = new SearchService(registry, readerFactory);
   const read = new ReadService(registry, readerFactory);
   const status = new StatusService(registry, readerFactory);
   const health = new HealthService(VERSION, clock, registry, status);
   const catalog = new ToolCatalogService();
+  const runner = new ToolRunner({ registry, search, read, status, health, now: () => clock.now() });
+  const shortcutService = new ShortcutService(runner, logger);
 
   // presentation
-  const mapper = new ToolMapper({
-    registry,
-    search,
-    read,
-    status,
-    health,
-    logger,
-    now: () => clock.now(),
-  });
+  const mapper = new ToolMapper({ runner, shortcuts, shortcutService, logger });
 
   // The simulator drives the server as an ordinary MCP client over its own
   // endpoint, which is only possible when it can authenticate. OAuth mode needs
@@ -87,7 +89,11 @@ async function main(): Promise<void> {
       bearerToken: settings.auth.mode === 'token' ? settings.auth.token : null,
       logger,
     });
-    simulator = { conversation: new ConversationService(registry, caller), registry, logger };
+    simulator = {
+      conversation: new ConversationService(registry, caller, shortcuts),
+      registry,
+      logger,
+    };
   } else if (settings.simulator.enabled) {
     logger.warn('simulator disabled: it cannot complete the OAuth flow on its own');
   }
@@ -96,11 +102,15 @@ async function main(): Promise<void> {
   // registry the watcher does rather than waiting for the file event.
   const reload = async (): Promise<void> => {
     await registry.load();
+    await shortcuts.load();
   };
 
   const console_: ConsoleDeps | null = settings.console.enabled
     ? {
-        management: new ManagementService(store, new GithubRepoInspector(http), logger),
+        management: new ManagementService(store, new GithubRepoInspector(http), logger, shortcutStore),
+        catalog,
+        registry,
+        shortcuts,
         health,
         logger,
         // With no auth configured the server is on localhost only, so the
@@ -114,6 +124,7 @@ async function main(): Promise<void> {
   const http_ = createHttpServer({
     version: VERSION,
     registry,
+    shortcuts,
     catalog,
     mapper,
     logger,
@@ -131,6 +142,7 @@ async function main(): Promise<void> {
     auth: settings.auth.mode,
     simulator: simulator === null ? 'off' : '/simulator',
     console: console_ === null ? 'off' : '/console',
+    shortcuts: shortcuts.listEnabled().map((shortcut) => shortcut.toolName),
   });
 
   // Warm the cache so the first tool call does not pay for a cold fetch: the

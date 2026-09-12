@@ -68,7 +68,7 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 |---|---|
 | `app-definition.ts` | Aggregate for one app: `id`, `label`, `description`, `enabled`, `primitives`, `sources[]`, `shortcuts[]`; owns invariants (id format, unique source ids) |
 | `data-source.ts` | One data source inside an app: `type`, connection fields (`repo`, `views_dir`, `stats_file`…) |
-| `shortcut.ts` | Optional macro: name, description, ordered steps, reply template |
+| `shortcut.ts` | Macro aggregate: name, ordered steps, reply template; owns the name-to-tool-name rule and the step limit |
 | `tool-spec.ts` | Neutral description of a tool to expose: name, description, input schema, output shape (what the catalog produces) |
 | `ports/config-store.ts` | `listApps() / getApp(id) / saveApp(def) / removeApp(id) / listAppFiles()` |
 | `ports/data-source-reader.ts` | Per-source read verbs: `search(def, params) / read(def, key) / status(def)` |
@@ -87,7 +87,8 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 | `health.service.ts` | Per-app and stack-wide health summary (drives `stack_status` and management) |
 | `management.service.ts` | Add / remove / enable / disable / validate / export apps; enforces safety rules; writes via ConfigStore port |
 | `response-shaper.ts` | Read model → spoken-friendly text (length caps, date phrasing, "and N more"); the Design differentiator |
-| `shortcut.service.ts` | Compile shortcut steps into one deterministic tool | *(stretch)*
+| `tool-runner.service.ts` | Runs any generated tool by name. Both the MCP layer and shortcuts dispatch through it, so neither owns the mapping |
+| `shortcut.service.ts` | Runs a shortcut's steps in order and stitches the answers into one |
 
 ### infrastructure/ — adapters (the "common" layer)
 

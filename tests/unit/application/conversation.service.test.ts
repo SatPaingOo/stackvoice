@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { AppRegistryService } from '../../../src/application/app-registry.service.js';
 import { ConversationService } from '../../../src/application/conversation.service.js';
+import { ShortcutRegistryService } from '../../../src/application/shortcut-registry.service.js';
 import { AppDefinition } from '../../../src/domain/app-definition.js';
 import {
   DataSource,
@@ -10,6 +11,8 @@ import {
 } from '../../../src/domain/data-source.js';
 import { SourceUnavailableError } from '../../../src/domain/errors.js';
 import type { ConfigStore } from '../../../src/domain/ports/config-store.js';
+import type { ShortcutStore } from '../../../src/domain/ports/shortcut-store.js';
+import { Shortcut } from '../../../src/domain/shortcut.js';
 import type { Logger } from '../../../src/domain/ports/logger.js';
 import type { ToolCallOutcome, ToolCaller } from '../../../src/domain/ports/tool-caller.js';
 
@@ -70,10 +73,17 @@ const store: ConfigStore = {
   listApps: async () => [app('library', 'Deep-dive library'), app('markets', 'Market intelligence')],
 };
 
-const build = async (caller: ToolCaller): Promise<ConversationService> => {
+const shortcutStoreOf = (shortcuts: Shortcut[]): ShortcutStore => ({
+  list: async () => shortcuts,
+  save: async () => null,
+});
+
+const build = async (caller: ToolCaller, shortcuts: Shortcut[] = []): Promise<ConversationService> => {
   const registry = new AppRegistryService(store, silentLogger);
   await registry.load();
-  return new ConversationService(registry, caller);
+  const shortcutRegistry = new ShortcutRegistryService(shortcutStoreOf(shortcuts), silentLogger);
+  await shortcutRegistry.load();
+  return new ConversationService(registry, caller, shortcutRegistry);
 };
 
 describe('ConversationService.respond', () => {
@@ -135,6 +145,23 @@ describe('ConversationService.respond', () => {
     });
 
     expect(caller.calls).toEqual([{ tool: 'markets_read', args: { key: 'evt-1' } }]);
+  });
+
+  it('routes a shortcut by the name a person would say', async () => {
+    const caller = new RecordingCaller(() => outcome({ spoken: 'Here is your brief.' }));
+    const brief = new Shortcut({
+      name: 'morning brief',
+      description: 'd',
+      enabled: true,
+      reply: '',
+      steps: [{ tool: 'stack_status', args: {} }],
+    });
+    const service = await build(caller, [brief]);
+
+    const turn = await service.respond({ utterance: "what's my morning brief?", context: {} });
+
+    expect(caller.calls).toEqual([{ tool: 'morning_brief', args: {} }]);
+    expect(turn.spoken).toBe('Here is your brief.');
   });
 
   it('answers without calling anything when the request is unclear', async () => {

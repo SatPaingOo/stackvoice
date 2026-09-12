@@ -31,10 +31,4 @@ sources:
     status_fields:
       last_data_date: last_date
       item_count: total_items
-shortcuts:
-  - name: "morning brief"
-    description: "Latest deep-dives plus overall stack health, in one answer."
-    steps:
-      - {tool: library_search, args: {limit: 3}}
-      - {tool: stack_status, args: {}}
-    reply: "Here is your brief: {results}"
+shortcuts: []   # shortcuts now live in config/shortcuts.yml

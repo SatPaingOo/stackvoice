@@ -12,6 +12,7 @@ import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter
 import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspector.js';
 import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
+import { YamlShortcutStore } from './infrastructure/config/yaml-shortcut-store.js';
 import { HttpClient } from './infrastructure/http/http-client.js';
 import { TtlCache } from './infrastructure/http/ttl-cache.js';
 import { PinoLogger } from './infrastructure/logging/pino.logger.js';
@@ -23,6 +24,7 @@ import {
   runApps,
   runRemove,
   runSetEnabled,
+  runShortcuts,
   runShow,
   runStatus,
   runValidate,
@@ -51,6 +53,7 @@ async function main(): Promise<number> {
 
   const settingsPath = resolve(cwd(), asString(flags['config']) ?? 'config/settings.yml');
   const appsDir = resolve(cwd(), asString(flags['apps']) ?? 'config/apps');
+  const shortcutsPath = resolve(appsDir, '..', 'shortcuts.yml');
 
   const settings = await new YamlSettingsStore(settingsPath).load();
   // The CLI prints its own output; the logger would only interleave noise.
@@ -63,7 +66,12 @@ async function main(): Promise<number> {
   const readerFactory = new ReaderFactory(readers);
 
   const registry = new AppRegistryService(store, logger);
-  const management = new ManagementService(store, new GithubRepoInspector(http), logger);
+  const management = new ManagementService(
+    store,
+    new GithubRepoInspector(http),
+    logger,
+    new YamlShortcutStore(shortcutsPath),
+  );
 
   const deps: CommandDeps = {
     management,
@@ -82,6 +90,9 @@ async function main(): Promise<number> {
     case 'status':
       await registry.load();
       return runStatus(deps);
+
+    case 'shortcuts':
+      return runShortcuts(deps);
 
     case 'app':
       return runAppCommand(deps, action, target, flags);

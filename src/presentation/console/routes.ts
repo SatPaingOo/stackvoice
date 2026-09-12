@@ -3,15 +3,22 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Express, NextFunction, Request, RequestHandler, Response } from 'express';
 
 import type { HealthService } from '../../application/health.service.js';
+import type { AppRegistryService } from '../../application/app-registry.service.js';
+import type { ShortcutRegistryService } from '../../application/shortcut-registry.service.js';
+import type { ToolCatalogService } from '../../application/tool-catalog.service.js';
 import type { AppSpec, ManagementService } from '../../application/management.service.js';
 import type { AppDefinition } from '../../domain/app-definition.js';
 import { StackVoiceError, ValidationError } from '../../domain/errors.js';
+import type { Shortcut, ShortcutProps, ShortcutStep } from '../../domain/shortcut.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import { renderConsolePage } from './page.js';
 
 export interface ConsoleDeps {
   readonly management: ManagementService;
   readonly health: HealthService;
+  readonly catalog: ToolCatalogService;
+  readonly registry: AppRegistryService;
+  readonly shortcuts: ShortcutRegistryService;
   readonly logger: Logger;
   /** Empty means no sign-in: only ever the case when the server is bound to localhost. */
   readonly ownerToken: string;
@@ -127,6 +134,55 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     });
   });
 
+  /**
+   * Every tool a shortcut could call, so the console offers a list rather than
+   * asking someone to remember tool names.
+   */
+  app.get('/console/api/tools', guard, (_req, res) => {
+    const specs = deps.catalog.generate(deps.registry.list(), []);
+    res.json({
+      tools: specs.map((spec) => ({
+        name: spec.name,
+        title: spec.title,
+        takesQuery: spec.verb === 'search',
+        needsKey: spec.verb === 'read',
+      })),
+    });
+  });
+
+  app.get('/console/api/shortcuts', guard, async (_req, res) => {
+    await handle(res, deps, async () => ({
+      shortcuts: (await deps.management.listShortcuts()).map(toShortcutWire),
+    }));
+  });
+
+  /** Creating. Editing uses PUT with the name being replaced, so a rename works. */
+  app.post('/console/api/shortcuts', guard, async (req, res) => {
+    await handle(res, deps, async () => {
+      const saved = await deps.management.saveShortcut(readShortcut(req.body));
+      await deps.reload();
+      return { shortcut: toShortcutWire(saved) };
+    });
+  });
+
+  app.put('/console/api/shortcuts/:name', guard, async (req, res) => {
+    await handle(res, deps, async () => {
+      const props = readShortcut(req.body);
+      const replacing = decodeURIComponent(req.params['name'] as string);
+      const saved = await deps.management.saveShortcut(props, replacing);
+      await deps.reload();
+      return { shortcut: toShortcutWire(saved) };
+    });
+  });
+
+  app.delete('/console/api/shortcuts/:name', guard, async (req, res) => {
+    await handle(res, deps, async () => {
+      await deps.management.removeShortcut(decodeURIComponent(req.params['name'] as string));
+      await deps.reload();
+      return { ok: true };
+    });
+  });
+
   app.delete('/console/api/apps/:id', guard, async (req, res) => {
     await handle(res, deps, async () => {
       const backup = await deps.management.remove(req.params['id'] as string);
@@ -210,6 +266,47 @@ function readSpec(id: string, body: unknown): AppSpec {
       lastDataDate: optional(statusFields, 'lastDataDate') ?? 'last_date',
       itemCount: optional(statusFields, 'itemCount') ?? 'total_items',
     },
+  };
+}
+
+function toShortcutWire(shortcut: Shortcut): Record<string, unknown> {
+  return {
+    name: shortcut.name,
+    description: shortcut.description,
+    enabled: shortcut.enabled,
+    reply: shortcut.reply,
+    toolName: shortcut.toolName,
+    steps: shortcut.steps.map((step) => ({ tool: step.tool, args: step.args })),
+  };
+}
+
+/** Validates the shape the browser sent; the entity validates the meaning. */
+function readShortcut(body: unknown): ShortcutProps {
+  if (body === null || typeof body !== 'object') throw new ValidationError('expected an object', 'body');
+  const raw = body as Record<string, unknown>;
+
+  const rawSteps = Array.isArray(raw['steps']) ? raw['steps'] : [];
+  const steps: ShortcutStep[] = rawSteps.map((entry, index) => {
+    if (entry === null || typeof entry !== 'object') {
+      throw new ValidationError(`step ${index + 1} is not a step`, 'steps');
+    }
+    const step = entry as Record<string, unknown>;
+    const tool = typeof step['tool'] === 'string' ? step['tool'].trim() : '';
+    if (tool === '') throw new ValidationError(`step ${index + 1} has no tool`, 'steps');
+
+    const args = step['args'];
+    if (args !== undefined && (args === null || typeof args !== 'object' || Array.isArray(args))) {
+      throw new ValidationError(`step ${index + 1} has arguments that are not an object`, 'steps');
+    }
+    return { tool, args: (args as Record<string, unknown> | undefined) ?? {} };
+  });
+
+  return {
+    name: typeof raw['name'] === 'string' ? raw['name'] : '',
+    description: typeof raw['description'] === 'string' ? raw['description'] : '',
+    reply: typeof raw['reply'] === 'string' ? raw['reply'] : '',
+    enabled: raw['enabled'] !== false,
+    steps,
   };
 }
 

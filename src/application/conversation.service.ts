@@ -1,6 +1,12 @@
 import type { ToolCaller } from '../domain/ports/tool-caller.js';
 import type { AppRegistryService } from './app-registry.service.js';
-import { IntentPlanner, type PlannerApp, type PlannerContext } from './intent-planner.js';
+import {
+  IntentPlanner,
+  type PlannerApp,
+  type PlannerContext,
+  type PlannerShortcut,
+} from './intent-planner.js';
+import type { ShortcutRegistryService } from './shortcut-registry.service.js';
 
 export interface TurnRequest {
   readonly utterance: string;
@@ -33,12 +39,18 @@ export class ConversationService {
   constructor(
     private readonly registry: AppRegistryService,
     private readonly caller: ToolCaller,
+    private readonly shortcuts: ShortcutRegistryService,
     private readonly planner: IntentPlanner = new IntentPlanner(),
   ) {}
 
   async respond(request: TurnRequest): Promise<Turn> {
     const apps = this.plannerApps();
-    const plan = this.planner.plan(request.utterance, apps, request.context);
+    const plan = this.planner.plan(
+      request.utterance,
+      apps,
+      request.context,
+      this.plannerShortcuts(),
+    );
 
     if (plan.kind === 'unclear') {
       return { spoken: plan.spoken, trace: null, context: request.context };
@@ -60,6 +72,14 @@ export class ConversationService {
       // in the wrong app.
       context: nextContext(plan.appId, outcome.structured, request.context),
     };
+  }
+
+  /** The enabled shortcuts, flattened to what the planner needs. */
+  private plannerShortcuts(): readonly PlannerShortcut[] {
+    return this.shortcuts.listEnabled().map((shortcut) => ({
+      name: shortcut.name,
+      toolName: shortcut.toolName,
+    }));
   }
 
   /** The configured apps, flattened to what the planner needs. */

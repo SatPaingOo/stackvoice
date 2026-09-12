@@ -84,11 +84,23 @@ Same inference, same output:
 Any guess that is wrong is one line to change in the generated file. The server
 watches `config/apps/` and reloads on its own.
 
+## Shortcuts
+
+A shortcut is one tool that runs several, so "what's my morning brief" is a
+single question instead of three. Build one in the console's Shortcuts section:
+name it the way you would say it, pick the tools, and choose how the answers are
+stitched together.
+
+The name is what makes it work by voice. "Morning brief" becomes the tool
+`morning_brief`, and both the simulator and a real assistant route the phrase
+straight to it.
+
 ### The rest of the CLI
 
 ```bash
 npm run stackvoice -- apps                 # what is configured
 npm run stackvoice -- status               # is everything running, how fresh is it
+npm run stackvoice -- shortcuts            # shortcuts and what they run
 npm run stackvoice -- app show mynotes     # the effective config
 npm run stackvoice -- app validate         # check config without starting the server
 npm run stackvoice -- app disable mynotes  # stop exposing it
@@ -122,6 +134,8 @@ flow that Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
    architecture (see CODING_STANDARDS.md and ARCHITECTURE.md).
 5. **Voice-shaped responses** — tool results come back as sentences a person can
    listen to, not JSON a speaker cannot read aloud.
+6. **Shortcuts** — one tool that runs several, for the questions you ask every
+   morning.
 
 ## Docs map
 
@@ -138,7 +152,7 @@ flow that Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
 ## Development
 
 ```bash
-npm test         # 169 unit tests, no network
+npm test         # 219 unit tests, no network
 npm run typecheck
 ```
 

@@ -11,6 +11,7 @@ v1 schema + validation rules + worked examples. Companion: ARCHITECTURE.md §4.
 ```
 config/
 ├─ settings.yml        # server + management behavior (one file)
+├─ shortcuts.yml       # macros: one tool that runs several
 └─ apps/
    ├─ library.yml      # one app = one file (name must equal app id)
    ├─ markets.yml
@@ -351,6 +352,45 @@ The server watches `config/apps/` and reloads when it changes. Each MCP session
 reads the registry when it connects, so the next conversation sees the new tools
 without a restart. A file that fails to parse is logged and ignored: the running
 server keeps the config it already validated rather than going dark.
+
+## 7.5 Shortcuts — `config/shortcuts.yml`
+
+A shortcut is one tool that runs several. "What's my morning brief" is two
+questions — what did my library find, and is my stack healthy — and asking an
+assistant to chain them is two round trips and a chance to get the order wrong.
+
+```yaml
+shortcuts:
+  - name: "morning brief"          # becomes the tool morning_brief
+    description: "The latest from your library plus whether the stack is healthy."
+    enabled: true
+    steps:
+      - tool: library_search
+        args: {"limit": 2}
+      - tool: stack_status
+        args: {}
+    reply: "Here is your brief. {1} {2}"
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | What you would say out loud. Becomes the tool name: `morning brief` → `morning_brief` |
+| `description` | The assistant reads this to decide when to run it |
+| `steps` | Run in order, at most four, each naming a tool this server exposes |
+| `reply` | `{1}`, `{2}` insert one step; `{results}` inserts all of them; empty joins them with a space |
+| `enabled` | `false` generates no tool |
+
+Steps run in order, not in parallel: a brief that reads the news before the
+weather one morning and after it the next is a worse brief. A step that fails
+does not sink the answer — being told the library is fine and the market feed is
+down beats being told nothing.
+
+Shortcuts live in their own file because they span apps: `morning brief` calls a
+library tool and a global one, and belongs to neither. A shortcut can never
+shadow a generated tool; if the names collide, the app's own tool wins.
+
+**Easiest way to write one:** the web console at `/console` has a Shortcuts
+section with a tool picker per step and a live preview of the tool name.
 
 ## 8. Validation & failure semantics
 
