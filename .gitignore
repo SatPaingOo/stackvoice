@@ -24,3 +24,8 @@ Thumbs.db
 
 # test output
 coverage/
+
+# end-to-end test output
+test-results/
+playwright-report/
+blob-report/

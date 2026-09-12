@@ -39,7 +39,7 @@ articles, growing daily) and [eventpulse](https://github.com/SatPaingOo/eventpul
 | Route | What it is |
 |---|---|
 | `/` | Landing page — the idea in ten seconds, with the live numbers from your stack |
-| `/simulator` | Ask your stack by voice or text; every answer shows the tool call behind it |
+| `/simulator` | Ask by voice or text, or hold a hands-free conversation; every answer shows the tool call behind it |
 | `/console` | Your apps — add, edit, enable, disable, remove, and see their health |
 | `/console/shortcuts` | Build one tool that runs several |
 | `/console/settings` | Access mode, the MCP address to connect, which pages are on, server options |
@@ -47,6 +47,20 @@ articles, growing daily) and [eventpulse](https://github.com/SatPaingOo/eventpul
 
 Every page is rendered by the server with no build step and no CDN, and each one
 adapts from a phone to a desktop.
+
+## Talking to it
+
+The simulator has two ways in.
+
+- **Push to talk.** Tap the microphone, ask one question, hear the answer.
+- **Conversation.** Tap *Start a conversation* and just keep talking. It
+  listens, answers out loud, and listens again on its own. Say "stop" or
+  "that's all" to finish, or tap *End conversation*. Tap the circle while it is
+  speaking to interrupt.
+
+It never opens the microphone while an answer is still playing, so it cannot
+hear itself and loop. Two silences in a row end the conversation rather than
+leaving a microphone open on an empty room.
 
 ## Point it at your own data
 
@@ -166,7 +180,8 @@ flow that Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
 ## Development
 
 ```bash
-npm test         # 219 unit tests, no network
+npm test          # 226 unit tests, no network
+npm run test:e2e  # browser tests against the real server, in the Edge you already have
 npm run typecheck
 ```
 

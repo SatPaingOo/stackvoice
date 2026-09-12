@@ -1,0 +1,24 @@
+# Settings for the end-to-end suite only: its own port, no auth, quiet logs.
+# Never point this at a real deployment.
+
+server:
+  host: 127.0.0.1
+  port: 8790
+  log_level: warn
+
+auth:
+  mode: none
+  token: ""
+  public_url: ""
+
+console:
+  enabled: true
+
+simulator:
+  enabled: true
+
+management:
+  cli: true
+
+cache:
+  ttl_seconds: 300
