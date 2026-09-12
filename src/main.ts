@@ -46,7 +46,8 @@ async function main(): Promise<void> {
   const appsDir = resolve(cwd(), argv[3] ?? 'config/apps');
   const shortcutsPath = resolve(appsDir, '..', 'shortcuts.yml');
 
-  const settings = await new YamlSettingsStore(settingsPath).load();
+  const settingsStore = new YamlSettingsStore(settingsPath);
+  const settings = await settingsStore.load();
   const logger = PinoLogger.create(settings.server.logLevel);
   const clock = new SystemClock();
 
@@ -92,6 +93,7 @@ async function main(): Promise<void> {
     simulator = {
       conversation: new ConversationService(registry, caller, shortcuts),
       registry,
+      shortcuts,
       logger,
     };
   } else if (settings.simulator.enabled) {
@@ -118,6 +120,8 @@ async function main(): Promise<void> {
         // nothing. The moment the server is exposed, it asks for the token.
         ownerToken: settings.auth.mode === 'none' ? '' : settings.auth.token,
         reload,
+        settings,
+        settingsStore,
       }
     : null;
 

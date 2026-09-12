@@ -108,7 +108,9 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 |---|---|---|
 | MCP server | `mcp/server.ts`, `mcp/tool-mapper.ts` | Streamable HTTP transport; maps `ToolSpec` → MCP tool definition; errors → MCP-shaped results |
 | CLI | `cli.ts`, `cli/commands/*.ts` | management operations from a terminal |
-| Web console | `console/routes.ts`, `console/page.ts` | add / edit / enable / remove apps and see health, over the same ManagementService |
+| Web design system | `web/theme.ts`, `web/layout.ts` | shared tokens, page shell and navigation; every page renders through one layout so they stay one product |
+| Landing | `web/landing.ts` | the idea in ten seconds, with live numbers read from the running stack |
+| Web console | `console/routes.ts`, `console/apps-page.ts`, `console/shortcuts-page.ts`, `console/settings-page.ts`, `console/signin-page.ts` | one route per concern over the same ManagementService, plus a settings write path |
 | Simulator | `simulator/routes.ts`, `simulator/page.ts` | simulated Alexa+ client; drives the server as a real MCP client |
 
 ## 4. Multi-app design (P2)

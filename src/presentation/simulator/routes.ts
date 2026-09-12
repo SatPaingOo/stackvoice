@@ -2,6 +2,7 @@ import type { Express, Request, Response } from 'express';
 
 import type { ConversationService } from '../../application/conversation.service.js';
 import type { AppRegistryService } from '../../application/app-registry.service.js';
+import type { ShortcutRegistryService } from '../../application/shortcut-registry.service.js';
 import { StackVoiceError } from '../../domain/errors.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import { renderSimulatorPage, type SimulatorAppSummary } from './page.js';
@@ -9,6 +10,7 @@ import { renderSimulatorPage, type SimulatorAppSummary } from './page.js';
 export interface SimulatorDeps {
   readonly conversation: ConversationService;
   readonly registry: AppRegistryService;
+  readonly shortcuts: ShortcutRegistryService;
   readonly logger: Logger;
 }
 
@@ -25,7 +27,8 @@ const MAX_UTTERANCE_LENGTH = 400;
  */
 export function installSimulator(app: Express, deps: SimulatorDeps): void {
   app.get('/simulator', (_req, res) => {
-    res.type('html').send(renderSimulatorPage(summarize(deps.registry)));
+    const shortcutNames = deps.shortcuts.listEnabled().map((shortcut) => shortcut.name);
+    res.type('html').send(renderSimulatorPage(summarize(deps.registry), shortcutNames));
   });
 
   app.get('/simulator/api/apps', (_req, res) => {

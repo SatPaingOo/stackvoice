@@ -34,6 +34,20 @@ Out of the box it is pointed at two real, live pipelines —
 articles, growing daily) and [eventpulse](https://github.com/SatPaingOo/eventpulse)
 (event → market intelligence). Nothing in the demo is mocked.
 
+## Pages
+
+| Route | What it is |
+|---|---|
+| `/` | Landing page — the idea in ten seconds, with the live numbers from your stack |
+| `/simulator` | Ask your stack by voice or text; every answer shows the tool call behind it |
+| `/console` | Your apps — add, edit, enable, disable, remove, and see their health |
+| `/console/shortcuts` | Build one tool that runs several |
+| `/console/settings` | Access mode, the MCP address to connect, which pages are on, server options |
+| `/mcp` | The MCP endpoint itself, for any client |
+
+Every page is rendered by the server with no build step and no CDN, and each one
+adapts from a phone to a desktop.
+
 ## Point it at your own data
 
 Your data project publishes JSON somewhere in a public GitHub repo. That is the

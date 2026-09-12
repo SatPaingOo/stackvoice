@@ -2,16 +2,22 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 
 import type { Express, NextFunction, Request, RequestHandler, Response } from 'express';
 
-import type { HealthService } from '../../application/health.service.js';
 import type { AppRegistryService } from '../../application/app-registry.service.js';
+import type { HealthService } from '../../application/health.service.js';
+import type { AppSpec, ManagementService } from '../../application/management.service.js';
 import type { ShortcutRegistryService } from '../../application/shortcut-registry.service.js';
 import type { ToolCatalogService } from '../../application/tool-catalog.service.js';
-import type { AppSpec, ManagementService } from '../../application/management.service.js';
 import type { AppDefinition } from '../../domain/app-definition.js';
 import { StackVoiceError, ValidationError } from '../../domain/errors.js';
-import type { Shortcut, ShortcutProps, ShortcutStep } from '../../domain/shortcut.js';
 import type { Logger } from '../../domain/ports/logger.js';
-import { renderConsolePage } from './page.js';
+import type { SettingsStore } from '../../domain/ports/settings-store.js';
+import type { AuthMode, LogLevel, Settings } from '../../domain/settings.js';
+import type { Shortcut, ShortcutProps, ShortcutStep } from '../../domain/shortcut.js';
+import { renderLandingPage } from '../web/landing.js';
+import { renderAppsPage } from './apps-page.js';
+import { renderSettingsPage } from './settings-page.js';
+import { renderShortcutsPage } from './shortcuts-page.js';
+import { renderSigninPage } from './signin-page.js';
 
 export interface ConsoleDeps {
   readonly management: ManagementService;
@@ -22,24 +28,28 @@ export interface ConsoleDeps {
   readonly logger: Logger;
   /** Empty means no sign-in: only ever the case when the server is bound to localhost. */
   readonly ownerToken: string;
-  /** Reloads the registry so a save takes effect without a restart. */
+  /** Reloads the registries so a save takes effect without a restart. */
   readonly reload: () => Promise<void>;
+  /** The settings the process started with, and where to write changes. */
+  readonly settings: Settings;
+  readonly settingsStore: SettingsStore;
 }
 
 const SESSION_COOKIE = 'stackvoice_console';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 /**
- * The web console.
+ * The web face: the landing page, the console routes, and their JSON API.
  *
- * A CLI means "any developer can add their data". A browser means "anyone can",
- * which is what the product actually claims. It is a thin adapter over
- * `ManagementService` — the same validation, the same backups, the same write
- * path as the CLI, because there is only one implementation of each operation.
+ * A thin adapter over `ManagementService` — the same validation, the same
+ * backups, the same write path as the CLI, because there is only one
+ * implementation of each operation.
  */
 export function installConsole(app: Express, deps: ConsoleDeps): void {
   const sessions = new Map<string, number>();
   const requiresLogin = deps.ownerToken !== '';
+  // What the page shows: the last saved settings, even where they wait for a restart.
+  let current: Settings = deps.settings;
 
   const authorized = (req: Request): boolean => {
     if (!requiresLogin) return true;
@@ -54,7 +64,7 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     return true;
   };
 
-  const guard: RequestHandler = (req, res, next: NextFunction) => {
+  const guardApi: RequestHandler = (req, res, next: NextFunction) => {
     if (authorized(req)) {
       next();
       return;
@@ -62,9 +72,56 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     res.status(401).json({ error: 'sign in first' });
   };
 
-  app.get('/console', (req, res) => {
-    res.type('html').send(renderConsolePage({ requiresLogin, signedIn: authorized(req) }));
+  /** Pages redirect to sign-in rather than returning a bare 401. */
+  const guardPage: RequestHandler = (req, res, next: NextFunction) => {
+    if (authorized(req)) {
+      next();
+      return;
+    }
+    res.redirect(`/console/signin?next=${encodeURIComponent(req.path)}`);
+  };
+
+  const html =
+    (render: () => string): RequestHandler =>
+    (_req, res) => {
+      res.type('html').send(render());
+    };
+
+  // ---- pages -------------------------------------------------------------
+
+  app.get('/', async (_req, res) => {
+    const health = await deps.health.reportStack().catch(() => null);
+    const items =
+      health === null
+        ? 0
+        : health.apps
+            .flatMap((entry) => entry.sources.map((source) => source.itemCount ?? 0))
+            .reduce((total, count) => total + count, 0);
+
+    res.type('html').send(
+      renderLandingPage({
+        appCount: deps.registry.listEnabled().length,
+        toolCount: deps.catalog.generate(deps.registry.list(), deps.shortcuts.list()).length,
+        itemCount: items === 0 ? null : items,
+        shortcutNames: deps.shortcuts.listEnabled().map((shortcut) => shortcut.name),
+      }),
+    );
   });
+
+  app.get('/console/signin', (req, res) => {
+    if (!requiresLogin || authorized(req)) {
+      res.redirect('/console');
+      return;
+    }
+    res.type('html').send(renderSigninPage());
+  });
+
+  app.get('/console', guardPage, html(renderAppsPage));
+  app.get('/console/apps', (_req, res) => res.redirect('/console'));
+  app.get('/console/shortcuts', guardPage, html(renderShortcutsPage));
+  app.get('/console/settings', guardPage, html(renderSettingsPage));
+
+  // ---- session -----------------------------------------------------------
 
   app.post('/console/api/login', (req, res) => {
     const body = req.body as { token?: unknown };
@@ -88,23 +145,17 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     res.clearCookie(SESSION_COOKIE).json({ ok: true });
   });
 
-  /** Apps plus their health, so the dashboard is one request. */
-  app.get('/console/api/apps', guard, async (_req, res) => {
-    await handle(res, deps, async () => {
-      const [apps, health] = await Promise.all([
-        deps.management.list(),
-        deps.health.reportStack(),
-      ]);
-      const healthById = new Map(health.apps.map((entry) => [entry.appId, entry]));
+  // ---- apps --------------------------------------------------------------
 
-      return {
-        apps: apps.map((app) => ({ ...toWire(app), health: healthById.get(app.id) ?? null })),
-      };
+  app.get('/console/api/apps', guardApi, async (_req, res) => {
+    await handle(res, deps, async () => {
+      const [apps, health] = await Promise.all([deps.management.list(), deps.health.reportStack()]);
+      const healthById = new Map(health.apps.map((entry) => [entry.appId, entry]));
+      return { apps: apps.map((entry) => ({ ...toWire(entry), health: healthById.get(entry.id) ?? null })) };
     });
   });
 
-  /** Previews a repository without writing anything. */
-  app.post('/console/api/inspect', guard, async (req, res) => {
+  app.post('/console/api/inspect', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
       const body = req.body as { repo?: unknown; branch?: unknown };
       const repo = typeof body.repo === 'string' ? body.repo.trim() : '';
@@ -116,29 +167,35 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     });
   });
 
-  app.put('/console/api/apps/:id', guard, async (req, res) => {
+  app.put('/console/api/apps/:id', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
-      const spec = readSpec(req.params['id'] as string, req.body);
-      const result = await deps.management.upsert(spec);
+      const result = await deps.management.upsert(readSpec(req.params['id'] as string, req.body));
       await deps.reload();
       return { app: toWire(result.app), replaced: result.replaced };
     });
   });
 
-  app.post('/console/api/apps/:id/enabled', guard, async (req, res) => {
+  app.post('/console/api/apps/:id/enabled', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
       const enabled = (req.body as { enabled?: unknown }).enabled === true;
-      const app = await deps.management.setEnabled(req.params['id'] as string, enabled);
+      const updated = await deps.management.setEnabled(req.params['id'] as string, enabled);
       await deps.reload();
-      return { app: toWire(app) };
+      return { app: toWire(updated) };
     });
   });
 
-  /**
-   * Every tool a shortcut could call, so the console offers a list rather than
-   * asking someone to remember tool names.
-   */
-  app.get('/console/api/tools', guard, (_req, res) => {
+  app.delete('/console/api/apps/:id', guardApi, async (req, res) => {
+    await handle(res, deps, async () => {
+      const backup = await deps.management.remove(req.params['id'] as string);
+      await deps.reload();
+      return { backup };
+    });
+  });
+
+  // ---- shortcuts ---------------------------------------------------------
+
+  /** Every tool a shortcut could call, so the page offers a list rather than a text box. */
+  app.get('/console/api/tools', guardApi, (_req, res) => {
     const specs = deps.catalog.generate(deps.registry.list(), []);
     res.json({
       tools: specs.map((spec) => ({
@@ -150,14 +207,14 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     });
   });
 
-  app.get('/console/api/shortcuts', guard, async (_req, res) => {
+  app.get('/console/api/shortcuts', guardApi, async (_req, res) => {
     await handle(res, deps, async () => ({
       shortcuts: (await deps.management.listShortcuts()).map(toShortcutWire),
     }));
   });
 
   /** Creating. Editing uses PUT with the name being replaced, so a rename works. */
-  app.post('/console/api/shortcuts', guard, async (req, res) => {
+  app.post('/console/api/shortcuts', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
       const saved = await deps.management.saveShortcut(readShortcut(req.body));
       await deps.reload();
@@ -165,17 +222,16 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     });
   });
 
-  app.put('/console/api/shortcuts/:name', guard, async (req, res) => {
+  app.put('/console/api/shortcuts/:name', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
-      const props = readShortcut(req.body);
       const replacing = decodeURIComponent(req.params['name'] as string);
-      const saved = await deps.management.saveShortcut(props, replacing);
+      const saved = await deps.management.saveShortcut(readShortcut(req.body), replacing);
       await deps.reload();
       return { shortcut: toShortcutWire(saved) };
     });
   });
 
-  app.delete('/console/api/shortcuts/:name', guard, async (req, res) => {
+  app.delete('/console/api/shortcuts/:name', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
       await deps.management.removeShortcut(decodeURIComponent(req.params['name'] as string));
       await deps.reload();
@@ -183,16 +239,26 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     });
   });
 
-  app.delete('/console/api/apps/:id', guard, async (req, res) => {
+  // ---- settings ----------------------------------------------------------
+
+  app.get('/console/api/settings', guardApi, (req, res) => {
+    res.json(settingsWire(current, req));
+  });
+
+  app.put('/console/api/settings', guardApi, async (req, res) => {
     await handle(res, deps, async () => {
-      const backup = await deps.management.remove(req.params['id'] as string);
-      await deps.reload();
-      return { backup };
+      const next = readSettings(req.body, current);
+      const backup = await deps.settingsStore.save(next);
+      const restartRequired = JSON.stringify(deps.settings) !== JSON.stringify(next);
+      current = next;
+      deps.logger.info('settings saved', { restartRequired });
+      return { ...settingsWire(current, req), backup, restartRequired };
     });
   });
 }
 
-/** Runs a handler, turning typed domain errors into the right status. */
+// ---- helpers ---------------------------------------------------------------
+
 async function handle(
   res: Response,
   deps: ConsoleDeps,
@@ -206,8 +272,7 @@ async function handle(
       return;
     }
     if (error instanceof StackVoiceError) {
-      const status = error.code === 'APP_NOT_FOUND' ? 404 : 502;
-      res.status(status).json({ error: error.message });
+      res.status(error.code === 'APP_NOT_FOUND' ? 404 : 502).json({ error: error.message });
       return;
     }
     deps.logger.error('console request failed', { reason: String(error) });
@@ -215,7 +280,76 @@ async function handle(
   }
 }
 
-/** Validates the shape the browser sent; the service validates the meaning. */
+/** The token itself never leaves the server; the page only learns whether one is set. */
+function settingsWire(settings: Settings, req: Request): Record<string, unknown> {
+  const origin =
+    settings.auth.publicUrl !== '' ? settings.auth.publicUrl : `${req.protocol}://${req.get('host') ?? 'localhost'}`;
+  return {
+    settings: {
+      server: settings.server,
+      auth: { mode: settings.auth.mode, tokenSet: settings.auth.token !== '', publicUrl: settings.auth.publicUrl },
+      console: settings.console,
+      simulator: settings.simulator,
+      cache: settings.cache,
+    },
+    endpoints: { mcp: `${origin}/mcp`, console: `${origin}/console`, simulator: `${origin}/simulator` },
+  };
+}
+
+function readSettings(body: unknown, previous: Settings): Settings {
+  if (body === null || typeof body !== 'object') throw new ValidationError('expected an object', 'body');
+  const raw = body as Record<string, Record<string, unknown> | undefined>;
+
+  const server = raw['server'] ?? {};
+  const auth = raw['auth'] ?? {};
+  const cache = raw['cache'] ?? {};
+
+  const host = typeof server['host'] === 'string' ? server['host'].trim() : '';
+  if (host === '') throw new ValidationError('an address to listen on is required', 'server.host');
+
+  const port = Number(server['port']);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new ValidationError('the port must be a whole number from 1 to 65535', 'server.port');
+  }
+
+  const logLevel = server['logLevel'];
+  if (logLevel !== 'debug' && logLevel !== 'info' && logLevel !== 'warn' && logLevel !== 'error') {
+    throw new ValidationError('choose a log level', 'server.logLevel');
+  }
+
+  const mode = auth['mode'];
+  if (mode !== 'none' && mode !== 'token' && mode !== 'oauth') {
+    throw new ValidationError('choose an access mode', 'auth.mode');
+  }
+
+  // An empty token field means "keep the one I have", so the page never has to
+  // hold the secret to let someone change something else.
+  const submittedToken = typeof auth['token'] === 'string' ? auth['token'] : '';
+  const token = submittedToken === '' ? previous.auth.token : submittedToken;
+  const publicUrl = typeof auth['publicUrl'] === 'string' ? auth['publicUrl'].trim().replace(/\/+$/, '') : '';
+
+  if (mode !== 'none' && token === '') {
+    throw new ValidationError('set an owner token before turning access control on', 'auth.token');
+  }
+  if (mode === 'oauth' && !/^https?:\/\//.test(publicUrl)) {
+    throw new ValidationError('OAuth needs the public address this server is reached at', 'auth.publicUrl');
+  }
+
+  const ttl = Number(cache['ttlSeconds']);
+  if (!Number.isInteger(ttl) || ttl < 0 || ttl > 86_400) {
+    throw new ValidationError('the cache must be between 0 and 86400 seconds', 'cache.ttlSeconds');
+  }
+
+  return {
+    server: { host, port, logLevel: logLevel as LogLevel },
+    auth: { mode: mode as AuthMode, token, publicUrl },
+    console: { enabled: (raw['console'] ?? {})['enabled'] !== false },
+    simulator: { enabled: (raw['simulator'] ?? {})['enabled'] !== false },
+    management: previous.management,
+    cache: { ttlSeconds: ttl },
+  };
+}
+
 function readSpec(id: string, body: unknown): AppSpec {
   if (body === null || typeof body !== 'object') throw new ValidationError('expected an object', 'body');
   const raw = body as Record<string, unknown>;
@@ -269,18 +403,6 @@ function readSpec(id: string, body: unknown): AppSpec {
   };
 }
 
-function toShortcutWire(shortcut: Shortcut): Record<string, unknown> {
-  return {
-    name: shortcut.name,
-    description: shortcut.description,
-    enabled: shortcut.enabled,
-    reply: shortcut.reply,
-    toolName: shortcut.toolName,
-    steps: shortcut.steps.map((step) => ({ tool: step.tool, args: step.args })),
-  };
-}
-
-/** Validates the shape the browser sent; the entity validates the meaning. */
 function readShortcut(body: unknown): ShortcutProps {
   if (body === null || typeof body !== 'object') throw new ValidationError('expected an object', 'body');
   const raw = body as Record<string, unknown>;
@@ -310,15 +432,26 @@ function readShortcut(body: unknown): ShortcutProps {
   };
 }
 
-function toWire(app: AppDefinition): Record<string, unknown> {
-  const source = app.primarySource();
+function toShortcutWire(shortcut: Shortcut): Record<string, unknown> {
   return {
-    id: app.id,
-    label: app.label,
-    description: app.description,
-    enabled: app.enabled,
-    primitives: app.primitives,
-    tools: app.enabledVerbs().map((verb) => `${app.id}_${verb}`),
+    name: shortcut.name,
+    description: shortcut.description,
+    enabled: shortcut.enabled,
+    reply: shortcut.reply,
+    toolName: shortcut.toolName,
+    steps: shortcut.steps.map((step) => ({ tool: step.tool, args: step.args })),
+  };
+}
+
+function toWire(entry: AppDefinition): Record<string, unknown> {
+  const source = entry.primarySource();
+  return {
+    id: entry.id,
+    label: entry.label,
+    description: entry.description,
+    enabled: entry.enabled,
+    primitives: entry.primitives,
+    tools: entry.enabledVerbs().map((verb) => `${entry.id}_${verb}`),
     repo: source.repo,
     indexFile: source.indexFile,
     statsFile: source.statsFile,

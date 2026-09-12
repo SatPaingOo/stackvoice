@@ -108,6 +108,14 @@ ARCHITECTURE.md §5 predicted.
 `config/shortcuts.yml`, because one spans apps and belongs to none. They are
 editable in the console and routable by voice.
 
+**Web redesign: done 2026-09-13.** The single-page console became a product:
+a landing page at `/` with animated sections and live numbers from the running
+stack, separate routes for apps, shortcuts and settings, a sign-in page, and one
+shared design system so every page reads as the same product. Settings are now
+editable in the browser, with a clear note on the ones that need a restart. All
+pages adapt from phone to desktop, render with no build step or CDN, and stay
+readable with script off.
+
 **Stretch remaining:** `json-url` and `rss` source types.
 
 ## 8. Open risks / next verifications
