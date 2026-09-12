@@ -13,6 +13,18 @@ assistant the hands.
 - **Target:** Amazon *Build, Ship, Shape* hackathon — Alexa+ track (deadline Oct 23, 2026).
 - **Stack:** Node.js 20+ / TypeScript · MCP spec 2025-11-25 · Streamable HTTP · $0 budget.
 
+## Quick start
+
+```bash
+npm install
+npm run dev              # starts the MCP server on http://127.0.0.1:8765/mcp
+npx @modelcontextprotocol/inspector   # point it at that URL to list and call tools
+```
+
+`npm test` runs the unit suite. Settings live in `config/settings.yml`; set
+`management.auth_token` there to require `Authorization: Bearer <token>` on every
+request.
+
 ## What's inside (scope — decided before any code)
 
 1. **Config-driven MCP core** — one server, tools generated from config at startup.
