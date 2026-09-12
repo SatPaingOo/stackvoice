@@ -92,7 +92,17 @@ describe('shapeStackHealth', () => {
 
   it('leads with the failure when something is broken', () => {
     const spoken = shapeStackHealth(health([app('library', false), app('markets', true)]));
-    expect(spoken.startsWith('1 app has a problem: library.')).toBe(true);
+    expect(spoken).toBe('1 app has a problem: library. The other one is fine.');
+  });
+
+  it('says "1 app is running", not "1 apps are running"', () => {
+    expect(shapeStackHealth(health([app('library', true)]))).toBe(
+      'Your stack is healthy. 1 app is running: library.',
+    );
+  });
+
+  it('does not claim other apps are fine when none are', () => {
+    expect(shapeStackHealth(health([app('library', false)]))).toBe('1 app has a problem: library.');
   });
 
   it('stays inside the spoken-word budget for a large stack', () => {

@@ -284,14 +284,54 @@ shortcuts: []
 > Primitives stay per-app: set any of `search`/`read`/`status` to `false` and the
 > catalog simply generates fewer tools for that app.
 
-## 7. Adding your own app (the "no code" story)
+## 7. Adding your own app
+
+### The short way
+
+```bash
+npm run stackvoice -- app add mynotes --repo me/my-pipeline
+```
+
+StackVoice fetches your read models, works out where the records live and which
+payload field feeds each spoken field, prints what it inferred with a sample
+value from your own data, and writes `config/apps/mynotes.yml`.
+
+What it looks for, in order:
+
+| Looking for | Paths tried |
+|---|---|
+| The records | `data/views/index.json`, `data/views/items.json`, `data/index.json`, `views/index.json`, `docs/data/index.json`, `index.json` |
+| Freshness and counts | `data/views/stats.json`, `data/views/status.json`, `data/views/summary.json`, `data/stats.json`, `data/status.json`, then the index document itself |
+
+If the index document is an object rather than an array, every array inside it is
+a candidate and the most *readable* one wins — the one that can fill the most
+spoken fields, not the longest. A list of price rows loses to a shorter list of
+events with titles and dates.
+
+Two things it will not do. It never names a field that is not in your data, so a
+mapping that comes back `null` really is absent rather than a broken guess. And
+if no record carries a title or a summary, it refuses to write the app and tells
+you which keys it did see, because a tool that can fetch but has nothing to say
+is worse than no tool.
+
+Useful flags: `--branch` for a non-default branch, `--label` for the human name
+used in tool descriptions, and `--description` for what the assistant reads when
+deciding whether to call this app.
+
+### The long way
+
+Everything above just writes YAML, so you can write it yourself:
 
 1. `cp config/apps/library.yml config/apps/myapp.yml`
-2. Edit `id`, `label`, `description`, sources (your repo(s)), primitives.
-3. `stackvoice app validate myapp` (or let startup validate).
-4. Restart the server → tools `myapp_search`, `myapp_read`, `myapp_status`
-   appear automatically.
-   Or: `stackvoice app add --from-template library --id myapp` (management CLI).
+2. Edit `id`, `label`, `description`, the source `repo`, and the field maps (§5.1).
+3. `npm run stackvoice -- app validate myapp`
+
+### Picking it up
+
+The server watches `config/apps/` and reloads when it changes. Each MCP session
+reads the registry when it connects, so the next conversation sees the new tools
+without a restart. A file that fails to parse is logged and ignored: the running
+server keeps the config it already validated rather than going dark.
 
 ## 8. Validation & failure semantics
 

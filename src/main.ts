@@ -12,6 +12,7 @@ import { StackVoiceError } from './domain/errors.js';
 import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
 import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
+import { ConfigWatcher } from './infrastructure/config/config-watcher.js';
 import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
 import { HttpClient } from './infrastructure/http/http-client.js';
@@ -23,7 +24,7 @@ import { createHttpServer } from './presentation/mcp/http-server.js';
 import { ToolMapper } from './presentation/mcp/tool-mapper.js';
 import type { SimulatorDeps } from './presentation/simulator/routes.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 
 const FETCH_TIMEOUT_MS = 8000;
 
@@ -111,8 +112,21 @@ async function main(): Promise<void> {
     .then(() => logger.info('cache warmed', { entries: cache.size }))
     .catch((error: unknown) => logger.warn('cache warm failed', { reason: String(error) }));
 
+  // Adding an app should not mean restarting. Each MCP session reads the
+  // registry when it connects, so reloading is enough for the next conversation
+  // to see the new tools.
+  const watcher = new ConfigWatcher({
+    appsDir,
+    logger,
+    reload: async () => {
+      await registry.load();
+    },
+  });
+  watcher.start();
+
   const shutdown = (signal: string): void => {
     logger.info('shutting down', { signal });
+    watcher.stop();
     server.close(() => exit(0));
   };
   process.on('SIGINT', () => shutdown('SIGINT'));

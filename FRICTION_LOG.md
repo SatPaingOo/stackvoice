@@ -65,3 +65,25 @@ a design change) · `minor` (annoying, worked around quickly).
   MCP Toolkit overview page listing transport, spec version, auth, and latency.
   Developers read the overview to decide *whether* to build; the constraints
   that decide that belong there.
+
+### 2026-09-13 — No guidance on what a "self-hosted MCP server" should expose
+
+- **Task:** Decide what tools to generate for a user's own data project, so an
+  Alexa+ customer can ask about it in their own words.
+- **Steps taken:** Read the Alexa+ MCP Toolkit overview, quickstart and the
+  certification page; looked for a reference add-on or a worked example of tool
+  naming, description style, or result length.
+- **Expected:** Guidance on what Alexa+ does well with — how long a tool result
+  should be before it stops being speakable, whether tool descriptions are used
+  for routing, how many tools an add-on can sensibly expose.
+- **Actual:** The docs cover transport, auth and packaging thoroughly, and say
+  nothing about the shape of a good tool for a *voice* surface. The constraint
+  that mattered most in practice, that a spoken answer is two sentences and not
+  a JSON array, had to be discovered by building a client and listening to it.
+- **Severity:** minor
+- **Workaround:** Built a response-shaping layer and a simulator, then tuned the
+  spoken output by ear.
+- **Suggestion for Amazon:** Publish one reference MCP add-on with its tool
+  definitions and sample results, and a short "writing tools for voice" page.
+  The transport is the easy half; nobody's first MCP server returns speakable
+  results, and every entrant in this track is solving that alone.

@@ -54,12 +54,15 @@ export function shapeStackHealth(health: StackHealth): string {
 
   if (failing.length === 0) {
     const names = listPhrase(healthy.map((app) => app.appId));
-    return toSpoken(`Your stack is healthy. ${healthy.length} apps are running: ${names}.`);
+    const count = healthy.length === 1 ? '1 app is' : `${healthy.length} apps are`;
+    return toSpoken(`Your stack is healthy. ${count} running: ${names}.`);
   }
 
   const names = listPhrase(failing.map((app) => app.appId));
   const trouble = failing.length === 1 ? 'app has a problem' : 'apps have problems';
-  return toSpoken(`${failing.length} ${trouble}: ${names}. The other ${healthy.length} are fine.`);
+  const rest =
+    healthy.length === 0 ? '' : ` The other ${healthy.length === 1 ? 'one is' : `${healthy.length} are`} fine.`;
+  return toSpoken(`${failing.length} ${trouble}: ${names}.${rest}`);
 }
 
 /** "a, b and c" — caps at three, then "and N more". */

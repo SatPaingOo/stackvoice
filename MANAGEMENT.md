@@ -34,13 +34,17 @@ Companion: ARCHITECTURE.md §5 (subsystem design), CONFIGURATION.md (schemas).
 | `stackvoice logs [--app <id>] [--tail N]` | recent structured logs |
 
 ### Change
-| Command / tool | Behavior |
+| Command | Behavior |
 |---|---|
-| `stackvoice app add --from-template <id> --id <new>` | copy template → validate → write (id must be free) |
-| `stackvoice app remove <id> [--yes]` | requires confirmation; writes backup first |
-| `stackvoice app enable <id>` / `disable <id>` | flip `enabled`; next startup reflects it |
-| `stackvoice app validate <id>` | run full validation without writing |
-| `stackvoice app export <id>` | print canonical YAML (good for sharing/backup) |
+| `stackvoice app add <id> --repo <owner/name>` | inspect the repo → infer the field map → validate → write |
+| `stackvoice app remove <id> [--yes]` | requires confirmation; writes a backup first |
+| `stackvoice app enable <id>` / `disable <id>` | flip `enabled`; the watcher picks it up |
+| `stackvoice app validate [<id>]` | run full validation without writing |
+
+`app add` is the command the product turns on. Config-driven only means anything
+if configuring is easy, and the hard part was never the YAML — it was working out
+which key in your own JSON holds the title. The inspector does that and shows its
+working, so adding an app is one command and a glance rather than an afternoon.
 
 ### Safety rules (enforced in the service — every face inherits them)
 1. **No blind writes:** every mutation validates first; invalid config is never
@@ -83,8 +87,9 @@ render the same object (spoken summary vs table vs JSON).
 
 ## 4. The three faces
 
-### A. CLI (primary, stage 3)
-`stackvoice <command>` — thin adapter over ManagementService/HealthService.
+### A. CLI (primary)
+`stackvoice <command>` — thin adapter over ManagementService/HealthService. Every
+safety rule lives in the service, so a second face cannot forget one.
 
 ```
 $ stackvoice apps list
