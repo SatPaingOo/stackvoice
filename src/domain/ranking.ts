@@ -24,7 +24,28 @@ export function queryWords(query: string | undefined): readonly string[] {
     .filter((word) => word.length >= MIN_WORD_LENGTH);
 }
 
-/** True when the item satisfies every constraint in `params`. */
+/**
+ * A word matches at a word boundary, never mid-word.
+ *
+ * Plain substring matching is a trap here: asked about "AI", `includes('ai')`
+ * matches "claim", "major" and "Tragic", and the answer read back out loud is
+ * nonsense. Words of three characters or fewer must match whole; longer words
+ * may match as a prefix, so "myanmar" still finds "Myanmar's".
+ */
+function wordMatches(haystack: string, word: string): boolean {
+  // `queryWords` already stripped everything that is not a letter or digit, so
+  // the word is safe to drop straight into a pattern.
+  const pattern = word.length <= 3 ? `\\b${word}\\b` : `\\b${word}`;
+  return new RegExp(pattern, 'u').test(haystack);
+}
+
+/**
+ * True when the item satisfies the filters and at least one query word hits.
+ *
+ * Requiring *every* word is wrong for speech: "what happened in Myanmar" would
+ * find nothing, because no article contains all four words. Ranking decides the
+ * order, so a one-word match is allowed to compete and simply loses.
+ */
 export function matchesItem(item: Item, params: SearchParams): boolean {
   if (params.topic !== undefined && !containsFold(item.topic, params.topic)) return false;
   if (params.region !== undefined && !containsFold(item.region, params.region)) return false;
@@ -33,7 +54,7 @@ export function matchesItem(item: Item, params: SearchParams): boolean {
   if (words.length === 0) return true;
 
   const haystack = `${item.title} ${item.summary ?? ''}`.toLowerCase();
-  return words.every((word) => haystack.includes(word));
+  return words.some((word) => wordMatches(haystack, word));
 }
 
 /** Relevance of one item to the query. Zero when there is no query to score against. */
@@ -46,8 +67,8 @@ export function scoreItem(item: Item, params: SearchParams): number {
 
   let score = 0;
   for (const word of words) {
-    if (title.includes(word)) score += TITLE_WEIGHT;
-    else if (summary.includes(word)) score += SUMMARY_WEIGHT;
+    if (wordMatches(title, word)) score += TITLE_WEIGHT;
+    else if (wordMatches(summary, word)) score += SUMMARY_WEIGHT;
   }
   return score;
 }

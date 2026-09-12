@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import process, { argv, cwd, exit } from 'node:process';
 
 import { AppRegistryService } from './application/app-registry.service.js';
+import { ConversationService } from './application/conversation.service.js';
 import { HealthService } from './application/health.service.js';
 import { ReadService } from './application/read.service.js';
 import { SearchService } from './application/search.service.js';
@@ -16,9 +17,11 @@ import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.j
 import { HttpClient } from './infrastructure/http/http-client.js';
 import { TtlCache } from './infrastructure/http/ttl-cache.js';
 import { PinoLogger } from './infrastructure/logging/pino.logger.js';
+import { McpLoopbackClient } from './infrastructure/mcp/mcp-loopback-client.js';
 import { SystemClock } from './infrastructure/system-clock.js';
 import { createHttpServer } from './presentation/mcp/http-server.js';
 import { ToolMapper } from './presentation/mcp/tool-mapper.js';
+import type { SimulatorDeps } from './presentation/simulator/routes.js';
 
 export const VERSION = '0.2.0';
 
@@ -65,7 +68,26 @@ async function main(): Promise<void> {
     now: () => clock.now(),
   });
 
-  const http_ = createHttpServer({ version: VERSION, registry, catalog, mapper, logger, settings });
+  // The simulator drives the server as an ordinary MCP client over its own
+  // endpoint, which is only possible when it can authenticate. OAuth mode needs
+  // a browser flow the simulator cannot complete on its own, so it stands down.
+  let simulator: SimulatorDeps | null = null;
+  if (settings.simulator.enabled && settings.auth.mode !== 'oauth') {
+    const endpoint =
+      settings.auth.publicUrl === ''
+        ? `http://${settings.server.host}:${settings.server.port}${'/mcp'}`
+        : `${settings.auth.publicUrl}/mcp`;
+    const caller = new McpLoopbackClient({
+      endpoint,
+      bearerToken: settings.auth.mode === 'token' ? settings.auth.token : null,
+      logger,
+    });
+    simulator = { conversation: new ConversationService(registry, caller), registry, logger };
+  } else if (settings.simulator.enabled) {
+    logger.warn('simulator disabled: it cannot complete the OAuth flow on its own');
+  }
+
+  const http_ = createHttpServer({ version: VERSION, registry, catalog, mapper, logger, settings, simulator });
   const server = await http_.listen();
 
   logger.info('stackvoice listening', {
@@ -74,11 +96,18 @@ async function main(): Promise<void> {
     endpoint: '/mcp',
     apps: registry.listEnabled().map((app) => app.id),
     auth: settings.auth.mode,
+    simulator: simulator === null ? 'off' : '/simulator',
   });
 
   // Warm the cache so the first tool call does not pay for a cold fetch: the
   // Alexa+ round-trip budget is 500 ms and a cold GitHub fetch alone exceeds it.
-  void Promise.all(registry.listEnabled().map((app) => status.report(app)))
+  // Status and search read different documents, so warm both.
+  void Promise.all(
+    registry.listEnabled().flatMap((app) => [
+      status.report(app),
+      app.primitives.search ? search.search(app.id, { limit: 1 }) : Promise.resolve([]),
+    ]),
+  )
     .then(() => logger.info('cache warmed', { entries: cache.size }))
     .catch((error: unknown) => logger.warn('cache warm failed', { reason: String(error) }));
 

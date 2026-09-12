@@ -9,6 +9,7 @@ import express, { type Request, type RequestHandler, type Response } from 'expre
 
 import type { Settings } from '../../domain/settings.js';
 import { LocalOAuthProvider } from '../../infrastructure/auth/local-oauth-provider.js';
+import { installSimulator, type SimulatorDeps } from '../simulator/routes.js';
 import { createMcpServer, type McpServerDeps } from './server-factory.js';
 
 const MCP_PATH = '/mcp';
@@ -19,6 +20,8 @@ const RESOURCE_METADATA_PATH = `/.well-known/oauth-protected-resource${MCP_PATH}
 
 export interface HttpServerDeps extends McpServerDeps {
   readonly settings: Settings;
+  /** Absent when the simulator is disabled or unavailable in this auth mode. */
+  readonly simulator: SimulatorDeps | null;
 }
 
 /**
@@ -93,6 +96,10 @@ export function createHttpServer(deps: HttpServerDeps): {
 
   app.get(MCP_PATH, guard, withSession);
   app.delete(MCP_PATH, guard, withSession);
+
+  if (deps.simulator !== null) {
+    installSimulator(app, deps.simulator);
+  }
 
   /** Liveness probe for the tunnel and the management CLI. Never requires auth. */
   app.get('/healthz', (_req, res) => {

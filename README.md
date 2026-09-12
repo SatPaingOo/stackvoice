@@ -17,8 +17,19 @@ assistant the hands.
 
 ```bash
 npm install
-npm run dev              # starts the MCP server on http://127.0.0.1:8765/mcp
-npx @modelcontextprotocol/inspector   # point it at that URL to list and call tools
+npm run dev              # MCP server on http://127.0.0.1:8765/mcp
+```
+
+Then open **http://127.0.0.1:8765/simulator** and ask your stack something.
+That page is the simulated Alexa+ experience: it speaks to the same MCP server
+over the same Streamable HTTP transport a device would use, and shows every tool
+call it makes. Speech in and out come from the browser, so nothing is sent
+anywhere but your own server.
+
+To drive the server directly instead:
+
+```bash
+npx @modelcontextprotocol/inspector
 ```
 
 `npm test` runs the unit suite. Settings live in `config/settings.yml`. Set

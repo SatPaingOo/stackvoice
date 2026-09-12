@@ -25,11 +25,26 @@ describe('queryWords', () => {
 });
 
 describe('matchesItem', () => {
-  it('requires every query word somewhere in the title or summary', () => {
+  it('accepts an item that matches any query word, because spoken questions carry extra words', () => {
     const subject = item({ key: 'a', title: 'Gold prices rise', summary: 'oil fell' });
 
     expect(matchesItem(subject, params({ query: 'gold oil' }))).toBe(true);
-    expect(matchesItem(subject, params({ query: 'gold copper' }))).toBe(false);
+    expect(matchesItem(subject, params({ query: 'gold copper' }))).toBe(true);
+    expect(matchesItem(subject, params({ query: 'copper tin' }))).toBe(false);
+  });
+
+  it('matches at a word boundary, not mid-word', () => {
+    const decoy = item({ key: 'a', title: 'Houthis claim a major advance' });
+
+    // "ai" lives inside "claim" and "major"; substring matching would return this.
+    expect(matchesItem(decoy, params({ query: 'ai' }))).toBe(false);
+    expect(matchesItem(item({ key: 'b', title: 'New AI labs' }), params({ query: 'ai' }))).toBe(true);
+  });
+
+  it('lets a longer word match as a prefix, so possessives still count', () => {
+    const subject = item({ key: 'a', title: "Myanmar's digital economy" });
+
+    expect(matchesItem(subject, params({ query: 'myanmar' }))).toBe(true);
   });
 
   it('matches everything when there is no query', () => {
@@ -101,12 +116,21 @@ describe('rankItems', () => {
     expect(rankItems(items, params({ query: 'gold' })).map((i) => i.key)).toEqual(['dated', 'undated']);
   });
 
-  it('drops entries that fail the filter', () => {
+  it('drops entries that match no query word at all', () => {
     const items = [
       item({ key: 'keep', title: 'Gold' }),
       item({ key: 'drop', title: 'Silver' }),
     ];
 
     expect(rankItems(items, params({ query: 'gold' })).map((i) => i.key)).toEqual(['keep']);
+  });
+
+  it('ranks a two-word match above a one-word match', () => {
+    const items = [
+      item({ key: 'one', title: 'Gold steady', date: '2026-09-10' }),
+      item({ key: 'both', title: 'Gold and oil both move', date: '2026-01-01' }),
+    ];
+
+    expect(rankItems(items, params({ query: 'gold oil' })).map((i) => i.key)).toEqual(['both', 'one']);
   });
 });

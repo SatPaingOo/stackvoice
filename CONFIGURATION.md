@@ -30,12 +30,27 @@ auth:
   token: ""                # shared token in "token" mode; consent secret in "oauth" mode
   public_url: ""           # required in "oauth" mode, e.g. https://stackvoice.example.com
 
+simulator:
+  enabled: true            # serves the simulated Alexa+ page at /simulator
+
 management:
   cli: true                # CLI face enabled (primary)
 
 cache:
   ttl_seconds: 300         # per-URL cache for fetched JSON / API calls
 ```
+
+### The simulator
+
+`simulator.enabled` serves a page at `/simulator` that acts as a simulated
+Alexa+ client: it plans a tool call from what you say, calls this server over
+its own MCP endpoint, and reads the answer back. It connects as an ordinary MCP
+client rather than calling the services in-process, so what the demo exercises
+is the real server.
+
+It stands down in `oauth` mode, because completing an authorization code flow
+needs a browser and a human. Run the demo with `auth.mode: none` or `token`, and
+switch to `oauth` to show the consent screen and the Alexa+ requirements.
 
 ### Auth modes
 

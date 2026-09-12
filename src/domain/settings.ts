@@ -33,6 +33,11 @@ export interface AuthSettings {
   readonly publicUrl: string;
 }
 
+export interface SimulatorSettings {
+  /** Serves the simulated Alexa+ page at /simulator. The demo surface. */
+  readonly enabled: boolean;
+}
+
 export interface CacheSettings {
   readonly ttlSeconds: number;
 }
@@ -41,5 +46,6 @@ export interface Settings {
   readonly server: ServerSettings;
   readonly management: ManagementSettings;
   readonly auth: AuthSettings;
+  readonly simulator: SimulatorSettings;
   readonly cache: CacheSettings;
 }

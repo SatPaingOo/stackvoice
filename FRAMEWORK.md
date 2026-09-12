@@ -86,15 +86,19 @@ MCP Toolkit requires it (RESEARCH.md §3).
 | 0 — Verify + research | done 09-05 | Rules confirmed; landscape mapped | RESEARCH.md |
 | 0.5 — Docs & architecture | done 09-06 | Full doc set | 7 docs |
 | 0.6 — Research pass 2 + repo hygiene | done 09-12 | Alexa+ Toolkit requirements found; git + MIT + config fix | RESEARCH.md §3–6 |
-| **1 — Scaffold + MCP boot** | **Sep 12–15** | Node/TS project, zod config load, Streamable HTTP transport, `stack_status` tool | MCP Inspector lists and calls the tool |
-| **2 — Auth + registry + first adapter** | **Sep 16–24** | OAuth 2.1 resource server (401, `/.well-known/oauth-authorization-server`, PKCE S256, `resource`); domain model; app registry; `github-repo` adapter | `library_search/read/status` return live data, authenticated |
-| **3 — Voice shaping + second app** | **Sep 25–Oct 1** | Response shaper (read model → 2 spoken sentences); `markets` app; latency budget met | p95 round-trip < 500 ms with warm cache |
-| **4 — Management CLI (minimal)** | **Oct 2–6** | `apps list`, `status`, `show`, `validate`, `add`, `enable/disable` | add-an-app demo runs end to end |
-| **5 — Alexa+ simulator** | **Oct 7–13** | Web app acting as an agentic MCP client over the same server — the demo surface | full conversation works in a browser |
+| ~~1 — Scaffold + MCP boot~~ | **done Sep 12** | Node/TS project, zod config load, Streamable HTTP transport, `stack_status` tool | protocol 2025-11-25 negotiated |
+| ~~2 — Auth + registry + first adapter~~ | **done Sep 12** | OAuth 2.1 authorization server (PKCE S256, metadata, 401 challenge); app registry; `github-repo` adapter | every verb returns live data, authenticated |
+| ~~3 — Voice shaping + second app~~ | **done Sep 12** | Response shaper, `markets` app, cache prewarm | every tool answers in 40–180 ms |
+| **4 — Management CLI (minimal)** | **Oct 13–17** | `apps list`, `status`, `show`, `validate`, `add`, `enable/disable` | add-an-app demo runs end to end |
+| ~~5 — Alexa+ simulator~~ | **done Sep 12** | Page at `/simulator`: intent planner, loopback MCP client, Web Speech in and out, visible tool traces | full conversation works in a browser |
 | **6 — Host + polish** | **Oct 14–18** | Public HTTPS (Cloudflare Tunnel), README, config docs, friction-log writeup | a judge can clone and run it |
 | **7 — Submit** | **Oct 19–20** | Demo video under 3 min (English, public) + Devpost submission | submitted; Oct 21–23 is buffer |
 
-**Stretch (only if Stage 5 lands early):** shortcut macro layer, `json-url` /
+**Order changed 2026-09-12:** the simulator was pulled ahead of the management
+CLI. It is the surface a judge actually sees, and the CLI is not on the critical
+path for the submission.
+
+**Stretch (only if Stage 6 lands early):** shortcut macro layer, `json-url` /
 `rss` source types. `library.yml` ships a `morning brief` shortcut — if the
 stretch is not reached, remove it from the default config before submitting
 rather than shipping config the server ignores.

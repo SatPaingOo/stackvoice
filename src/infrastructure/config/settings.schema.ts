@@ -31,6 +31,11 @@ export const settingsSchema = z.object({
     .refine((value) => value.mode !== 'token' || value.token !== '', {
       message: 'auth.token is required when auth.mode is "token"',
     }),
+  simulator: z
+    .object({
+      enabled: z.boolean().default(true),
+    })
+    .default({ enabled: true }),
   cache: z
     .object({
       ttl_seconds: z.number().int().min(0).max(86_400).default(300),
