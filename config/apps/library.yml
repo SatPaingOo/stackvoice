@@ -1,0 +1,27 @@
+# Demo persona app 1: information-hub (deep-dive library).
+# See CONFIGURATION.md §3 for the full reference.
+
+id: library
+label: "Deep-dive library"
+description: >
+  Daily deep-dive articles on world news, tech, politics and products,
+  verified and classified by region and topic.
+enabled: true
+primitives:
+  search: true
+  read: true
+  status: true
+sources:
+  - id: library
+    type: github-repo
+    repo: SatPaingOo/information-hub
+    views_dir: data/views
+    stats_file: data/views/stats.json
+    label: "deep-dive library"
+shortcuts:
+  - name: "morning brief"
+    description: "Latest deep-dives plus overall stack health, in one answer."
+    steps:
+      - {tool: library_search, args: {limit: 3}}
+      - {tool: stack_status, args: {}}
+    reply: "Here is your brief: {results}"

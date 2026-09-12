@@ -1,0 +1,16 @@
+# StackVoice — server & management settings.
+# See CONFIGURATION.md §2 for the full reference.
+
+server:
+  host: 127.0.0.1          # default localhost; use 0.0.0.0 behind a tunnel/proxy
+  port: 8765
+  log_level: info          # debug | info | warn | error
+
+management:
+  cli: true                # CLI face enabled (primary)
+  web_console: false       # local dashboard (planned, stage 5)
+  admin_mcp_tools: false   # expose admin_* tools over MCP (opt-in; see MANAGEMENT.md)
+  auth_token: ""           # optional shared token required when server is public
+
+cache:
+  ttl_seconds: 300         # per-URL cache for fetched JSON / API calls

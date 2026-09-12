@@ -1,0 +1,21 @@
+# Demo persona app 2: eventpulse (market intelligence).
+# Example of an app that is NOT a searchable text library — read + status only.
+
+id: markets
+label: "Market intelligence"
+description: >
+  Event-driven market intelligence: tracks global events and explains why
+  gold, oil and major stocks moved.
+enabled: true
+primitives:
+  search: false
+  read: true
+  status: true
+sources:
+  - id: markets
+    type: github-repo
+    repo: SatPaingOo/eventpulse
+    views_dir: data/views
+    stats_file: data/views/status.json
+    label: "market intelligence"
+shortcuts: []
