@@ -50,6 +50,9 @@ export class YamlSettingsStore implements SettingsStore {
         token: raw.auth.token,
         publicUrl: raw.auth.public_url.replace(/\/+$/, ''),
       },
+      console: {
+        enabled: raw.console.enabled,
+      },
       simulator: {
         enabled: raw.simulator.enabled,
       },

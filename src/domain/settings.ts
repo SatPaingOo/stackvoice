@@ -33,6 +33,11 @@ export interface AuthSettings {
   readonly publicUrl: string;
 }
 
+export interface ConsoleSettings {
+  /** Serves the web console at /console. How a non-developer adds their apps. */
+  readonly enabled: boolean;
+}
+
 export interface SimulatorSettings {
   /** Serves the simulated Alexa+ page at /simulator. The demo surface. */
   readonly enabled: boolean;
@@ -46,6 +51,7 @@ export interface Settings {
   readonly server: ServerSettings;
   readonly management: ManagementSettings;
   readonly auth: AuthSettings;
+  readonly console: ConsoleSettings;
   readonly simulator: SimulatorSettings;
   readonly cache: CacheSettings;
 }

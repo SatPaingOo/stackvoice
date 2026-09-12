@@ -3,6 +3,7 @@ import process, { argv, cwd, exit } from 'node:process';
 
 import { AppRegistryService } from './application/app-registry.service.js';
 import { ConversationService } from './application/conversation.service.js';
+import { ManagementService } from './application/management.service.js';
 import { HealthService } from './application/health.service.js';
 import { ReadService } from './application/read.service.js';
 import { SearchService } from './application/search.service.js';
@@ -12,6 +13,7 @@ import { StackVoiceError } from './domain/errors.js';
 import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
 import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
+import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspector.js';
 import { ConfigWatcher } from './infrastructure/config/config-watcher.js';
 import { YamlConfigStore } from './infrastructure/config/yaml-config-store.js';
 import { YamlSettingsStore } from './infrastructure/config/yaml-settings-store.js';
@@ -22,6 +24,7 @@ import { McpLoopbackClient } from './infrastructure/mcp/mcp-loopback-client.js';
 import { SystemClock } from './infrastructure/system-clock.js';
 import { createHttpServer } from './presentation/mcp/http-server.js';
 import { ToolMapper } from './presentation/mcp/tool-mapper.js';
+import type { ConsoleDeps } from './presentation/console/routes.js';
 import type { SimulatorDeps } from './presentation/simulator/routes.js';
 
 export const VERSION = '0.3.0';
@@ -49,7 +52,8 @@ async function main(): Promise<void> {
   const readerFactory = new ReaderFactory(readers);
 
   // application
-  const registry = new AppRegistryService(new YamlConfigStore(appsDir), logger);
+  const store = new YamlConfigStore(appsDir);
+  const registry = new AppRegistryService(store, logger);
   await registry.load();
 
   const search = new SearchService(registry, readerFactory);
@@ -88,7 +92,35 @@ async function main(): Promise<void> {
     logger.warn('simulator disabled: it cannot complete the OAuth flow on its own');
   }
 
-  const http_ = createHttpServer({ version: VERSION, registry, catalog, mapper, logger, settings, simulator });
+  // Saving from the console must take effect at once, so it reloads the same
+  // registry the watcher does rather than waiting for the file event.
+  const reload = async (): Promise<void> => {
+    await registry.load();
+  };
+
+  const console_: ConsoleDeps | null = settings.console.enabled
+    ? {
+        management: new ManagementService(store, new GithubRepoInspector(http), logger),
+        health,
+        logger,
+        // With no auth configured the server is on localhost only, so the
+        // console is as reachable as the config file itself and a sign-in adds
+        // nothing. The moment the server is exposed, it asks for the token.
+        ownerToken: settings.auth.mode === 'none' ? '' : settings.auth.token,
+        reload,
+      }
+    : null;
+
+  const http_ = createHttpServer({
+    version: VERSION,
+    registry,
+    catalog,
+    mapper,
+    logger,
+    settings,
+    simulator,
+    console: console_,
+  });
   const server = await http_.listen();
 
   logger.info('stackvoice listening', {
@@ -98,6 +130,7 @@ async function main(): Promise<void> {
     apps: registry.listEnabled().map((app) => app.id),
     auth: settings.auth.mode,
     simulator: simulator === null ? 'off' : '/simulator',
+    console: console_ === null ? 'off' : '/console',
   });
 
   // Warm the cache so the first tool call does not pay for a cold fetch: the
@@ -115,13 +148,7 @@ async function main(): Promise<void> {
   // Adding an app should not mean restarting. Each MCP session reads the
   // registry when it connects, so reloading is enough for the next conversation
   // to see the new tools.
-  const watcher = new ConfigWatcher({
-    appsDir,
-    logger,
-    reload: async () => {
-      await registry.load();
-    },
-  });
+  const watcher = new ConfigWatcher({ appsDir, logger, reload });
   watcher.start();
 
   const shutdown = (signal: string): void => {

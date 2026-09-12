@@ -9,6 +9,7 @@ import express, { type Request, type RequestHandler, type Response } from 'expre
 
 import type { Settings } from '../../domain/settings.js';
 import { LocalOAuthProvider } from '../../infrastructure/auth/local-oauth-provider.js';
+import { installConsole, type ConsoleDeps } from '../console/routes.js';
 import { installSimulator, type SimulatorDeps } from '../simulator/routes.js';
 import { createMcpServer, type McpServerDeps } from './server-factory.js';
 
@@ -22,6 +23,8 @@ export interface HttpServerDeps extends McpServerDeps {
   readonly settings: Settings;
   /** Absent when the simulator is disabled or unavailable in this auth mode. */
   readonly simulator: SimulatorDeps | null;
+  /** Absent when the console is disabled. */
+  readonly console: ConsoleDeps | null;
 }
 
 /**
@@ -96,6 +99,10 @@ export function createHttpServer(deps: HttpServerDeps): {
 
   app.get(MCP_PATH, guard, withSession);
   app.delete(MCP_PATH, guard, withSession);
+
+  if (deps.console !== null) {
+    installConsole(app, deps.console);
+  }
 
   if (deps.simulator !== null) {
     installSimulator(app, deps.simulator);

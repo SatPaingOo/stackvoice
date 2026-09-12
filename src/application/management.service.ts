@@ -1,5 +1,5 @@
 import { AppDefinition, APP_ID_PATTERN, type Primitives } from '../domain/app-definition.js';
-import { DataSource } from '../domain/data-source.js';
+import { DataSource, type FieldMap, type StatusFieldMap } from '../domain/data-source.js';
 import { AppNotFoundError, ValidationError } from '../domain/errors.js';
 import type { ConfigStore } from '../domain/ports/config-store.js';
 import type { Logger } from '../domain/ports/logger.js';
@@ -21,6 +21,27 @@ export interface AddAppResult {
   readonly proposal: SourceProposal;
   readonly backupPath: string | null;
   readonly replaced: boolean;
+}
+
+/**
+ * A fully specified app, as a person edits it.
+ *
+ * `addFromRepo` is the fast path; this is the one behind every field the web
+ * console exposes, so a guess the inspector got wrong is something the user
+ * corrects rather than lives with.
+ */
+export interface AppSpec {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly enabled: boolean;
+  readonly primitives: Primitives;
+  readonly repo: string;
+  readonly indexFile: string;
+  readonly statsFile: string;
+  readonly itemsPath: string | null;
+  readonly fields: FieldMap;
+  readonly statusFields: StatusFieldMap;
 }
 
 export interface ValidationReport {
@@ -125,6 +146,57 @@ export class ManagementService {
 
     this.logger.info('app added', { appId: app.id, repo: request.repo, replaced: existing !== null });
     return { app, proposal, backupPath, replaced: existing !== null };
+  }
+
+  /**
+   * Writes an app exactly as specified, creating or replacing it.
+   *
+   * @throws {ValidationError} when the id or the source would be invalid.
+   */
+  async upsert(spec: AppSpec): Promise<{ app: AppDefinition; backupPath: string | null; replaced: boolean }> {
+    if (!APP_ID_PATTERN.test(spec.id)) {
+      throw new ValidationError(
+        `"${spec.id}" must be lowercase, start with a letter, and be 2-32 characters of a-z, 0-9 or "-"`,
+        'id',
+      );
+    }
+    if (spec.label.trim() === '') throw new ValidationError('a label is required', 'label');
+    if (spec.description.trim() === '') throw new ValidationError('a description is required', 'description');
+
+    const app = new AppDefinition({
+      id: spec.id,
+      label: spec.label.trim(),
+      description: spec.description.trim(),
+      enabled: spec.enabled,
+      primitives: spec.primitives,
+      sources: [
+        new DataSource({
+          id: spec.id,
+          type: 'github-repo',
+          label: spec.label.trim().toLowerCase(),
+          repo: spec.repo,
+          viewsDir: spec.indexFile.includes('/')
+            ? spec.indexFile.slice(0, spec.indexFile.lastIndexOf('/'))
+            : '.',
+          statsFile: spec.statsFile,
+          indexFile: spec.indexFile,
+          itemsPath: spec.itemsPath,
+          fields: spec.fields,
+          statusFields: spec.statusFields,
+        }),
+      ],
+    });
+
+    const existing = await this.store.getApp(spec.id);
+    const backupPath = await this.store.saveApp(app);
+
+    this.logger.info('app saved', { appId: app.id, replaced: existing !== null });
+    return { app, backupPath, replaced: existing !== null };
+  }
+
+  /** Inspects a repository without writing anything. The console previews with this. */
+  async inspect(repo: string, branch?: string): Promise<SourceProposal> {
+    return this.inspector.inspect(repo, branch);
   }
 
   /** @throws {AppNotFoundError} */

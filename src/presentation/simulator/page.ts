@@ -87,6 +87,8 @@ export function renderSimulatorPage(apps: readonly SimulatorAppSummary[]): strin
   <header>
     <h1>StackVoice</h1>
     <span class="badge">Simulated Alexa+</span>
+    <span style="flex:1"></span>
+    <a href="/console" style="color:var(--accent);font-size:14px">Manage apps →</a>
   </header>
   <p class="sub">Ask your own stuff, not the internet. Connected to <code>${appList}</code> over MCP.</p>
 

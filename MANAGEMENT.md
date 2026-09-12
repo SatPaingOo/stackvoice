@@ -125,10 +125,23 @@ Design note: admin tools default **off** and are read-mostly — a voice agent
 mutating config is a deliberate, documented, opt-in choice (safe demo: enable it
 only in the demo persona).
 
-### C. Web console (optional, stage 5)
-Local read-only dashboard (list + health + logs) and an "add app" form calling
-the same services. Not required for the hackathon deliverable; adds demo polish
-if time allows.
+### C. Web console (primary for non-developers)
+Served at `/console` when `console.enabled` is true. The same operations as the
+CLI, over the same `ManagementService`:
+
+- **Add an app** — paste a repository, see the inferred field mapping with a
+  sample value from the user's own data, correct anything, save.
+- **Edit** — label, description, which tools to expose, every field mapping, and
+  the file paths.
+- **Enable / disable / remove**, with the same backup rules as the CLI.
+- **Health at a glance** — the same payload `stack_status` returns.
+
+A save reloads the registry immediately, so the new tools are live in the next
+conversation without a restart.
+
+This is the face that makes the product claim true. "Config-driven, so anyone can
+point it at their own apps" is only honest if adding an app does not require a
+terminal.
 
 ## 5. Security model
 
@@ -149,4 +162,4 @@ if time allows.
 |---|---|---|
 | Stage 3 (core) | Sep 19–26 | ManagementService + ConfigStore write path + CLI: list/status/show/add/remove/enable/disable/validate/logs + tests |
 | Stage 4 | Sep 27–Oct 4 | admin MCP tools (gated) + `app export` |
-| Stage 5 | Oct 5–11 | web console (if time) + auth hardening |
+| done Sep 13 | — | web console + auth gate |

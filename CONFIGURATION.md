@@ -30,6 +30,9 @@ auth:
   token: ""                # shared token in "token" mode; consent secret in "oauth" mode
   public_url: ""           # required in "oauth" mode, e.g. https://stackvoice.example.com
 
+console:
+  enabled: true            # web console at /console — add and edit apps in a browser
+
 simulator:
   enabled: true            # serves the simulated Alexa+ page at /simulator
 
@@ -39,6 +42,17 @@ management:
 cache:
   ttl_seconds: 300         # per-URL cache for fetched JSON / API calls
 ```
+
+### The console
+
+`console.enabled` serves a page at `/console` for adding and editing apps in a
+browser: paste a repository, review the inferred mapping, correct it, save. A
+save takes effect at once.
+
+With `auth.mode: none` the server is on localhost only, so the console is exactly
+as reachable as the config file itself and asks for nothing. In `token` or
+`oauth` mode it asks for `auth.token` and holds a session cookie for twelve
+hours.
 
 ### The simulator
 
@@ -286,7 +300,12 @@ shortcuts: []
 
 ## 7. Adding your own app
 
-### The short way
+### The easiest way
+
+Open `/console`, click **Add an app**, paste your repository, check the inferred
+mapping, save. Everything below describes what that page is doing.
+
+### From a terminal
 
 ```bash
 npm run stackvoice -- app add mynotes --repo me/my-pipeline

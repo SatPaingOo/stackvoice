@@ -107,7 +107,8 @@ Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
 |---|---|---|
 | MCP server | `mcp/server.ts`, `mcp/tool-mapper.ts` | Streamable HTTP transport; maps `ToolSpec` → MCP tool definition; errors → MCP-shaped results |
 | CLI | `cli.ts`, `cli/commands/*.ts` | management operations from a terminal |
-| Web console *(planned, stage 5)* | `web/` | local read-only dashboard + app add form (same services) |
+| Web console | `console/routes.ts`, `console/page.ts` | add / edit / enable / remove apps and see health, over the same ManagementService |
+| Simulator | `simulator/routes.ts`, `simulator/page.ts` | simulated Alexa+ client; drives the server as a real MCP client |
 
 ## 4. Multi-app design (P2)
 
@@ -139,9 +140,16 @@ Every face is a thin adapter over it — no duplicated logic (DIP + DRY):
 ```
 CLI  ─────────┐
 Web console ──┼──► ManagementService ──► ConfigStore port ──► config/apps/*.yml
-Admin MCP ────┘         │
-                        └──► HealthService / AppRegistryService (read paths)
+              │         │
+              │         ├──► SourceInspector port ──► GithubRepoInspector
+              │         └──► HealthService / AppRegistryService (read paths)
+              │
+              └── both faces are thin: neither holds a validation rule,
+                  a backup rule, or a write path of its own.
 ```
+
+The console being cheap to add is the payoff for the port boundary: it is a
+route file and a page, because every rule it needs already lived in the service.
 
 Operations: `list`, `status`/`health`, `show config`, `logs`, `add` (from
 template), `remove`, `enable/disable`, `validate`, `export`. Safety rules

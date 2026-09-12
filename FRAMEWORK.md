@@ -47,7 +47,7 @@ the reverse direction (laptop agent drives Alexa devices).
 |---|---|---|
 | **P1 Config-driven MCP core** | Tools auto-generated from config at startup; server is a data adapter (no LLM inside) | ARCHITECTURE.md |
 | **P2 Multi-app registry** | Add/remove any number of apps (`config/apps/*.yml`); each app gets its own tool namespace (`{app}_search`, `{app}_read`, `{app}_status`) | CONFIGURATION.md |
-| **P3 Management system** | One service, one CLI. `app add` inspects a repo and infers the field map, which is what makes "config-driven" true rather than merely stated. Web console and admin MCP tools stay cut | MANAGEMENT.md |
+| **P3 Management system** | One service, two faces: a web console and a CLI. Both inspect a repo and infer the field map, which is what makes "config-driven" true rather than merely stated. Admin MCP tools stay cut | MANAGEMENT.md |
 | **P4 Standards-compliant engineering** | OOP, SOLID, Clean/Hexagonal layers, TypeScript strict, zod at boundaries, tests per layer | CODING_STANDARDS.md |
 | **P5 Voice-shaped responses** *(added 09-12)* | A shaping layer turns read models into two spoken sentences. Competing config-driven servers return raw API payloads; a voice assistant cannot speak those. This is the Design differentiator | ARCHITECTURE.md |
 
@@ -91,12 +91,18 @@ MCP Toolkit requires it (RESEARCH.md §3).
 | ~~3 — Voice shaping + second app~~ | **done Sep 12** | Response shaper, `markets` app, cache prewarm | every tool answers in 40–180 ms |
 | ~~4 — Management CLI~~ | **done Sep 13** | `apps`, `status`, `app show/validate/add/enable/disable/remove`, plus repo inspection and config hot reload | a repo nobody configured becomes working tools in one command |
 | ~~5 — Alexa+ simulator~~ | **done Sep 12** | Page at `/simulator`: intent planner, loopback MCP client, Web Speech in and out, visible tool traces | full conversation works in a browser |
-| **6 — Host + polish** | **Sep 14–Oct 18** | Public HTTPS (Cloudflare Tunnel), README, config docs, friction-log writeup | a judge can clone and run it |
+| **6 — Host + polish** | **Sep 15–Oct 18** | Public HTTPS (Cloudflare Tunnel), README, config docs, friction-log writeup | a judge can clone and run it |
 | **7 — Submit** | **Oct 19–20** | Demo video under 3 min (English, public) + Devpost submission | submitted; Oct 21–23 is buffer |
 
 **Order changed 2026-09-12:** the simulator was pulled ahead of the management
-CLI. It is the surface a judge actually sees, and the CLI is not on the critical
-path for the submission.
+CLI. It is the surface a judge actually sees.
+
+**Scope changed 2026-09-13:** the web console is back in, having been cut on
+09-12. The cut was wrong. The product claims anyone can point it at their own
+apps, and a terminal-only path makes that true for developers only — which is
+the Potential Impact criterion, not a nice-to-have. With `ManagementService`
+already built, the console was a thin adapter over it, exactly as
+ARCHITECTURE.md §5 predicted.
 
 **Stretch (only if Stage 6 lands early):** shortcut macro layer, `json-url` /
 `rss` source types. `library.yml` ships a `morning brief` shortcut — if the

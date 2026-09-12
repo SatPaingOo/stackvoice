@@ -8,8 +8,8 @@ call. You point it at *your* apps in config; tools are generated for those apps
 automatically. The assistant understands the user's words — StackVoice gives the
 assistant the hands.
 
-- **Status:** working. MCP server, two live demo apps, OAuth 2.1, management CLI,
-  and a simulated Alexa+ page.
+- **Status:** working. MCP server, two live demo apps, OAuth 2.1, a web console
+  for adding your own, a CLI, and a simulated Alexa+ page.
 - **Target:** Amazon *Build, Ship, Shape* hackathon — Alexa+ track (deadline Oct 23, 2026).
 - **Stack:** Node.js 20+ / TypeScript · MCP spec 2025-11-25 · Streamable HTTP · $0 budget.
 
@@ -37,16 +37,29 @@ articles, growing daily) and [eventpulse](https://github.com/SatPaingOo/eventpul
 ## Point it at your own data
 
 Your data project publishes JSON somewhere in a public GitHub repo. That is the
-only requirement. StackVoice will work out the rest:
+only requirement.
+
+### In a browser
+
+Open **http://localhost:8765/console**, click **Add an app**, and paste your
+repository. StackVoice fetches your read models, finds the records, and works out
+which field is the title, which is the summary, which is the date, and where the
+freshness and item counts live. It shows you every guess with a sample value from
+your own data, you correct anything that looks wrong, and you click Save.
+
+Your assistant can use it in the next sentence. No restart, no YAML, no terminal.
+
+The same page lists what you have, shows whether each app is healthy and how
+fresh its data is, and lets you edit, disable or remove any of them. When the
+server is exposed beyond localhost it asks for your `auth.token` first.
+
+### From a terminal
 
 ```bash
 npm run stackvoice -- app add mynotes --repo me/my-pipeline
 ```
 
-It fetches your read models, finds the records, and infers which field is the
-title, which is the summary, which is the date, and where the freshness and item
-counts live. Then it shows you what it guessed, with a sample value from your own
-data, and writes `config/apps/mynotes.yml`:
+Same inference, same output:
 
 ```
   Found 177 records in data/views/index.json.
@@ -69,10 +82,7 @@ data, and writes `config/apps/mynotes.yml`:
 ```
 
 Any guess that is wrong is one line to change in the generated file. The server
-notices the file and reloads on its own, so the new tools are live in the next
-conversation — no restart.
-
-Nothing to write, no schema to learn, no code to touch.
+watches `config/apps/` and reloads on its own.
 
 ### The rest of the CLI
 
@@ -106,7 +116,8 @@ flow that Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
 1. **Config-driven MCP core** — one server, tools generated from config at startup.
 2. **Multi-app registry** — add as many apps as you want (`config/apps/*.yml`);
    every app gets its own tool namespace.
-3. **Management system** — add, inspect, validate and monitor apps from one CLI.
+3. **Management system** — add, inspect, validate and monitor apps from a web
+   console or a CLI, both over the same service.
 4. **Standards-compliant engineering** — OOP + SOLID + Clean/Hexagonal
    architecture (see CODING_STANDARDS.md and ARCHITECTURE.md).
 5. **Voice-shaped responses** — tool results come back as sentences a person can
@@ -120,14 +131,14 @@ flow that Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
 | [RESEARCH.md](./RESEARCH.md) | Landscape research — who is building what in private-data × MCP × voice |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Technical architecture — layers, ports & adapters, multi-app design, management subsystem, SOLID mapping |
 | [CONFIGURATION.md](./CONFIGURATION.md) | User config schema — `settings.yml` + `config/apps/*.yml`, validation rules, worked examples |
-| [MANAGEMENT.md](./MANAGEMENT.md) | Management system — features, CLI, safety model |
+| [MANAGEMENT.md](./MANAGEMENT.md) | Management system — features, web console, CLI, safety model |
 | [CODING_STANDARDS.md](./CODING_STANDARDS.md) | Engineering standards — OOP/SOLID/Clean, TypeScript, error handling, testing, git |
 | [FRICTION_LOG.md](./FRICTION_LOG.md) | Development friction log (Amazon gives up to +10% judging bonus) |
 
 ## Development
 
 ```bash
-npm test         # 159 unit tests, no network
+npm test         # 169 unit tests, no network
 npm run typecheck
 ```
 
