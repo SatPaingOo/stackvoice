@@ -1,225 +1,297 @@
 # StackVoice — Architecture
 
-Technical architecture for a standards-compliant, config-driven, multi-app MCP
-server with a management system. **OOP + SOLID + Clean/Hexagonal (Ports &
-Adapters)**. Companion docs: CONFIGURATION.md (schemas), MANAGEMENT.md
-(features/faces), CODING_STANDARDS.md (rules of the code).
+Technical architecture of a self-hosted MCP server that turns any feed, API,
+spreadsheet, repository or file into tools, with a management console, a CLI and
+a simulated Alexa+ client. **OOP + SOLID + Clean/Hexagonal (Ports & Adapters).**
+Companion docs: CONFIGURATION.md (schemas), MANAGEMENT.md (the console and CLI),
+CODING_STANDARDS.md (rules of the code).
 
 ---
 
 ## 1. Goals & non-goals
 
 **Goals**
-- Apps (user data projects) are first-class config artifacts; adding one never
-  touches core code.
-- One MCP server exposes tools for *all* apps; each app gets a stable tool
-  namespace.
-- A management system (list / health / add / remove / enable / validate) exists
-  from day one, powered by the *same* application service behind every face.
+- A source of any supported kind becomes tools through config alone; adding one
+  never touches core code.
+- One MCP server exposes tools for every app, each in its own namespace.
+- Every face, console, CLI and simulator, sits on the same application services.
 - Domain and application layers are pure TypeScript: no MCP SDK, no framework,
-  no I/O — everything external goes through ports (interfaces) so the core is
-  unit-testable in milliseconds.
-- Voice-agnostic: the server speaks MCP; Alexa+ is the story, any MCP client works.
-- **Voice-shaped output:** every tool result is short enough to be spoken. A
-  response shaper sits between the adapters and the MCP layer; adapters return
-  read models, the shaper returns sentences. Round-trip budget: < 500 ms.
+  no I/O. Everything external goes through ports, so the core is unit-testable
+  in milliseconds.
+- Voice-agnostic: the server speaks MCP; Alexa+ is the target, any MCP client
+  works.
+- **Voice-shaped output:** every tool result is short enough to be spoken.
+  Adapters return records; the response shaper returns sentences. The Alexa+
+  round-trip budget is 500 ms.
 
-**Non-goals (now)**
-- No LLM inside the server (the client is the brain).
-- No write-back to data sources (read-first product).
-- **Auth: OAuth 2.1 resource server (revised 2026-09-12).** The Alexa+ MCP
-  Toolkit mandates OAuth 2.1 + PKCE (S256), `/.well-known/oauth-authorization-server`
-  metadata, a `resource` parameter, and `401` on unauthenticated requests. The
-  earlier "shared token only" non-goal is withdrawn; see FRAMEWORK.md §7 Stage 2.
-- No multi-tenant SaaS.
+**Non-goals**
+- No LLM inside the server. The client is the brain.
+- No writing back to sources.
+- No multi-tenant hosting. One server, one owner.
 
 ## 2. Architecture style
 
 Clean Architecture with a single dependency rule, expressed as Ports & Adapters:
 
-```
+```text
                 ┌───────────────────────────────────────────────┐
-                │  presentation/   (MCP server · CLI · web ctl)  │  → adapts app layer to the world
+                │  presentation/  MCP · console · CLI · sim     │  → adapts the app layer to the world
                 └──────────────────┬────────────────────────────┘
                                    │ depends on
                 ┌──────────────────▼────────────────────────────┐
-                │  application/    (use-case services)          │  → orchestrates domain via ports
+                │  application/   use-case services             │  → orchestrates the domain via ports
                 └──────────────────┬────────────────────────────┘
                                    │ depends on
                 ┌──────────────────▼────────────────────────────┐
-                │  domain/         (entities + ports + errors)  │  ← THE CORE (no I/O, no SDK)
+                │  domain/        entities · ports · errors     │  ← the core: no I/O, no SDK
                 └──────────────────▲────────────────────────────┘
                                    │ implements ports
                 ┌──────────────────┴────────────────────────────┐
-                │  infrastructure/ (adapters: config, fetch…)   │  ← knows about GitHub, YAML, HTTP
+                │  infrastructure/ adapters: HTTP, YAML, OAuth  │  ← knows GitHub, feeds, files
                 └───────────────────────────────────────────────┘
 ```
 
-**Dependency rule:** source-code dependencies point *inward*. `domain/` knows
+**Dependency rule:** source-code dependencies point inward. `domain/` knows
 nothing about `application/`, `infrastructure/`, `presentation/`, the MCP SDK,
-zod, or YAML. `infrastructure/` implements `domain/ports/*` interfaces.
-Wiring happens once in a **composition root** (`src/main.ts`, `src/cli.ts`).
+zod or YAML. `infrastructure/` implements `domain/ports/*`. Wiring happens once
+in the composition roots, `src/main.ts` and `src/cli.ts`.
 
 ## 3. Layer contents
 
-### domain/ — entities (OOP value models) + ports + errors
+### domain/ — entities, ports, errors
 
-| File | Responsibility (SRP) |
+| File | Responsibility |
 |---|---|
-| `app-definition.ts` | Aggregate for one app: `id`, `label`, `description`, `enabled`, `primitives`, `sources[]`; owns invariants (id format, unique source ids) |
-| `data-source.ts` | One data source inside an app: `type`, connection fields (`repo`, `views_dir`, `stats_file`…) |
-| `shortcut.ts` | A shortcut: name, phrases with slots, and a flow of blocks; owns the name-to-tool-name rule and knows its slots |
+| `app-definition.ts` | One app: id, label, description, enabled, primitives, sources. Owns its invariants: id format, at least one source, unique source ids |
+| `data-source.ts` | One source: a location that is a GitHub repository, a URL with a format and header references, or a file in the data folder, plus its field map. Validates the location: http or https only, no credentials in an address, no `..` in a file path |
+| `item.ts` | The normalized record every reader returns |
+| `ranking.ts` | Search ranking over items, as a pure function |
+| `health.ts` | The health payload shared by the status tools and the management faces |
+| `shortcut.ts` | A shortcut: name, phrases with slots, and a flow of blocks. Owns the name-to-tool-name rule and knows its slots |
 | `flow.ts` | The six kinds of block. Parses untrusted blocks with field paths and validates what a flow means: limits, shared slots, and that every name used is set |
-| `tool-spec.ts` | Neutral description of a tool to expose: name, description, input schema, output shape (what the catalog produces) |
-| `ports/config-store.ts` | `listApps() / getApp(id) / saveApp(def) / removeApp(id) / listAppFiles()` |
-| `ports/data-source-reader.ts` | Per-source read verbs: `search(def, params) / read(def, key) / status(def)` |
-| `ports/health-reporter.ts` | `report(source) → SourceHealth` (used by status/management) |
-| `ports/tool-registrar.ts` | `register(spec, handler)` — hides MCP SDK from the core |
-| `ports/logger.ts` | minimal `info/warn/error` + child scopes |
+| `source-proposal.ts` | What an inspector inferred about a source, with a sample per field |
+| `tool-spec.ts` | A neutral description of a tool to expose: name, title, description, verb, and for a shortcut its slots and phrases. No SDK types |
+| `settings.ts` | Server settings as the core sees them |
 | `errors.ts` | Typed errors: `AppNotFoundError`, `ValidationError`, `SourceUnavailableError`, `ConfigError` |
 
-### application/ — use-case services (thin, orchestrate via ports)
+| Port | Methods |
+|---|---|
+| `ports/config-store.ts` | `listApps() · getApp(id) · saveApp(app) · removeApp(id)` |
+| `ports/data-source-reader.ts` | `search · read · status` per source, and a factory that picks the reader for a source type |
+| `ports/source-inspector.ts` | `inspect(target)` returns a proposal for a source nobody has configured |
+| `ports/secret-store.ts` | `get · names · set · remove`. There is deliberately no way to list values |
+| `ports/settings-store.ts` | `load · save` |
+| `ports/shortcut-store.ts` | `list · save` |
+| `ports/tool-caller.ts` | `callTool(name, args)`: how the simulator reaches the server |
+| `ports/logger.ts` | Structured `debug · info · warn · error` and child scopes |
+
+### application/ — use-case services
 
 | Service | Responsibility |
 |---|---|
-| `app-registry.service.ts` | Load/list/get apps from the ConfigStore port; parse into `AppDefinition` |
-| `tool-catalog.service.ts` | `AppDefinition → ToolSpec[]` — the config→tools brain (pure function over domain) |
-| `search/read/status.service.ts` | Per-verb use cases: pick adapter via factory, run, shape response for speech |
-| `health.service.ts` | Per-app and stack-wide health summary (drives `stack_status` and management) |
-| `management.service.ts` | Add / remove / enable / disable / validate / export apps; enforces safety rules; writes via ConfigStore port |
-| `response-shaper.ts` | Read model → spoken-friendly text (length caps, date phrasing, "and N more"); the Design differentiator |
-| `tool-runner.service.ts` | Runs any generated tool by name. Both the MCP layer and shortcuts dispatch through it, so neither owns the mapping |
-| `shortcut.service.ts` | Interprets a flow block by block with an injected clock and returns the answer with a trace of every block that ran |
-| `flow-values.ts` | What a flow's variables hold and the functions that read them, for templates and conditions |
+| `app-registry.service.ts` | Load, list and get apps through the ConfigStore port |
+| `tool-catalog.service.ts` | Apps and shortcuts in, `ToolSpec[]` out: the config-to-tools step, as a pure function |
+| `search/read/status.service.ts` | One use case per verb: pick the reader for the source, run it |
+| `health.service.ts` | Per-app and stack-wide health |
+| `management.service.ts` | Add from any source, upsert, enable, disable, validate and remove apps; save and remove shortcuts. Every safety rule lives here |
+| `source-input.ts` | Works out what was pasted: a GitHub repository, a link or a file |
+| `response-shaper.ts` | Records into spoken text: word budget, dates in words, "and N more" |
+| `tool-runner.service.ts` | Runs any generated tool by name. The MCP layer and shortcuts both dispatch through it |
+| `shortcut-registry.service.ts` | Holds the loaded shortcuts |
+| `shortcut.service.ts` | Interprets a flow block by block with an injected clock, and returns the answer with a trace of every block that ran |
+| `flow-values.ts` | What a flow's variables hold, and the functions that read them for templates and conditions |
+| `intent-planner.ts` | The simulator's stand-in for the assistant: matches phrasings and shortcut phrases to a tool call. Rules, not a model |
+| `conversation.service.ts` | One simulated turn: plan, call through the ToolCaller port, speak, carry context |
 
-### infrastructure/ — adapters (the "common" layer)
+### infrastructure/ — adapters
 
 | Adapter | Implements | Notes |
 |---|---|---|
-| `yaml-config-store.ts` | ConfigStore | reads `config/apps/*.yml`; atomic write + backup on save |
-| `github-repo.adapter.ts` | DataSourceReader + HealthReporter | fetches `data/views/*.json` from raw.githubusercontent + Actions/commits from api.github.com; maps to search/read/status |
-| `json-url.adapter.ts` *(planned)* | DataSourceReader | generic public JSON |
-| `rss.adapter.ts` *(planned)* | DataSourceReader | feed → items |
-| `http-client.ts` | — | fetch wrapper: timeout, retry, shared cache, rate-limit guard |
-| `ttl-cache.ts` | — | per-URL in-memory cache (default TTL 300 s) |
-| `pino.logger.ts` | Logger | structured JSON logs + request ids |
+| `adapters/github-repo.adapter.ts` | DataSourceReader | Read models from raw.githubusercontent.com; last run from the GitHub Actions API |
+| `adapters/url.adapter.ts` | DataSourceReader | Links and files: fetch or read, parse, locate the records, map fields. Status is the record count and newest date |
+| `adapters/github-repo.inspector.ts` · `url.inspector.ts` · `composite.inspector.ts` | SourceInspector | The composite routes a target to the inspector for its type |
+| `adapters/adapter-factory.ts` | DataSourceReaderFactory | Source type to reader |
+| `adapters/records.ts` | — | Shared by every source type: find the most readable list, infer fields, render templates, normalize dates |
+| `adapters/data-file.ts` | — | Reads a file source by real path, refusing anything outside the data folder |
+| `formats/detect.ts` · `parse.ts` | — | Format from the body, not the address; RSS and Atom flattened to one record shape; CSV delimiter detection; XML entity declarations refused |
+| `http/http-client.ts` | — | Timeout, one retry, TTL cache keyed by URL and a header fingerprint; for links, a 5 MB cap and redirects followed by hand |
+| `http/network-guard.ts` | — | Refuses private, loopback and cloud metadata addresses on every redirect hop, including IPv4-mapped IPv6 |
+| `http/ttl-cache.ts` | — | In-memory cache, 300 s by default |
+| `config/yaml-config-store.ts` | ConfigStore | `config/apps/*.yml`; atomic write and backup |
+| `config/yaml-shortcut-store.ts` | ShortcutStore | A hand-writable block shorthand; still reads shortcuts written before flows |
+| `config/yaml-settings-store.ts` | SettingsStore | `config/settings.yml` |
+| `config/yaml-secret-store.ts` | SecretStore | `config/secrets.yml`, owner-readable only; `STACKVOICE_SECRET_*` wins |
+| `config/secret-headers.ts` | — | Fills `{{secret:NAME}}` into a request at the last moment, in memory |
+| `config/*.schema.ts` | — | zod schemas for every file |
+| `config/config-watcher.ts` | — | Reloads the registries when a file in `config/apps/` changes. Saves from the console reload directly |
+| `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; tokens in memory |
+| `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint |
+| `logging/pino.logger.ts` | Logger | Structured JSON |
+| `system-clock.ts` | — | The one place that reads the time |
 
-### presentation/ — thin faces over application services
+### presentation/ — thin faces
 
 | Face | Files | Responsibility |
 |---|---|---|
-| MCP server | `mcp/server.ts`, `mcp/tool-mapper.ts` | Streamable HTTP transport; maps `ToolSpec` → MCP tool definition; errors → MCP-shaped results |
-| CLI | `cli.ts`, `cli/commands/*.ts` | management operations from a terminal |
-| Web design system | `web/theme.ts`, `web/layout.ts` | shared tokens, page shell and navigation; every page renders through one layout so they stay one product |
-| Landing | `web/landing.ts` | the idea in ten seconds, with live numbers read from the running stack |
-| Web console | `console/routes.ts`, `console/apps-page.ts`, `console/shortcuts-page.ts`, `console/settings-page.ts`, `console/signin-page.ts` | one route per concern over the same ManagementService, plus a settings write path. The server renders each page's frame; adding and editing happen in client dialogs |
-| Web client | `web/client/`, compiled by `tsconfig.client.json` to `dist/public` and served at `/assets` | browser components as classes with no framework: `Modal`, `ConfirmDialog`, form controls, and per-screen forms such as `AppFormModal`. Each screen's entry file is its composition root. Forms depend on gateway interfaces such as `AppsGateway`, never on `fetch`, and a new source type is a new `LocationEditor`. The shortcut builder holds one editor class per kind of block, chosen in `createBlockEditor`, and an If gets its branches from a `FlowContext`, so no editor imports another |
-| Simulator | `simulator/routes.ts`, `simulator/page.ts` | simulated Alexa+ client; drives the server as a real MCP client |
+| MCP server | `mcp/http-server.ts`, `mcp/server-factory.ts`, `mcp/tool-mapper.ts` | Streamable HTTP sessions and the three auth modes; one `McpServer` per session from the catalog; `ToolSpec` to a registration with zod input and output schemas, a shortcut's slots becoming required inputs; the one place an error becomes a tool result |
+| CLI | `cli.ts`, `cli/commands.ts` | Management from a terminal |
+| Web design system | `web/theme.ts`, `web/layout.ts`, `web/components-css.ts` | Shared tokens, page shell and component styles, so every page reads as one product |
+| Landing | `web/landing.ts` | The idea in ten seconds, with live numbers from the running stack |
+| Web console | `console/routes.ts` and one page file per route | JSON API over `ManagementService` and the stores, plus server-rendered page frames |
+| Web client | `web/client/`, compiled by `tsconfig.client.json` to `dist/public`, served at `/assets` | Browser components as classes with no framework: `Modal`, `ConfirmDialog`, form controls, and per-screen forms such as `AppFormModal`. Each screen's entry file is its composition root. Forms depend on gateway interfaces such as `AppsGateway`, never on `fetch`. A new source type is a new `LocationEditor`; a new kind of block is one editor class chosen in `createBlockEditor`, and an If gets its branches from a `FlowContext`, so no editor imports another |
+| Simulator | `simulator/routes.ts`, `simulator/page.ts` | The simulated Alexa+ page; drives the server through the loopback MCP client |
 
-## 4. Multi-app design (P2)
+## 4. Multi-app design
 
-- An **app** = a named, enabled/disabled bundle: label, primitives, one or more
-  data sources. Files live in `config/apps/*.yml`; filename
-  must match the app `id`.
-- **Registry** loads *all* files at startup into `AppDefinition[]` (fail-fast on
-  validation error, with the offending file named).
-- **Tool namespace:** every enabled app with `search: true` exposes
-  `{id}_search(query?, topic?, limit)`; same for `read` / `status`. Global tools:
-  `stack_status()`.
-- **Adding an app** = drop a validated file in `config/apps/` (or run
-  `stackvoice app add`) and restart. Core code untouched → OCP demonstration.
-- **Shortcuts** live in `config/shortcuts.yml` because they span apps. Each compiles to one
-  `{shortcut_name}` tool that runs its flow of blocks, and each `{slot}` in its phrases
-  becomes a required input on that tool.
+- An **app** is a named, enabled or disabled bundle of a label, primitives and
+  sources. Files live in `config/apps/*.yml`, and a filename must match its id.
+- The **registry** loads every file at startup and fails fast on a broken one,
+  naming the file and field.
+- **Tool namespace:** an enabled app exposes `{id}_search`, `{id}_read` and
+  `{id}_status` for each verb its primitives turn on. The global tool is
+  `stack_status`.
+- **Adding an app** means writing a validated file, through the console, the CLI
+  or by hand. The watcher reloads the registry; no restart and no code change.
+- **Several sources:** an app file may list more than one, but the verbs read the
+  first. Fan-out across sources is not built.
+- **Shortcuts** live in `config/shortcuts.yml` because they span apps. Each
+  becomes one tool that runs its flow, with a required input per slot. A shortcut
+  never shadows a generated tool.
 
+```text
+AppDefinition
+ ├─ sources[]   → the first is read, by the reader its type selects
+ └─ primitives  → which verbs become tools
+Shortcut
+ ├─ triggers[]  → phrases; their slots become tool inputs
+ └─ blocks[]    → the flow the tool runs
 ```
-AppDefinition (aggregate)
- ├─ sources[]   → each resolved by adapter factory (type → adapter)
- └─ primitives  → which verbs generate tools
-```
 
-## 5. Management subsystem (P3)
+## 5. Management subsystem
 
-One **ManagementService** (application layer) is the single source of truth.
-Every face is a thin adapter over it — no duplicated logic (DIP + DRY):
+One `ManagementService` is the single source of truth. Every face is a thin
+adapter over it:
 
-```
-CLI  ─────────┐
-Web console ──┼──► ManagementService ──► ConfigStore port ──► config/apps/*.yml
+```text
+CLI ──────────┐
+Web console ──┼──► ManagementService ──► ConfigStore ─────► config/apps/*.yml
               │         │
-              │         ├──► SourceInspector port ──► GithubRepoInspector
-              │         └──► HealthService / AppRegistryService (read paths)
+              │         ├──► SourceInspector ──► CompositeSourceInspector
+              │         │                          ├─ GithubRepoInspector
+              │         │                          └─ UrlSourceInspector (links, files)
+              │         ├──► ShortcutStore ────► config/shortcuts.yml
+              │         └──► HealthService · AppRegistryService (read paths)
               │
-              └── both faces are thin: neither holds a validation rule,
-                  a backup rule, or a write path of its own.
+Console only ─┴──► SecretStore ─────► config/secrets.yml
+                   SettingsStore ───► config/settings.yml
 ```
 
-The console being cheap to add is the payoff for the port boundary: it is a
-route file and a page, because every rule it needs already lived in the service.
+Operations: list, show, validate, inspect, add from a source, upsert, enable,
+disable, remove, and save or remove a shortcut. Safety rules live in the service
+so every face inherits them. Full list: MANAGEMENT.md §3.
 
-Operations: `list`, `status`/`health`, `show config`, `logs`, `add` (from
-template), `remove`, `enable/disable`, `validate`, `export`. Safety rules
-(live-config guard, backup before write, confirmation for remove) live in the
-service so every face inherits them. Full spec: MANAGEMENT.md.
-
-## 6. SOLID mapping (concrete, checked per class)
+## 6. SOLID mapping
 
 | Principle | Where it shows up |
 |---|---|
-| **S** — Single Responsibility | One class, one reason to change: `AppDefinition` (state+invariants) ≠ `ToolCatalogService` (config→tools) ≠ `GithubRepoAdapter` (fetching) ≠ `ManagementService` (registry mutations) ≠ `ToolMapper` (MCP shape) |
-| **O** — Open/Closed | New source type → new adapter + factory entry; registry/catalog/services unchanged. New verb → new use-case; catalog iterates primitives. New management face → new thin adapter over the same service |
-| **L** — Liskov | Every `DataSourceReader` returns the same shapes (`search/read/status`); clients depend on the port, not on `github-repo` specifics |
-| **I** — Interface Segregation | Ports are small: `ConfigStore` ≠ `DataSourceReader` ≠ `HealthReporter` ≠ `ToolRegistrar` ≠ `Logger`; no god-interface, no unused methods |
-| **D** — Dependency Inversion | `domain/` declares ports; `infrastructure/` implements them; composition root injects. `application/` imports only `domain/` |
+| **S** | One reason to change per class: `AppDefinition` (invariants) ≠ `ToolCatalogService` (config to tools) ≠ `UrlSourceReader` (reading links and files) ≠ `ManagementService` (registry changes) ≠ `ToolMapper` (MCP shape) |
+| **O** | A new source type is a reader, an inspector, one factory entry and a `LocationEditor`; the services, catalog and form are untouched. A new kind of block is a parser case, an interpreter case and an editor class |
+| **L** | Every `DataSourceReader` returns the same shapes and error semantics. The GitHub reader and the URL reader are interchangeable to every caller |
+| **I** | Ports stay small: `ConfigStore` ≠ `ShortcutStore` ≠ `SecretStore` ≠ `DataSourceReader` ≠ `SourceInspector` ≠ `Logger`. The secret store has no method to read values back in bulk |
+| **D** | `domain/` declares ports, `infrastructure/` implements them, the composition roots inject. In the browser, forms depend on gateway interfaces and each page's entry file wires them |
 
 ## 7. Design patterns used
 
-- **Factory** — adapter selection by `source.type` (`github-repo` → instance);
-  new types register here only.
-- **Repository** — `ConfigStore` abstracts `config/apps/*.yml` (filesystem)
-  behind a port; domain never touches paths.
-- **Registry** — app registry loads + validates + indexes apps.
-- **Strategy** — verbs (`search/read/status`) are strategies per source type.
-- **Mapper** — `ToolSpec ↔ MCP tool definition` isolation (SDK stays in
-  presentation).
-- **Composition root** — `main.ts` / `cli.ts` wire everything; classes never
-  self-instantiate dependencies (constructor injection).
+- **Factory:** the reader for a source type, and the editor for a kind of block.
+- **Composite:** one `SourceInspector` that routes to the inspector for a target.
+- **Repository:** `ConfigStore`, `ShortcutStore` and `SecretStore` hide the files.
+- **Registry:** apps and shortcuts load, validate and index once.
+- **Interpreter:** `ShortcutService` runs a flow block by block and records a trace.
+- **Mapper:** `ToolSpec` to MCP registration, so the SDK stays in presentation.
+- **Gateway:** the console's browser code talks to the server only through
+  `AppsGateway`, `ShortcutsGateway` and friends.
+- **Composition root:** `main.ts`, `cli.ts`, and one entry file per console page.
 
 ## 8. Errors, logging, caching
 
-- **Errors:** typed domain errors (`domain/errors.ts`); use cases return results
-  or throw typed errors; presentation maps them (MCP error text / CLI exit code /
-  HTTP status). No raw `Error` escapes to a client.
-- **Logging:** structured JSON via `Logger` port; `requestId` per MCP call; app id
-  and source id as log fields; never log tokens/secrets. Logs are a management
-  feature (`stackvoice logs`).
-- **Caching:** shared `ttl-cache` keyed by normalized URL (default 300 s) to stay
-  inside unauthenticated GitHub limits (60 req/h) and keep voice latency low.
+- **Errors:** typed domain errors. Use cases return results or throw typed
+  errors, and each face maps them once: MCP error text, CLI exit code, HTTP
+  status. A field error carries its path, such as `blocks.2.then.0.text`, and the
+  console turns that into "Block 3 › Then › 1".
+- **Logging:** structured JSON through the Logger port, with tool names, app ids
+  and secret names as fields. Never tokens, key values, file contents or the
+  values a tool was called with. At debug level each fetched URL is logged in
+  full.
+- **Caching:** a TTL cache keyed by URL and a fingerprint of the request headers,
+  300 s by default, warmed at startup so a tool call rarely waits on the network.
 
 ## 9. Testing strategy
 
-| Layer | Test | Technique |
+| Layer | What is tested | How |
 |---|---|---|
-| domain | invariants, catalog pure logic | plain unit tests, no I/O |
-| application | registry load, management add/remove/validate, health aggregation | fake ports (in-memory ConfigStore, fake readers) |
-| infrastructure | yaml-config-store parse/write/atomic; github-repo adapter mapping | fixtures + mocked HTTP (no network) |
-| presentation | MCP tool registration & error mapping | MCP Inspector + local client calls; CLI golden tests |
-| end-to-end (stage 5) | boot server → Inspector/agentic client → real endpoints | optional live smoke (public JSON) |
+| domain | Invariants, flow parsing and validation, ranking | Plain unit tests, no I/O |
+| application | Management, catalog, planner, shortcut interpreter, conversation | Fake ports and an injected clock |
+| infrastructure | Format detection and parsing, network guard, inspectors, readers, YAML round trips, secrets | Fixture bodies, fake fetchers, temporary directories; no network |
+| presentation | Console API, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
+| end-to-end | Every page, the add-app and shortcut-builder dialogs, simulator voice and conversation | Playwright against the real server in the installed Edge, on a scratch copy of the config |
 
-## 10. Directory structure (planned — created in Stage 1)
+On 2026-09-13, 605 unit tests and 38 browser tests passed.
 
-```
+## 10. Directory structure
+
+```text
 StackVoice/
 ├─ config/
 │  ├─ settings.yml
-│  └─ apps/{app}.yml
+│  ├─ shortcuts.yml
+│  ├─ apps/{app}.yml
+│  ├─ secrets.yml            # git-ignored, created when a key is saved
+│  └─ backups/               # git-ignored
+├─ data/                     # git-ignored; file sources are read from here only
 ├─ src/
-│  ├─ main.ts  cli.ts            # composition roots
-│  ├─ domain/  entities · ports · errors
-│  ├─ application/  services
-│  ├─ infrastructure/  config · adapters · http · cache · logging
-│  └─ presentation/  mcp · cli (web planned)
-├─ tests/  unit · integration · fixtures
-├─ docs/… (top-level *.md)
-└─ package.json tsconfig.json    # created in Stage 1
+│  ├─ main.ts · cli.ts       # composition roots
+│  ├─ domain/                # entities · ports · errors
+│  ├─ application/           # use-case services
+│  ├─ infrastructure/        # adapters · auth · config · formats · http · logging · mcp
+│  └─ presentation/
+│     ├─ mcp/  cli/  console/  simulator/
+│     └─ web/                # theme, layout, landing
+│        └─ client/          # browser components, compiled separately
+├─ tests/
+│  ├─ unit/                  # mirrors src/
+│  └─ e2e/                   # Playwright
+├─ docs/                     # everything outside the root doc set
+├─ tsconfig.json             # server
+└─ tsconfig.client.json      # browser
 ```
+
+## 11. Key decisions
+
+| Decision | Alternatives rejected | Why |
+|---|---|---|
+| The simulator calls the server over its own MCP endpoint | Calling the services in-process | The demo is only honest if it exercises the real transport and auth. If the loopback client can drive it, so can Alexa+ |
+| No LLM in the server | A model to plan tool calls or phrase answers | The assistant already understands the user. A model inside would add cost, latency and non-determinism to a $0, 500 ms product |
+| A local OAuth 2.1 authorization server | Delegating to an external identity provider | A self-hosted server has one owner and no provider. The Toolkit requires OAuth, not a particular provider |
+| Format detected from the body | Trusting the content type or the file extension | Published sheets arrive as `text/plain` and feeds without `.xml`; both are wrong often enough to be useless |
+| Keys stored apart and referenced as `{{secret:NAME}}` | Keys inside app files | App files can then be shared or committed, and the browser never needs a key value |
+| Shortcut flows as six fixed blocks | User-written scripts or expressions | No code to sandbox, limits that can be checked on save, and a builder a non-developer can use |
+| Console browser code as framework-free TypeScript classes | React or another framework | No new dependency and no bundler; one extra `tsc` project gives types and components |
+| Server-rendered page frames with client dialogs | A single-page app with a client router | Every page stays linkable and reloadable with no router, and the landing page reads without script; only the forms need to be interactive |
+
+## 12. Known issues (2026-09-13)
+
+- The verbs read only an app's first source.
+- OAuth tokens live in memory, and the simulator stands down in `oauth` mode.
+- User-facing strings are hardcoded English. The project canon asks for i18n keys
+  with English and Burmese values.
+- No linter is configured; unused code is caught by the TypeScript compiler only.
+- The simulator's intent planner is English phrasing rules and misreads questions
+  outside those patterns.
+- A hand edit to `config/shortcuts.yml` is picked up only on restart or on the
+  next change in `config/apps/`, because the watcher watches that folder only.
+- A key placed in a URL's query string, rather than in a header, is not treated
+  as a secret: it is written into the app file and appears in debug logs.
+
+---
+
+Last reviewed: 2026-09-13

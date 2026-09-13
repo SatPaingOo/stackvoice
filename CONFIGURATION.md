@@ -1,21 +1,25 @@
 # StackVoice — Configuration
 
-**Config is the product.** A user never edits code — they add/edit YAML in
-`config/`, run the server, and their assistant gets new tools. This doc is the
-v1 schema + validation rules + worked examples. Companion: ARCHITECTURE.md §4.
+**Config is the product.** A user never edits code. The console and the CLI
+write YAML in `config/`, and a person can edit it by hand too; the assistant gets
+new tools on the next conversation. This doc is the schema, the validation rules
+and worked examples. Companion: ARCHITECTURE.md §4.
 
 ---
 
 ## 1. Layout
 
-```
+```text
 config/
-├─ settings.yml        # server + management behavior (one file)
-├─ shortcuts.yml       # macros: one tool that runs several
+├─ settings.yml        # server behavior (one file)
+├─ shortcuts.yml       # flows: one tool that runs blocks
+├─ secrets.yml         # API keys; git-ignored, created when a key is saved
+├─ backups/            # what every write replaced; git-ignored
 └─ apps/
    ├─ library.yml      # one app = one file (name must equal app id)
    ├─ markets.yml
    └─ … (user adds more)
+data/                  # file sources are read from here only (sources.data_dir)
 ```
 
 ## 2. `config/settings.yml`
@@ -37,18 +41,22 @@ console:
 simulator:
   enabled: true            # serves the simulated Alexa+ page at /simulator
 
+sources:
+  allow_private_network: false   # let links reach your own network, e.g. a home server
+  data_dir: "data"               # file sources are read from here and nowhere else
+
 management:
-  cli: true                # CLI face enabled (primary)
+  cli: true                # CLI face enabled
 
 cache:
-  ttl_seconds: 300         # per-URL cache for fetched JSON / API calls
+  ttl_seconds: 300         # per-URL cache for fetched documents
 ```
 
 ### The console
 
 `console.enabled` serves a page at `/console` for adding and editing apps in a
-browser: paste a repository, review the inferred mapping, correct it, save. A
-save takes effect at once.
+browser: paste a feed, API, spreadsheet link, repository or file name, review
+the inferred mapping, correct it, save. A save takes effect at once.
 
 With `auth.mode: none` the server is on localhost only, so the console is exactly
 as reachable as the config file itself and asks for nothing. In `token` or
@@ -66,6 +74,18 @@ is the real server.
 It stands down in `oauth` mode, because completing an authorization code flow
 needs a browser and a human. Run the demo with `auth.mode: none` or `token`, and
 switch to `oauth` to show the consent screen and the Alexa+ requirements.
+
+### Data sources
+
+`sources.allow_private_network` is off by default. With it off, a url source
+cannot reach loopback, private or cloud metadata addresses, and neither can a
+redirect from a public address. Turn it on only for a server that the internet
+cannot reach, such as one beside a home server you want to read.
+
+`sources.data_dir` is where file sources live, relative to the working directory.
+A file source cannot read outside it, including through a symbolic link, and the
+server refuses to start if it overlaps `config/`. Both settings take effect on
+restart.
 
 ### Auth modes
 
@@ -116,7 +136,7 @@ primitives:
 # ── data sources: what the verbs operate on ───────────────
 sources:
   - id: library                  # unique within this app
-    type: github-repo            # v1 supported type (see §5)
+    type: github-repo            # github-repo, url or file (see §5)
     repo: SatPaingOo/information-hub
     views_dir: data/views        # public JSON read models
     stats_file: data/views/stats.json
@@ -132,8 +152,8 @@ shortcuts: []
   tool names.
 - App ids must be unique; source ids unique within an app.
 - `primitives.*` default `false`; tools are generated only for enabled verbs.
-- A source may be added later; multi-source apps are supported (verbs fan out
-  per source when the verb targets a source id).
+- An app may list more than one source, and each is validated, but the verbs
+  read only the first. Fan-out across sources is not built.
 
 ## 4. Tool naming & exposure
 
@@ -156,12 +176,61 @@ deep-dive library, e.g. 'what did you find about AI this week?'").
 
 ## 5. Source types
 
-| type | v1? | Fields | Verbs supported |
+| type | Reads | Fields | Status reports |
 |---|---|---|---|
-| `github-repo` | ✅ | `repo`, `views_dir`, `stats_file`, `index_file`, `items_path`, `fields`, `status_fields` | search / read / status (index views + Actions runs) |
-| `json-url` | planned | `url`, `items_path` | search / read |
-| `rss` | planned | `url`, `limit` | search (fetch → normalize items) |
-| `api` | planned | `url_template`, `auth_env` | search (GET) |
+| `github-repo` | JSON read models from a public repository | `repo`, `branch`, `views_dir`, `index_file`, `stats_file`, `items_path`, `fields`, `status_fields` | Last GitHub Actions run, and freshness and count from the stats document |
+| `url` | JSON, RSS, Atom or CSV from an http or https address | `url`, `format` (`json`, `rss`, `atom` or `csv`), `headers`, `items_path`, `fields` | Record count and the newest date among the records |
+| `file` | JSON, RSS, Atom or CSV from a file in `sources.data_dir` | `path`, `format`, `items_path`, `fields` | Record count and the newest date among the records |
+
+Every type supports search, read and status. A feed is flattened on the way in:
+its entries sit under `items`, each with `id`, `title`, `summary`, `date`, `link`,
+`category` and `author`, with HTML stripped and dates in ISO form.
+
+### A url source with a key
+
+```yaml
+sources:
+  - id: projects
+    type: url
+    label: "projects"
+    url: "https://api.example.com/v1/projects"
+    format: json
+    # The value references a saved key. The key itself is in config/secrets.yml.
+    headers:
+      Authorization: "Bearer {{secret:PROJECTS_KEY}}"
+    items_path: data.items
+    fields:
+      key: id
+      title: name
+      summary: description
+      date: created_at
+      topic: null
+      region: null
+      url: html_url
+```
+
+An address may not carry credentials, such as `https://user:pass@…`, because it
+would then be written into the app file. `Host`, `Cookie`, `Content-Length`,
+`Transfer-Encoding` and `Connection` cannot be set as headers.
+
+### A file source
+
+```yaml
+sources:
+  - id: gold
+    type: file
+    label: "gold prices"
+    path: "prices.csv"          # inside sources.data_dir; no "..", drive letter or leading slash
+    format: csv
+    fields:
+      key: Date
+      title: "{Date}: {Price}"  # a template: rows with no title of their own get one
+      summary: null
+      date: Date
+      topic: null
+      region: null
+      url: null
+```
 
 ### 5.1 Mapping a payload you did not design (`fields`, `status_fields`)
 
@@ -186,7 +255,11 @@ normalized field lives. This is the whole config-driven claim in one block:
 ```
 
 Every value is a path into the source's own payload; `fields` feeds the search
-and read verbs, `status_fields` feeds the status verb. Both accept dot paths.
+and read verbs, `status_fields` feeds the status verb. Both accept dot paths. A
+`fields` value may also be a template that combines several paths, such as
+`"{Date}: {Price}"`; when part of it is missing, the separators around that part
+are dropped. Quote a template in YAML, or it reads as a map. `status_fields` is
+used by `github-repo` sources only.
 An app whose entries have no topic sets `topic: null` and the topic filter simply
 never matches it.
 
@@ -292,20 +365,29 @@ shortcuts: []
 
 ### The easiest way
 
-Open `/console`, click **Add an app**, paste your repository, check the inferred
-mapping, save. Everything below describes what that page is doing.
+Open `/console`, click **Add an app**, paste your source, check the inferred
+mapping, save. Everything below describes what that dialog is doing.
 
 ### From a terminal
 
 ```bash
-npm run stackvoice -- app add mynotes --repo me/my-pipeline
+npm run stackvoice -- app add mynotes --from me/my-pipeline
+npm run stackvoice -- app add news --from https://example.com/feed.xml
+npm run stackvoice -- app add gold --from prices.csv
 ```
 
-StackVoice fetches your read models, works out where the records live and which
-payload field feeds each spoken field, prints what it inferred with a sample
-value from your own data, and writes `config/apps/mynotes.yml`.
+StackVoice works out what was pasted, reads it, finds where the records live and
+which field feeds each spoken field, prints what it inferred with a sample value
+from your own data, and writes `config/apps/<id>.yml`.
 
-What it looks for, in order:
+**For a link or a file,** the format comes from the content: a body that starts
+like JSON is JSON, `<rss>` is RSS, `<feed>` is Atom, and rows with a consistent
+number of cells are CSV. An ordinary web page is refused with a hint to find its
+feed. If the document is an object, the most readable list inside it becomes the
+records. A record with no title-like field gets a template built from its first
+two text columns.
+
+**For a GitHub repository,** it looks for these, in order:
 
 | Looking for | Paths tried |
 |---|---|
@@ -430,3 +512,7 @@ each slot and lists every block that ran, before anything is saved.
   stays up. Management `validate` runs the same rules without restarting.
 - **Removal:** config files are the source of truth; management writes go through
   the ConfigStore port with atomic write + timestamped backup.
+
+---
+
+Last reviewed: 2026-09-13

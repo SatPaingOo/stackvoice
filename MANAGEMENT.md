@@ -1,8 +1,8 @@
 # StackVoice — Management System
 
-The management system is a **day-one pillar**, not an afterthought: the same
-product that exposes apps to an assistant also lets the owner manage those apps
-and monitor their health. One service, three faces — no duplicated logic.
+The same product that exposes apps to an assistant lets their owner add, correct
+and watch over those apps. One service, two faces: a **web console** for anyone
+and a **CLI** for developers. Neither holds a rule of its own.
 
 Companion: ARCHITECTURE.md §5 (subsystem design), CONFIGURATION.md (schemas).
 
@@ -11,156 +11,143 @@ Companion: ARCHITECTURE.md §5 (subsystem design), CONFIGURATION.md (schemas).
 ## 1. Goals & personas
 
 **Goals**
-- Add / remove / enable / disable apps without touching code or YAML by hand.
-- See the health of every app and its sources at a glance (the same data the
-  assistant's `stack_status` returns).
-- Validate config before it goes live; never corrupt a live config.
-- Everything works offline/local-first; no accounts, no cloud dependency.
+- Add, correct, enable, disable and remove apps without touching code or YAML.
+- See the health and freshness of every app at a glance, from the same data the
+  assistant's `stack_status` tool returns.
+- Validate config before it goes live, and never corrupt a live config.
+- Work offline and local-first: no account, no cloud dependency.
 
 **Personas**
-- **Owner (primary):** the self-hoster running their own stack — wants a fast
-  terminal + a glanceable status.
-- **Demo audience / judges:** see "add an app → new tools appear" as the product
-  story; see management as proof it's a product, not a script.
+- **Owner:** the person running the server. Has a feed, a sheet, an API or a data
+  project, and may never open a terminal.
+- **Developer:** wants a fast CLI and files that are readable by hand.
+- **Judges and demo audiences:** see "paste a source, and new tools appear" as the
+  product story.
 
-## 2. Feature list
+## 2. Features
 
-### Discover
-| Command / tool | What it returns |
+### Web console
+
+Served at `/console` when `console.enabled` is true.
+
+| Page | What it does |
 |---|---|
-| `stackvoice apps list` | id, label, enabled, source count, shortcut count |
-| `stackvoice status` | per-app + stack health summary (JSON/table) |
-| `stackvoice app show <id>` | full effective config of one app |
-| `stackvoice shortcuts` | each shortcut, the phrase that triggers it, and the tools it runs |
-| `stackvoice logs [--app <id>] [--tail N]` | recent structured logs |
+| Apps | Add an app in a dialog from any source, see every inferred field with a sample from the data, and correct a field by clicking a column. Edit, enable, disable or remove an app. Each card shows the source kind, health, freshness and the tools the app gives the assistant |
+| Shortcuts | Build a shortcut from blocks: phrases with slots, Ask, If and Otherwise, Say, Get, Set, Stop. **Try it** runs the draft with sample slot values and shows every block that ran |
+| Settings | Access mode and owner token, the public address, data sources, which pages are served, server options, and **saved keys** by name |
+| Sign-in | Asks for the owner token when the server is exposed beyond localhost |
 
-### Change
-| Command | Behavior |
+A save reloads the registry at once, so new tools are live in the next
+conversation without a restart. Closing a dialog with unsaved changes asks first,
+and every removal asks in the console's own confirm dialog.
+
+### CLI
+
+```bash
+npm run stackvoice -- <command>
+```
+
+| Command | What it does |
 |---|---|
-| `stackvoice app add <id> --repo <owner/name>` | inspect the repo → infer the field map → validate → write |
-| `stackvoice app remove <id> [--yes]` | requires confirmation; writes a backup first |
-| `stackvoice app enable <id>` / `disable <id>` | flip `enabled`; the watcher picks it up |
-| `stackvoice app validate [<id>]` | run full validation without writing |
+| `apps` | Every configured app: id, label, whether it is enabled, and its tools |
+| `status` | Health of every app, and of the stack as a whole |
+| `shortcuts` | Every shortcut, its tool name, and the tools its flow asks |
+| `app show <id>` | The effective config of one app |
+| `app validate [<id>]` | Run full validation without starting the server or writing anything |
+| `app add <id> --from <source>` | Inspect a link, repository or file, print the guesses with samples, validate, write |
+| `app enable <id>` / `app disable <id>` | Flip `enabled`; the watcher picks it up |
+| `app remove <id> --yes` | Delete the app file, keeping a backup |
 
-`app add` is the command the product turns on. Config-driven only means anything
-if configuring is easy, and the hard part was never the YAML — it was working out
-which key in your own JSON holds the title. The inspector does that and shows its
-working, so adding an app is one command and a glance rather than an afternoon.
+`app add` also takes `--header "Name: value"` for a key reference such as
+`Authorization: Bearer {{secret:MY_KEY}}`, `--branch` for a GitHub repository,
+and `--label` and `--description`.
 
-### Safety rules (enforced in the service — every face inherits them)
-1. **No blind writes:** every mutation validates first; invalid config is never
+Adding an app is the command the product turns on. Config-driven only means
+anything if configuring is easy, and the hard part was never the YAML: it was
+working out which key in someone's own data holds the title. The inspector does
+that and shows its working.
+
+## 3. Safety rules
+
+Enforced in `ManagementService` and the stores, so every face inherits them.
+
+1. **No blind writes.** Every change validates first; invalid config is never
    written.
-2. **Backup before write:** on each mutation the previous file is preserved
-   (`config/backups/<id>.yml.<timestamp>`).
-3. **Confirmation for destructive ops:** `remove` requires `--yes` (CLI) or an
-   explicit confirm (web/admin).
-4. **Fail-fast on load:** a broken app file fails startup with the file named —
-   management `validate` exists precisely so this happens before restart.
-5. **Never rewrite user comments/format:** ConfigStore writes canonical YAML from
-   the parsed model; hand-authored files are treated as inputs, backups keep the
-   original.
+2. **Backup before write.** The previous file is kept in `config/backups/`.
+3. **Confirmation for destructive changes.** `--yes` on the CLI, a confirm dialog
+   in the console.
+4. **Fail fast on load.** A broken app file stops startup and names the file and
+   field. `app validate` exists so that happens before a restart.
+5. **Canonical writes.** A written file is regenerated from the parsed model, so
+   hand-written comments are not kept; the backup keeps the original.
+6. **Keys go in, never out.** A saved key is never sent back to a browser, and
+   neither is any header value. An app moved to a different site does not carry
+   its key along.
+7. **Reads stay contained.** Links cannot reach private or cloud metadata
+   addresses unless settings allow it, and file sources cannot leave the data
+   folder, which may not overlap `config/`.
 
-## 3. Health payload (shared by `stack_status`, `{id}_status`, management `status`)
+## 4. Health payload
+
+One `HealthService` produces this object. `stack_status` speaks it, `status`
+prints it as a table, and the console shows it on each card. Values below are
+illustrative.
 
 ```json
 {
-  "appId": "library",
-  "enabled": true,
   "ok": true,
-  "checkedAt": "2026-09-05T05:40:00Z",
-  "sources": [
+  "checkedAt": "2026-09-13T05:40:00.000Z",
+  "version": "0.3.0",
+  "uptimeSeconds": 3600,
+  "apps": [
     {
-      "sourceId": "library",
+      "appId": "library",
+      "enabled": true,
       "ok": true,
-      "lastRunAt": "2026-09-05T05:36:39Z",
-      "lastRunConclusion": "success",
-      "lastDataDate": "2026-09-05",
-      "itemCount": 125,
-      "latencyMs": 340,
-      "lastError": null
+      "sources": [
+        {
+          "sourceId": "library",
+          "ok": true,
+          "lastRunAt": "2026-09-13T05:36:39Z",
+          "lastDataDate": "2026-09-13",
+          "itemCount": 177,
+          "latencyMs": 42,
+          "lastError": null
+        }
+      ]
     }
   ]
 }
 ```
 
-One **HealthService** produces this; the assistant tool and the management faces
-render the same object (spoken summary vs table vs JSON).
-
-## 4. The three faces
-
-### A. CLI (primary)
-`stackvoice <command>` — thin adapter over ManagementService/HealthService. Every
-safety rule lives in the service, so a second face cannot forget one.
-
-```
-$ stackvoice apps list
-  ID        LABEL              ENABLED  SOURCES  SHORTCUTS
-  library   Deep-dive library  yes      1        1
-  markets   Market intelligence yes     1        0
-
-$ stackvoice app add --from-template library --id mynews
-  ✓ validated  mynews
-  ✓ written    config/apps/mynews.yml   (backup: none — new file)
-  → restart server to expose tools: mynews_search, mynews_read, mynews_status
-
-$ stackvoice status
-  ✓ library  — last run 2 min ago (success), 125 items, data fresh to today
-  ✓ markets  — deployed 6 h ago (success)
-  stack: healthy
-```
-
-### B. Admin MCP tools (opt-in, gated)
-Enabled only when `settings.management.admin_mcp_tools: true` — lets the *same*
-assistant manage the stack by voice ("add my new repo as an app"). Tools:
-
-| Tool | Effect |
-|---|---|
-| `admin_list_apps()` | read-only listing |
-| `admin_app_status(id)` | health of one app |
-| `admin_add_app(app_yaml)` | validate + add (requires full app YAML from the user/config) |
-| `admin_set_app_enabled(id, enabled)` | enable/disable |
-| `admin_validate(id?)` | validate one or all apps |
-| `admin_remove_app(id)` | disabled by default; requires `confirm: true` arg |
-
-Design note: admin tools default **off** and are read-mostly — a voice agent
-mutating config is a deliberate, documented, opt-in choice (safe demo: enable it
-only in the demo persona).
-
-### C. Web console (primary for non-developers)
-Served at `/console` when `console.enabled` is true. The same operations as the
-CLI, over the same `ManagementService`:
-
-- **Add an app** — paste a repository, see the inferred field mapping with a
-  sample value from the user's own data, correct anything, save.
-- **Edit** — label, description, which tools to expose, every field mapping, and
-  the file paths.
-- **Enable / disable / remove**, with the same backup rules as the CLI.
-- **Health at a glance** — the same payload `stack_status` returns.
-
-A save reloads the registry immediately, so the new tools are live in the next
-conversation without a restart.
-
-This is the face that makes the product claim true. "Config-driven, so anyone can
-point it at their own apps" is only honest if adding an app does not require a
-terminal.
+`lastRunAt` comes from GitHub Actions and is null for links and files, whose
+freshness is the newest date among their records.
 
 ## 5. Security model
 
-- Default bind: `127.0.0.1` (localhost only), with `auth.mode: none`.
-- Exposed publicly: set `auth.mode` to `token` (one shared bearer token) or
-  `oauth` (OAuth 2.1 with PKCE, which Alexa+ requires). Both are enforced on
+- Default bind is `127.0.0.1` with `auth.mode: none`.
+- Exposed beyond localhost, set `auth.mode` to `token` (one shared bearer token)
+  or `oauth` (OAuth 2.1 with PKCE, which Alexa+ requires). Either is enforced on
   every request to `/mcp`; `/healthz` stays open as a liveness probe.
-- In `oauth` mode the consent screen asks for `auth.token`, because a
+- In `token` or `oauth` mode the console asks for the owner token and keeps a
+  session cookie for twelve hours.
+- In `oauth` mode the consent screen asks for the owner token, because a
   self-hosted server has one user and no identity provider. Tokens are held in
   memory, so a restart signs every client out.
-- Admin MCP tools are cut from scope (FRAMEWORK.md §7), so no tool can mutate
-  config.
-- Logs never include tokens, file contents, or full query payloads.
+- Keys live in `config/secrets.yml`, written readable by its owner only, or in
+  `STACKVOICE_SECRET_*` environment variables. App files hold references only.
+- Logs never include tokens, key values, file contents or the values a tool was
+  called with. At debug level each fetched URL is logged in full, so a key belongs
+  in a header, never in a URL's query string.
 
-## 6. Staged rollout
+## 6. Designed but not built
 
-| Stage | Window | Delivers |
-|---|---|---|
-| Stage 3 (core) | Sep 19–26 | ManagementService + ConfigStore write path + CLI: list/status/show/add/remove/enable/disable/validate/logs + tests |
-| Stage 4 | Sep 27–Oct 4 | admin MCP tools (gated) + `app export` |
-| done Sep 13 | — | web console + auth gate |
+| Feature | State on 2026-09-13 |
+|---|---|
+| Admin MCP tools, which would let the assistant change config by voice | Cut on 2026-09-12 when scope was set to core and simulator (FRAMEWORK.md §7). No tool can change config |
+| `stackvoice logs` | Not built. The server writes structured JSON logs to standard output |
+| Adding an app from a template, and `app export` | Not built. Apps are added by inspecting a source, and app files are already plain YAML |
+
+---
+
+Last reviewed: 2026-09-13

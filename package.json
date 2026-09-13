@@ -2,7 +2,7 @@
   "name": "stackvoice",
   "version": "0.3.0",
   "private": true,
-  "description": "Self-hosted, config-driven MCP server that turns your own data projects into tools an AI assistant can call.",
+  "description": "Self-hosted MCP server that turns your own feeds, APIs, spreadsheets, repositories and files into tools a voice assistant can call.",
   "license": "MIT",
   "type": "module",
   "engines": {

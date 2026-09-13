@@ -1,75 +1,90 @@
 # StackVoice
 
-**Ask your own stuff — not the internet.**
+**Turns your own feeds, APIs, spreadsheets, repositories and files into tools a voice assistant can call, and answers in sentences you can listen to.**
 
-StackVoice is a self-hosted **MCP server** that turns your own data projects
-(GitHub pipelines, datasets, libraries, feeds) into tools an AI assistant can
-call. You point it at *your* apps in config; tools are generated for those apps
-automatically. The assistant understands the user's words — StackVoice gives the
-assistant the hands.
+**Status:** working, preparing submission · Amazon *Build, Ship, Shape* hackathon, Alexa+ track (deadline 2026-10-23 12:00 PDT) · last reviewed 2026-09-13
 
-- **Status:** working. MCP server, two live demo apps, OAuth 2.1, a web console
-  for adding your own, a CLI, and a simulated Alexa+ page.
-- **Target:** Amazon *Build, Ship, Shape* hackathon — Alexa+ track (deadline Oct 23, 2026).
-- **Stack:** Node.js 20+ / TypeScript · MCP spec 2025-11-25 · Streamable HTTP · $0 budget.
+> The assistant you already talk to can search the whole web, yet it cannot tell
+> you what is in your own feeds, spreadsheets and data projects. StackVoice is a
+> self-hosted MCP server that closes that gap. Paste a source, and the assistant
+> can search it, read from it and check on it, in your words and out loud.
+>
+> **Before the features, the caveats.** The Alexa+ MCP Toolkit is available in
+> the US only, so StackVoice has not been run on a real Alexa+ device. It is
+> demonstrated through a simulated Alexa+ page that calls the real server as an
+> ordinary MCP client over Streamable HTTP, which the hackathon rules accept.
+> Speech on that page uses the browser's own speech service, which may send your
+> voice to Google in Chrome or Microsoft in Edge. Your records stay on your
+> server; the assistant receives only the answers it asks for.
 
-## Try it in two minutes
+## What it does
+
+- **Any source becomes tools.** Paste an RSS or Atom feed, a JSON API, a CSV or
+  published Google Sheet, a GitHub repository, or a file on the server.
+  StackVoice reads the content, finds the records, guesses which field is the
+  title, summary, date and link, and generates `search`, `read` and `status`
+  tools for it.
+- **Answers are spoken, not dumped.** A speaker cannot read a JSON array aloud.
+  Every tool result comes back as a sentence or two a person can listen to.
+- **Shortcuts you build from blocks,** like shortcuts on a phone. Say it your way
+  with slots such as "news about {topic}", then Ask a tool, check the answer with
+  If and Otherwise, and Say something. Each slot becomes an input the assistant
+  fills.
+- **A console and a CLI** to add, correct, enable and remove apps, save API keys,
+  and see whether each source is healthy and fresh.
+- **Ready for a real client.** MCP spec 2025-11-25 over Streamable HTTP, with a
+  built-in OAuth 2.1 authorization server using PKCE (S256), as the Alexa+ MCP
+  Toolkit requires.
+
+## Install
+
+Node.js 20 or later.
 
 ```bash
 npm install
 npm run dev
 ```
 
-`npm run dev` compiles the console's browser code into `dist/public` first. While changing files under
+`npm run dev` compiles the console's browser code into `dist/public`, then starts
+the server on http://localhost:8765. While changing files under
 `src/presentation/web/client`, keep `npm run dev:client` running beside it.
 
-Open **http://localhost:8765/simulator** and ask it something:
+Out of the box it reads two live data projects of mine,
+[information-hub](https://github.com/SatPaingOo/information-hub) (177 articles on
+2026-09-13, growing daily) and [eventpulse](https://github.com/SatPaingOo/eventpulse)
+(event-driven market intelligence). Nothing in the demo is mocked.
 
-> "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more" · "News about AI"
+## Usage
 
-That page is a simulated Alexa+ client. It talks to the MCP server over the same
-Streamable HTTP transport a device would use, and shows every tool call it makes
-underneath the answer. Speech in and out use your browser's built-in speech
-features, which may send your voice to the browser maker's speech service —
-Google in Chrome, Microsoft in Edge. Your records never leave your server.
-
-Out of the box it is pointed at two real, live pipelines —
-[information-hub](https://github.com/SatPaingOo/information-hub) (177 verified
-articles, growing daily) and [eventpulse](https://github.com/SatPaingOo/eventpulse)
-(event → market intelligence). Nothing in the demo is mocked.
-
-## Pages
+### Pages
 
 | Route | What it is |
 |---|---|
-| `/` | Landing page — the idea in ten seconds, with the live numbers from your stack |
+| `/` | Landing page: the idea in ten seconds, with live numbers from your stack |
 | `/simulator` | Ask by voice or text, or hold a hands-free conversation; every answer shows the tool call behind it |
-| `/console` | Your apps — add, edit, enable, disable, remove, and see their health |
-| `/console/shortcuts` | Build one tool that runs several |
-| `/console/settings` | Access mode, the MCP address to connect, which pages are on, server options |
+| `/console` | Your apps: add from any source, edit, enable, disable, remove, and see their health |
+| `/console/shortcuts` | Build shortcuts from blocks and try them before saving |
+| `/console/settings` | Access mode, the MCP address to connect, data sources, saved keys, server options |
+| `/console/signin` | Asks for the owner token once the server is exposed beyond localhost |
 | `/mcp` | The MCP endpoint itself, for any client |
 
-Every page is rendered by the server with no build step and no CDN, and each one
-adapts from a phone to a desktop.
+Every page adapts from a phone to a desktop and needs no CDN.
 
-## Talking to it
+### Talking to it
 
-The simulator has two ways in.
+Open **http://localhost:8765/simulator** and ask:
+
+> "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more" · "News about AI"
 
 - **Push to talk.** Tap the microphone, ask one question, hear the answer.
-- **Conversation.** Tap *Start a conversation* and just keep talking. It
-  listens, answers out loud, and listens again on its own. Say "stop" or
-  "that's all" to finish, or tap *End conversation*. Tap the circle while it is
-  speaking to interrupt.
+- **Conversation.** Tap *Start a conversation* and keep talking. It listens,
+  answers out loud, and listens again on its own. Say "stop" or "that's all" to
+  finish. Tap the circle while it is speaking to interrupt.
 
-It never opens the microphone while an answer is still playing, so it cannot
-hear itself and loop. Two silences in a row end the conversation rather than
-leaving a microphone open on an empty room.
+It never opens the microphone while an answer is still playing, so it cannot hear
+itself and loop. Two silences in a row end the conversation.
 
-## Point it at your own data
-
-Anything that publishes records works. Paste it into one box and StackVoice
-works out what it is:
+### Point it at your own data
 
 | You have | Paste |
 | --- | --- |
@@ -84,27 +99,16 @@ claims, so a spreadsheet served as plain text or a feed without `.xml` in its
 name still works. A link to an ordinary web page is refused with a hint to look
 for its feed instead.
 
-### In a browser
-
-Open **http://localhost:8765/console**, click **Add an app**, and paste into the dialog that opens. StackVoice
-fetches it, finds the records, even when an API nests them inside its response,
-and works out which field is the title, the summary, the date and the link.
+**In a browser.** Open **http://localhost:8765/console**, click **Add an app**,
+and paste into the dialog. StackVoice finds the records, even when an API nests
+them inside its response, and shows every guess with a sample from your own data.
 Records with no title of their own get one built from their columns, so a row of
-gold prices reads "2026-08: 4411.000".
+gold prices reads "2026-08: 4411.000". To change a guess, click the field, then
+click a column; click two columns to combine them, like `{Date}: {Price}`. Save,
+and your assistant can use it in the next sentence. No restart, no YAML.
 
-Every guess is shown with a sample from your own data. To change one, click the
-field, then click a column; click two columns to combine them, like
-`{Date}: {Price}`. Then Save. Your assistant can use it in the next sentence. No
-restart, no YAML, no terminal.
-
-The same page lists what you have, shows whether each app is healthy and how
-fresh its data is, and lets you edit, disable or remove any of them. When the
-server is exposed beyond localhost it asks for your `auth.token` first.
-
-### API keys
-
-When a link needs a key, open **This needs an API key**, say which header carries
-it (most APIs use `Authorization: Bearer …`) and paste the key.
+**API keys.** When a link needs a key, open **This needs an API key**, say which
+header carries it (most APIs use `Authorization: Bearer …`) and paste the key.
 
 - The key is kept in `config/secrets.yml` on the server. That file is git-ignored
   and written readable by its owner only.
@@ -115,7 +119,7 @@ it (most APIs use `Authorization: Bearer …`) and paste the key.
 - Where a file is the wrong place for a key, set `STACKVOICE_SECRET_PROJECTS_KEY`
   in the environment instead. It wins over the file.
 
-### What it refuses to read
+**What it refuses to read.**
 
 - Addresses on your own machine or network (`localhost`, `192.168.x.x`, cloud
   metadata addresses), including by way of a redirect. If StackVoice runs beside
@@ -124,7 +128,7 @@ it (most APIs use `Authorization: Bearer …`) and paste the key.
   folder that overlaps `config/`.
 - Bodies over 5 MB, and XML that declares its own entities.
 
-### From a terminal
+**From a terminal.**
 
 ```bash
 npm run stackvoice -- app add news --from https://feeds.bbci.co.uk/news/world/rss.xml
@@ -134,9 +138,9 @@ npm run stackvoice -- app add projects --from https://api.example.com/v1/project
   --header "Authorization: Bearer {{secret:PROJECTS_KEY}}"
 ```
 
-Same inference, same output:
+The CLI prints the same guesses with samples, then writes `config/apps/<id>.yml`:
 
-```
+```text
   Looking at https://feeds.bbci.co.uk/news/world/rss.xml…
   Found 25 records in this RSS under "items".
 
@@ -157,13 +161,12 @@ Same inference, same output:
   New tools once the server picks it up: news_search, news_read, news_status
 ```
 
-Any guess that is wrong is one line to change in the generated file. The server
-watches `config/apps/` and reloads on its own.
+The server watches `config/apps/` and reloads on its own.
 
-## Shortcuts
+### Shortcuts
 
-A shortcut is one tool that runs a flow of blocks, like a shortcut on a phone.
-Build one on the console's Shortcuts page:
+A shortcut is one tool that runs a flow of blocks. Build one on the console's
+Shortcuts page:
 
 - **Say it your way.** Write the phrases it answers to. A word in braces is a
   slot the person fills in, so "news about {topic}" answers "news about gold".
@@ -172,16 +175,17 @@ Build one on the console's Shortcuts page:
 - **Try it** before saving. It runs the draft with a value for each slot and
   lists every block that ran.
 
-Each shortcut becomes one tool. "News about topic" becomes `news_about_topic`
-with a required `topic` input, so a real assistant fills the slot and the
-simulator fills it from what you said. The file format is in CONFIGURATION.md §7.5.
+"News about topic" becomes the tool `news_about_topic` with a required `topic`
+input, so a real assistant fills the slot and the simulator fills it from what
+you said. Flows cannot loop and cannot run code. The file format is in
+[CONFIGURATION.md](./CONFIGURATION.md) §7.5.
 
 ### The rest of the CLI
 
 ```bash
 npm run stackvoice -- apps                 # what is configured
 npm run stackvoice -- status               # is everything running, how fresh is it
-npm run stackvoice -- shortcuts            # shortcuts and what they run
+npm run stackvoice -- shortcuts            # shortcuts and the tools they ask
 npm run stackvoice -- app show mynotes     # the effective config
 npm run stackvoice -- app validate         # check config without starting the server
 npm run stackvoice -- app disable mynotes  # stop exposing it
@@ -191,54 +195,81 @@ npm run stackvoice -- app remove mynotes --yes
 Every write validates first and backs up whatever it replaces into
 `config/backups/`.
 
-## Connecting a real assistant
+### Connecting a real assistant
 
-The server speaks plain MCP, so any client works — MCP Inspector, a coding
-agent, or Alexa+:
+The server speaks plain MCP, so any client works:
 
 ```bash
 npx @modelcontextprotocol/inspector      # point it at http://localhost:8765/mcp
 ```
 
-For anything beyond localhost, set `auth.mode` in `config/settings.yml`:
-`token` for one shared bearer token, or `oauth` for the full OAuth 2.1 + PKCE
-flow that Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
+For anything beyond localhost, set `auth.mode` in `config/settings.yml`: `token`
+for one shared bearer token, or `oauth` for the full OAuth 2.1 + PKCE flow that
+Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
 
-## What's inside
+## Architecture
 
-1. **Config-driven MCP core** — one server, tools generated from config at startup.
-2. **Multi-app registry** — add as many apps as you want (`config/apps/*.yml`);
-   every app gets its own tool namespace.
-3. **Management system** — add, inspect, validate and monitor apps from a web
-   console or a CLI, both over the same service.
-4. **Standards-compliant engineering** — OOP + SOLID + Clean/Hexagonal
-   architecture (see CODING_STANDARDS.md and ARCHITECTURE.md).
-5. **Voice-shaped responses** — tool results come back as sentences a person can
-   listen to, not JSON a speaker cannot read aloud.
-6. **Shortcuts** — one tool that runs several, for the questions you ask every
-   morning.
-
-## Docs map
+Clean architecture with ports and adapters. The domain and application layers
+have no I/O and no SDK; adapters for GitHub, links, files, YAML and OAuth sit
+behind interfaces; the MCP server, console, CLI and simulator are thin faces over
+the same services. The console's browser code is framework-free TypeScript
+classes. Details, key decisions and known issues are in
+[ARCHITECTURE.md](./ARCHITECTURE.md).
 
 | Doc | Covers |
 |---|---|
-| [FRAMEWORK.md](./FRAMEWORK.md) | Product concept, verified hackathon constraints, judging map, roadmap, risks |
-| [RESEARCH.md](./RESEARCH.md) | Landscape research — who is building what in private-data × MCP × voice |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Technical architecture — layers, ports & adapters, multi-app design, management subsystem, SOLID mapping |
-| [CONFIGURATION.md](./CONFIGURATION.md) | User config schema — `settings.yml` + `config/apps/*.yml`, validation rules, worked examples |
-| [MANAGEMENT.md](./MANAGEMENT.md) | Management system — features, web console, CLI, safety model |
-| [CODING_STANDARDS.md](./CODING_STANDARDS.md) | Engineering standards — OOP/SOLID/Clean, TypeScript, error handling, testing, git |
-| [FRICTION_LOG.md](./FRICTION_LOG.md) | Development friction log (Amazon gives up to +10% judging bonus) |
+| [FRAMEWORK.md](./FRAMEWORK.md) | Hackathon rules as verified, pitch, judging map, roadmap, risks |
+| [RESEARCH.md](./RESEARCH.md) | Who else is building what, and how StackVoice differs |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Layers, ports and adapters, key decisions, known issues |
+| [CONFIGURATION.md](./CONFIGURATION.md) | `settings.yml`, app files, source types, shortcut flows |
+| [MANAGEMENT.md](./MANAGEMENT.md) | The console and CLI, and the safety rules behind both |
+| [CODING_STANDARDS.md](./CODING_STANDARDS.md) | Where this project's rules differ from the defaults |
+| [FRICTION_LOG.md](./FRICTION_LOG.md) | Where Amazon's tooling fought the build |
+| [docs/devpost-submission.md](./docs/devpost-submission.md) | Draft text for the hackathon submission and the demo video outline |
 
 ## Development
 
 ```bash
-npm test          # 226 unit tests, no network
+npm test          # unit tests, no network
 npm run test:e2e  # browser tests against the real server, in the Edge you already have
-npm run typecheck
+npm run typecheck # server and browser code
+npm run build     # compile both into dist/
 ```
+
+On 2026-09-13, 605 unit tests and 38 browser tests passed.
+
+## Cost model
+
+$0 by design. Every dependency is open source, the demo data is public, speech
+uses the browser's built-in APIs, and the server runs on your own machine or a
+free-tier VM. The only keys involved are the ones for your own services, and they
+stay on your server.
+
+## Limitations
+
+- **Not run on a real Alexa+ device.** The Alexa+ MCP Toolkit is US-only. The
+  server meets the Toolkit's published transport and auth requirements, but the
+  end-to-end proof is the simulator, not a device.
+- **The simulator's understanding is rules, not a model.** It matches phrasings
+  and shortcut phrases in English. On a real device, the assistant does that part.
+- **Read-only.** Nothing is ever written back to a source.
+- **One source per app is searched.** An app file may list more than one source,
+  but the verbs read the first.
+- **Formats:** JSON, RSS, Atom and CSV. No spreadsheets in Excel format, PDFs or
+  scraped web pages.
+- **Freshness for links and files** is the newest date among the records. Only
+  GitHub sources report a last run, from GitHub Actions.
+- **One owner.** Access is one owner token. OAuth tokens live in memory, so a
+  restart signs every client out, and the simulator stands down in `oauth` mode.
+- **Latency.** Tools answered in 40–180 ms with a warm cache on 2026-09-12. The
+  cache is warmed at startup, but a cold fetch from GitHub is slower than the
+  Alexa+ budget of 500 ms.
+- **English only,** in the pages and in spoken answers.
 
 ## License
 
-MIT. Public repo from day one (also qualifies for the hackathon's Open Source
-mini challenge).
+MIT. See [LICENSE](./LICENSE).
+
+---
+
+Last reviewed: 2026-09-13

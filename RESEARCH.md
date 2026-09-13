@@ -126,7 +126,8 @@ pitched as one.** A judge who searches will find both projects.
 
 ## 5. Revised differentiation (what actually holds)
 
-1. **Persona, not plumbing.** gen-mcp and mcpany serve people who already have an
+1. **Persona, not plumbing.** *(Superseded 2026-09-13 by §8: sources are no
+   longer GitHub-only.)* gen-mcp and mcpany serve people who already have an
    API or an OpenAPI spec. StackVoice serves the self-hoster whose data is the
    *output of their own nightly pipelines* — GitHub Actions writing JSON read
    models. The source type, not the config mechanism, is the product.
@@ -148,3 +149,49 @@ Ring, Bee) as of 2026-09-12. The project gallery stays unpublished until judging
 so competing submissions cannot be inspected. Assume the Alexa+ track is crowded
 with generic "expose my API over MCP" entries — the persona and the voice
 shaping are what separate this from them.
+
+---
+
+# Update — 2026-09-13 (third pass: differentiation after universal sources)
+
+StackVoice now reads RSS and Atom feeds, JSON APIs, CSV and published sheets,
+GitHub repositories and local files, and builds shortcut flows with slots. The
+"persona, not plumbing" argument in §5 rested on GitHub pipelines being the only
+source type. That no longer describes the product, so this section replaces it.
+
+## 7. Neighbours re-checked
+
+Read from each project's GitHub README on 2026-09-13.
+
+| | gen-mcp | mcpany/core | StackVoice |
+|---|---|---|---|
+| How a tool is defined | Hand-written YAML, or converted from an OpenAPI spec | YAML or JSON configuration over REST/OpenAPI, gRPC, GraphQL or CLI backends | Inferred from a pasted link, repository or file, shown with samples, corrected by clicking |
+| Feeds, CSV or files with no API spec | Not described | Not described | Built in |
+| Visual editor | None described; command line | A dashboard, whose functions the README does not describe | Web console for apps, keys and shortcut flows |
+| Multi-step or conditional flows | Not described | Not described | Shortcut blocks with If and Otherwise, and slots as tool inputs |
+| Answer shape | API output | Backend protocol output | Spoken sentences |
+| Auth | TLS, OAuth/OIDC | Upstream authentication, identity federation | Token, or a local OAuth 2.1 server with PKCE |
+| Maturity | "Early Preview" | 22 stars | Hackathon build |
+
+"Not described" means the README does not mention it, not that the project
+cannot do it.
+
+## 8. Differentiation (supersedes §5 point 1)
+
+1. **No spec required.** A person pastes whatever they have, and StackVoice reads
+   the content to decide the format and the fields. Both neighbours start from a
+   definition the person must already have or write.
+2. **Answers made for listening.** Unchanged from §5 point 3. Neither neighbour
+   describes shaping results for speech.
+3. **Flows a person builds and says in their own words.** A phrase with slots
+   becomes a tool with inputs, and blocks decide what gets said. Neither
+   neighbour describes multi-step or conditional flows.
+4. **Live demo data.** Unchanged from §5 point 2, now alongside any public feed.
+
+Still not to be claimed: that config-driven MCP is new, that data never leaves
+the server when the assistant hears every answer, or that StackVoice has run on
+an Alexa+ device.
+
+---
+
+Last reviewed: 2026-09-13

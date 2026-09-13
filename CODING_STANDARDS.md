@@ -69,7 +69,8 @@ presentation → application → domain  ← infrastructure (implements domain p
 - **Immutability by convention:** prefer `readonly` arrays/fields; treat parsed
   config as immutable once loaded; mutations go through services that write fresh
   state.
-- **No unused imports/variables** (eslint `no-unused-vars` as error).
+- **No unused imports/variables.** Enforced by `noUnusedLocals` and
+  `noUnusedParameters` in both tsconfig files; no linter is configured yet.
 - Async everywhere it touches I/O; no sync `fs` reads in request paths.
 - Use `node:` prefix for builtins (`node:fs`, `node:path`).
 
@@ -108,7 +109,7 @@ presentation → application → domain  ← infrastructure (implements domain p
 ## 9. Config handling
 
 - All YAML passes zod schema validation (schemas in
-  `infrastructure/config/schema.ts`) — single source of truth for shapes.
+  `infrastructure/config/*.schema.ts`) — single source of truth for shapes.
 - Fail fast at startup on invalid config; name the file and field.
 - Management writes go through `ConfigStore` (atomic write + timestamped backup);
   never write files directly from presentation.
@@ -128,14 +129,17 @@ presentation → application → domain  ← infrastructure (implements domain p
 
 ## 11. Git & PR workflow
 
-- **Branches:** `feat/<slug>`, `fix/<slug>`, `docs/<slug>` off `main`.
+- **Branches:** one author, so commits go straight to `main`. Use
+  `feat/<slug>`, `fix/<slug>` or `docs/<slug>` once anyone else contributes.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`,
   `test:`); small, single-purpose commits.
 - **PR checklist:** builds clean · `npm test` green · lint/format clean · no
   cross-layer imports (standards §3) · no secrets · tests for new behavior ·
   docs touched if behavior changed.
-- **License:** MIT at root; repo public from day one (Open Source mini
-  challenge).
+- **License:** MIT at root. The repository is private until submission and
+  public from then on, as the rules and the Open Source mini challenge require.
+- **No AI contributors:** no `Co-Authored-By` trailer naming an AI tool, and
+  AI tool working folders stay git-ignored.
 
 ## 12. Definition of Done
 
@@ -154,3 +158,7 @@ presentation → application → domain  ← infrastructure (implements domain p
 - Premature abstraction: the second source type is when we generalize the
   adapter factory — not the first.
 - `any`, `@ts-ignore`, sync I/O in request paths, secrets in code or logs.
+
+---
+
+Last reviewed: 2026-09-13
