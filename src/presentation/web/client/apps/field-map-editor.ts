@@ -35,7 +35,12 @@ export class FieldMapEditor {
 
     for (const name of FIELD_NAMES) {
       const input = h('input', {
-        attrs: { type: 'text', spellcheck: 'false', placeholder: 'not set', 'aria-label': `${LABELS[name]} is read from` },
+        attrs: {
+          type: 'text',
+          spellcheck: 'false',
+          placeholder: 'not set',
+          'aria-label': `${LABELS[name]} is read from`,
+        },
         dataset: { name },
         on: { focus: () => this.aim(input) },
       });
@@ -52,7 +57,10 @@ export class FieldMapEditor {
     this.columnsBox.hidden = true;
 
     this.element = h('div', { className: 'field' }, [
-      h('label', {}, ['Where each spoken field lives', h('span', { className: 'hint', text: ' — one column, or several such as {Date}: {Price}' })]),
+      h('label', {}, [
+        'Where each spoken field lives',
+        h('span', { className: 'hint', text: ' — one column, or several such as {Date}: {Price}' }),
+      ]),
       grid,
       this.columnsBox,
     ]);
@@ -91,7 +99,9 @@ export class FieldMapEditor {
 
   showColumns(keys: readonly string[]): void {
     this.columns.replaceChildren(
-      ...keys.map((key) => h('button', { className: 'small', text: key, attrs: { type: 'button' }, on: { click: () => this.put(key) } })),
+      ...keys.map((key) =>
+        h('button', { className: 'small', text: key, attrs: { type: 'button' }, on: { click: () => this.put(key) } }),
+      ),
     );
     this.columnsBox.hidden = keys.length === 0;
   }

@@ -43,12 +43,17 @@ describe('isPrivateAddress', () => {
     expect(isPrivateAddress(address)).toBe(true);
   });
 
-  it.each(['8.8.8.8', '151.101.1.140', '172.32.0.1', '192.169.0.1', '100.128.0.1', '2606:4700::1111', '::ffff:8.8.8.8'])(
-    'allows %s',
-    (address) => {
-      expect(isPrivateAddress(address)).toBe(false);
-    },
-  );
+  it.each([
+    '8.8.8.8',
+    '151.101.1.140',
+    '172.32.0.1',
+    '192.169.0.1',
+    '100.128.0.1',
+    '2606:4700::1111',
+    '::ffff:8.8.8.8',
+  ])('allows %s', (address) => {
+    expect(isPrivateAddress(address)).toBe(false);
+  });
 });
 
 describe('assertFetchable', () => {
@@ -81,7 +86,9 @@ describe('assertFetchable', () => {
   });
 
   it('allows a private address once the owner has turned that on', async () => {
-    await expect(assertFetchable('http://192.168.1.20:3000/data.json', 'x', open, mustNotResolve)).resolves.toBeUndefined();
+    await expect(
+      assertFetchable('http://192.168.1.20:3000/data.json', 'x', open, mustNotResolve),
+    ).resolves.toBeUndefined();
   });
 
   it.each(['ftp://example.org/data.csv', 'file:///etc/passwd', 'javascript:alert(1)'])(
@@ -95,7 +102,9 @@ describe('assertFetchable', () => {
     const fails: Resolver = async () => {
       throw new Error('ENOTFOUND');
     };
-    await expect(assertFetchable('https://nowhere.invalid/', 'x', closed, fails)).rejects.toThrowError(/could not resolve/);
+    await expect(assertFetchable('https://nowhere.invalid/', 'x', closed, fails)).rejects.toThrowError(
+      /could not resolve/,
+    );
   });
 
   it('reports something that is not an address', async () => {

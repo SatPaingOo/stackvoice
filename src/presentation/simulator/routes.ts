@@ -51,8 +51,7 @@ export function installSimulator(app: Express, deps: SimulatorDeps): void {
       });
       res.json(turn);
     } catch (error) {
-      const message =
-        error instanceof StackVoiceError ? error.message : 'The server could not answer that.';
+      const message = error instanceof StackVoiceError ? error.message : 'The server could not answer that.';
       deps.logger.warn('simulator turn failed', { reason: message });
       res.status(502).json({ spoken: message, trace: null, context: readContext(body.context) });
     }

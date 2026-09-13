@@ -33,7 +33,9 @@ class FakeRunner {
     this.calls.push({ tool, args });
     return {
       spoken: 'One entry.',
-      structured: { items: [{ key: 'k1', title: 'Gold rises', summary: null, date: null, topic: null, region: null, url: null }] },
+      structured: {
+        items: [{ key: 'k1', title: 'Gold rises', summary: null, date: null, topic: null, region: null, url: null }],
+      },
     };
   }
 }
@@ -65,7 +67,10 @@ beforeEach(async () => {
   runner = new FakeRunner();
   const registry = new AppRegistryService({ listApps: async () => [] } as unknown as ConfigStore, silentLogger);
   await registry.load();
-  const shortcuts = new ShortcutRegistryService({ list: async () => [news, brief], save: async () => null }, silentLogger);
+  const shortcuts = new ShortcutRegistryService(
+    { list: async () => [news, brief], save: async () => null },
+    silentLogger,
+  );
   await shortcuts.load();
 
   const toolRunner = runner as unknown as ToolRunner;

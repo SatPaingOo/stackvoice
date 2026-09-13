@@ -53,7 +53,11 @@ export class ApiClient implements JsonRequester {
       throw new ApiError(message ?? 'Sign in first.', 401, null);
     }
     if (!response.ok) {
-      throw new ApiError(message ?? 'That did not work.', response.status, typeof data.field === 'string' ? data.field : null);
+      throw new ApiError(
+        message ?? 'That did not work.',
+        response.status,
+        typeof data.field === 'string' ? data.field : null,
+      );
     }
     return data as T;
   }

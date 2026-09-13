@@ -60,8 +60,7 @@ ${(options.modules ?? []).map((path) => `<script type="module" src="${ASSETS_PAT
 
 function topbar(active: NavKey | null): string {
   const links = NAV_ITEMS.map(
-    (item) =>
-      `<a href="${item.href}"${item.key === active ? ' class="on" aria-current="page"' : ''}>${item.label}</a>`,
+    (item) => `<a href="${item.href}"${item.key === active ? ' class="on" aria-current="page"' : ''}>${item.label}</a>`,
   ).join('');
 
   return `<header class="topbar">

@@ -104,7 +104,12 @@ describe('ShortcutService.run', () => {
 
   it('stops at a Stop block, and nothing after it runs', async () => {
     const runner = new FakeRunner(() => speaks('All healthy.'));
-    const shortcut = flow([say('One.'), { kind: 'stop' }, { kind: 'ask', tool: 'stack_status', args: {}, as: 'health' }, say('Two.')]);
+    const shortcut = flow([
+      say('One.'),
+      { kind: 'stop' },
+      { kind: 'ask', tool: 'stack_status', args: {}, as: 'health' },
+      say('Two.'),
+    ]);
 
     const result = await serviceWith(runner).run(shortcut);
 
@@ -131,7 +136,12 @@ describe('ShortcutService.run', () => {
     );
     const shortcut = flow([
       search('found', { limit: 2 }),
-      { kind: 'if', condition: { kind: 'failed', variable: 'found' }, then: [say('The library is down.')], otherwise: [] },
+      {
+        kind: 'if',
+        condition: { kind: 'failed', variable: 'found' },
+        then: [say('The library is down.')],
+        otherwise: [],
+      },
       { kind: 'ask', tool: 'stack_status', args: {}, as: 'health' },
       say('{health}'),
     ]);
@@ -154,7 +164,10 @@ describe('ShortcutService.run', () => {
 
   it('answers with what the tools said when no block says anything', async () => {
     const runner = new FakeRunner((tool) => speaks(tool === 'library_search' ? 'Two entries.' : 'All healthy.'));
-    const shortcut = flow([search('news', { limit: 2 }), { kind: 'ask', tool: 'stack_status', args: {}, as: 'health' }]);
+    const shortcut = flow([
+      search('news', { limit: 2 }),
+      { kind: 'ask', tool: 'stack_status', args: {}, as: 'health' },
+    ]);
 
     expect((await serviceWith(runner).run(shortcut)).spoken).toBe('Two entries. All healthy.');
   });

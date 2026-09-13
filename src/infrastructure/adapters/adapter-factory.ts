@@ -15,7 +15,10 @@ export class ReaderFactory implements DataSourceReaderFactory {
   forSource(source: DataSource): DataSourceReader {
     const reader = this.readers.get(source.type);
     if (reader === undefined) {
-      throw new ValidationError(`no reader is registered for source type "${source.type}"`, `sources.${source.id}.type`);
+      throw new ValidationError(
+        `no reader is registered for source type "${source.type}"`,
+        `sources.${source.id}.type`,
+      );
     }
     return reader;
   }

@@ -54,7 +54,10 @@ export default tseslint.config(
     rules: {
       // Every promise is awaited, returned, or deliberately discarded with `void`.
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { arguments: false, attributes: false } }],
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { arguments: false, attributes: false } },
+      ],
     },
   },
 
@@ -66,8 +69,14 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            { group: ['**/infrastructure/**', '**/presentation/**'], message: 'The core must not depend on an outer layer.' },
-            { group: ['@modelcontextprotocol/*', 'express', 'zod', 'yaml', 'pino'], message: 'The core must not depend on an SDK or a library at the boundary.' },
+            {
+              group: ['**/infrastructure/**', '**/presentation/**'],
+              message: 'The core must not depend on an outer layer.',
+            },
+            {
+              group: ['@modelcontextprotocol/*', 'express', 'zod', 'yaml', 'pino'],
+              message: 'The core must not depend on an SDK or a library at the boundary.',
+            },
             { group: ['node:*'], message: 'The core has no I/O; take what you need through a port.' },
           ],
         },

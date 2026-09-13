@@ -111,10 +111,14 @@ describe('file sources', () => {
     expect(file('exports\\notes.csv').location).toMatchObject({ path: 'exports/notes.csv' });
   });
 
-  it.each(['../config/secrets.yml', 'exports/../../etc/passwd', '/etc/passwd', 'C:\\Windows\\win.ini', 'data\\..\\..\\x', ''])(
-    'refuse %j',
-    (path) => {
-      expect(() => file(path)).toThrowError(ValidationError);
-    },
-  );
+  it.each([
+    '../config/secrets.yml',
+    'exports/../../etc/passwd',
+    '/etc/passwd',
+    'C:\\Windows\\win.ini',
+    'data\\..\\..\\x',
+    '',
+  ])('refuse %j', (path) => {
+    expect(() => file(path)).toThrowError(ValidationError);
+  });
 });

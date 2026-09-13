@@ -8,8 +8,8 @@ server:
 
 auth:
   mode: none
-  token: ""
-  public_url: ""
+  token: ''
+  public_url: ''
 
 console:
   enabled: true

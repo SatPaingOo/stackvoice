@@ -43,7 +43,10 @@ export class Modal {
 
     this.element = h('dialog', { className: `modal ${options.size ?? 'md'}`, attrs: { 'aria-labelledby': titleId } }, [
       h('div', { className: 'modal-panel' }, [
-        h('header', { className: 'modal-head' }, [h('div', { className: 'grow' }, [this.heading, this.subtitle]), close]),
+        h('header', { className: 'modal-head' }, [
+          h('div', { className: 'grow' }, [this.heading, this.subtitle]),
+          close,
+        ]),
         this.body,
         this.footer,
       ]),

@@ -54,7 +54,12 @@ export class TemplateField {
     const token = this.insert.value;
     if (token === '') return;
     const length = this.input.value.length;
-    const next = insertText(this.input.value, token, this.input.selectionStart ?? length, this.input.selectionEnd ?? length);
+    const next = insertText(
+      this.input.value,
+      token,
+      this.input.selectionStart ?? length,
+      this.input.selectionEnd ?? length,
+    );
     this.input.value = next.text;
     this.insert.value = '';
     this.input.focus();

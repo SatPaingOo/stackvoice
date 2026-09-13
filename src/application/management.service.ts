@@ -317,7 +317,10 @@ function defaultLabel(target: SourceTarget): string {
       break;
     case 'url': {
       const url = new URL(target.url);
-      const last = url.pathname.split('/').filter((part) => part !== '').pop();
+      const last = url.pathname
+        .split('/')
+        .filter((part) => part !== '')
+        .pop();
       raw = last === undefined ? url.hostname.replace(/^www\./, '') : last.replace(/\.[a-z0-9]+$/i, '');
       break;
     }

@@ -60,7 +60,12 @@ export class SourcePicker {
     this.branch.element.hidden = true;
 
     this.chips = EXAMPLES.map((example) =>
-      h('button', { className: 'kind', text: example.label, attrs: { type: 'button' }, on: { click: () => this.use(example) } }),
+      h('button', {
+        className: 'kind',
+        text: example.label,
+        attrs: { type: 'button' },
+        on: { click: () => this.use(example) },
+      }),
     );
 
     this.element = h('div', { className: 'source-picker' }, [

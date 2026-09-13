@@ -115,7 +115,12 @@ class FlowRun {
     const spoken =
       this.said.length > 0
         ? tidy(this.said.join(' '))
-        : tidy(this.steps.map((step) => step.spoken).filter((text) => text.trim() !== '').join(' '));
+        : tidy(
+            this.steps
+              .map((step) => step.spoken)
+              .filter((text) => text.trim() !== '')
+              .join(' '),
+          );
     return { spoken: spoken === '' ? NOTHING_TO_SAY : spoken, steps: this.steps, trace: this.trace };
   }
 
@@ -133,7 +138,10 @@ class FlowRun {
         const value = applyFunction(this.variables.get(block.from) ?? NOTHING, block.fn, block.index, this.now);
         this.define(block.as, value);
         const which = block.index === null ? '' : ` number ${block.index}`;
-        return { ok: true, summary: `Got ${block.fn}${which} of ${block.from}: "${clip(textOf(value))}", saved as ${block.as}.` };
+        return {
+          ok: true,
+          summary: `Got ${block.fn}${which} of ${block.from}: "${clip(textOf(value))}", saved as ${block.as}.`,
+        };
       }
       case 'set': {
         const value = renderTemplate(block.to, this.variables, this.now).trim();
@@ -155,7 +163,8 @@ class FlowRun {
       const items = itemsFrom(output.structured);
       this.define(block.as, { kind: 'answer', spoken: output.spoken, ok: true, items });
       this.steps.push({ tool: block.tool, spoken: output.spoken, ok: true });
-      const got = items.length > 0 ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : `"${clip(output.spoken)}"`;
+      const got =
+        items.length > 0 ? `${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : `"${clip(output.spoken)}"`;
       return { ok: true, summary: `${asked}, saved as ${block.as}: ${got}.` };
     } catch (error) {
       const message = error instanceof StackVoiceError ? error.message : `${block.tool} did not answer.`;
@@ -190,7 +199,12 @@ class FlowRun {
       case 'text': {
         const actual = clip(renderTemplate(condition.template, this.variables, this.now).trim());
         const expected = clip(renderTemplate(condition.value, this.variables, this.now).trim());
-        const op = { contains: `contain "${expected}"`, is: `say "${expected}"`, is_empty: 'come out empty', is_not_empty: 'have anything in it' }[condition.op];
+        const op = {
+          contains: `contain "${expected}"`,
+          is: `say "${expected}"`,
+          is_empty: 'come out empty',
+          is_not_empty: 'have anything in it',
+        }[condition.op];
         return `Does "${actual}" ${op}`;
       }
       case 'failed':
@@ -225,7 +239,9 @@ function isItem(value: unknown): value is Item {
 }
 
 function describeArgs(args: Readonly<Record<string, ArgValue>>): string {
-  const parts = Object.entries(args).map(([key, value]) => `${key} ${typeof value === 'string' ? `"${clip(value)}"` : String(value)}`);
+  const parts = Object.entries(args).map(
+    ([key, value]) => `${key} ${typeof value === 'string' ? `"${clip(value)}"` : String(value)}`,
+  );
   return parts.length === 0 ? '' : ` with ${parts.join(', ')}`;
 }
 

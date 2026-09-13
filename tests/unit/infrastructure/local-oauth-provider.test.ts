@@ -83,10 +83,7 @@ const makeProvider = (ownerToken = OWNER_TOKEN): LocalOAuthProvider =>
   new LocalOAuthProvider({ ownerToken, logger: silentLogger });
 
 /** Runs the consent step and returns the issued authorization code. */
-const grantCode = async (
-  provider: LocalOAuthProvider,
-  over: Partial<AuthorizationParams> = {},
-): Promise<string> => {
+const grantCode = async (provider: LocalOAuthProvider, over: Partial<AuthorizationParams> = {}): Promise<string> => {
   const res = new FakeResponse(OWNER_TOKEN);
   await provider.authorize(client, params(over), res.asExpress());
   const url = new URL(res.redirectedTo as string);
@@ -197,9 +194,9 @@ describe('authorization code exchange', () => {
     const provider = makeProvider();
     const code = await grantCode(provider);
 
-    await expect(
-      provider.exchangeAuthorizationCode({ ...client, client_id: 'other' }, code),
-    ).rejects.toBeInstanceOf(InvalidGrantError);
+    await expect(provider.exchangeAuthorizationCode({ ...client, client_id: 'other' }, code)).rejects.toBeInstanceOf(
+      InvalidGrantError,
+    );
   });
 
   it('expires a code after five minutes', async () => {

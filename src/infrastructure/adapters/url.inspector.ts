@@ -50,7 +50,8 @@ export class UrlSourceInspector implements SourceInspector {
     const name = target.type === 'url' ? target.url : target.path;
     const { body, contentType } = await this.load(target);
 
-    const extensionFormat = target.type === 'file' ? (EXTENSION_FORMATS[extname(target.path).toLowerCase()] ?? null) : null;
+    const extensionFormat =
+      target.type === 'file' ? (EXTENSION_FORMATS[extname(target.path).toLowerCase()] ?? null) : null;
     const format = detectFormat(body, contentType) ?? extensionFormat;
     if (format === null) {
       throw new SourceUnavailableError(
@@ -135,7 +136,9 @@ export class UrlSourceInspector implements SourceInspector {
 function channelTitle(document: unknown): string | null {
   if (!isPlainObject(document)) return null;
   const channel = document['channel'];
-  return isPlainObject(channel) && typeof channel['title'] === 'string' && channel['title'] !== '' ? channel['title'] : null;
+  return isPlainObject(channel) && typeof channel['title'] === 'string' && channel['title'] !== ''
+    ? channel['title']
+    : null;
 }
 
 function looksLikeWebPage(body: string): boolean {

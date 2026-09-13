@@ -5,7 +5,11 @@ import { slotsIn } from './flow-hints.js';
 export class TriggerListEditor {
   readonly element: HTMLDivElement;
   private readonly rows = h('div', { attrs: { id: 'phrases' } });
-  private readonly addButton = h('button', { className: 'small', text: 'Add a phrase', attrs: { type: 'button', id: 'addPhrase' } });
+  private readonly addButton = h('button', {
+    className: 'small',
+    text: 'Add a phrase',
+    attrs: { type: 'button', id: 'addPhrase' },
+  });
   private readonly slotsLine = h('p', { className: 'slots-line', attrs: { id: 'slotsLine' } });
   private inputs: HTMLInputElement[] = [];
 
@@ -19,7 +23,10 @@ export class TriggerListEditor {
       this.inputs.at(-1)?.focus();
     });
     this.element = h('div', { className: 'field' }, [
-      h('label', {}, ['Ways to say it', h('span', { className: 'hint', text: ' — a word in braces, such as {topic}, is filled in by the person' })]),
+      h('label', {}, [
+        'Ways to say it',
+        h('span', { className: 'hint', text: ' — a word in braces, such as {topic}, is filled in by the person' }),
+      ]),
       this.rows,
       this.slotsLine,
       this.addButton,
@@ -77,8 +84,14 @@ export class TriggerListEditor {
       parts = ['The person fills in '];
       slots.forEach((slot, index) => parts.push(index === 0 ? '' : ', ', h('code', { text: `{${slot}}` })));
     } else {
-      parts = [this.value.length === 0 ? 'With no phrase, the name is what the person says.' : 'No slots: the phrase is said as it is.'];
+      parts = [
+        this.value.length === 0
+          ? 'With no phrase, the name is what the person says.'
+          : 'No slots: the phrase is said as it is.',
+      ];
     }
-    this.slotsLine.replaceChildren(...parts.filter((part): part is Node | string => typeof part === 'string' || part instanceof Node));
+    this.slotsLine.replaceChildren(
+      ...parts.filter((part): part is Node | string => typeof part === 'string' || part instanceof Node),
+    );
   }
 }

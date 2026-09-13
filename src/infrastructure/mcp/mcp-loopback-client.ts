@@ -31,9 +31,8 @@ export class McpLoopbackClient implements ToolCaller {
     const started = Date.now();
     const client = new Client({ name: 'stackvoice-simulator', version: '1.0.0' });
     const transport = new StreamableHTTPClientTransport(new URL(this.options.endpoint), {
-      requestInit: this.options.bearerToken === null
-        ? {}
-        : { headers: { authorization: `Bearer ${this.options.bearerToken}` } },
+      requestInit:
+        this.options.bearerToken === null ? {} : { headers: { authorization: `Bearer ${this.options.bearerToken}` } },
     });
 
     try {

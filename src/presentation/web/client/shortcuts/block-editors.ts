@@ -66,7 +66,8 @@ class AskBlockEditor implements BlockEditor {
   read(): BlockWire {
     const tool = this.selected();
     // A tool this server no longer has keeps the arguments it was saved with.
-    if (tool === undefined) return { kind: 'ask', tool: this.tool.value, args: this.block.args, as: this.as.value.trim() };
+    if (tool === undefined)
+      return { kind: 'ask', tool: this.tool.value, args: this.block.args, as: this.as.value.trim() };
 
     const args: Record<string, ArgValue> = {};
     for (const [key, value] of Object.entries(this.block.args)) {
@@ -106,7 +107,10 @@ class IfBlockEditor implements BlockEditor {
     this.element = h('div', {}, [
       this.condition.element,
       h('div', { className: 'branch then' }, [h('p', { className: 'branch-label', text: 'Then' }), this.then.element]),
-      h('div', { className: 'branch otherwise' }, [h('p', { className: 'branch-label', text: 'Otherwise' }), this.otherwise.element]),
+      h('div', { className: 'branch otherwise' }, [
+        h('p', { className: 'branch-label', text: 'Otherwise' }),
+        this.otherwise.element,
+      ]),
     ]);
   }
 
@@ -147,7 +151,9 @@ class GetBlockEditor implements BlockEditor {
 
   constructor(block: Of<'get'>, context: FlowContext) {
     this.fn.append(
-      ...(Object.keys(FUNCTION_LABELS) as FlowFunction[]).map((fn) => h('option', { text: FUNCTION_LABELS[fn], attrs: { value: fn } })),
+      ...(Object.keys(FUNCTION_LABELS) as FlowFunction[]).map((fn) =>
+        h('option', { text: FUNCTION_LABELS[fn], attrs: { value: fn } }),
+      ),
     );
     this.fn.value = block.fn;
     this.from = new NameSelect(block.from, () => context.values(), 'get-from');
@@ -209,7 +215,10 @@ class SetBlockEditor implements BlockEditor {
 
 class StopBlockEditor implements BlockEditor {
   readonly kind = 'stop';
-  readonly element = h('p', { className: 'muted stop-note', text: 'The answer ends here, with what has been said so far.' });
+  readonly element = h('p', {
+    className: 'muted stop-note',
+    text: 'The answer ends here, with what has been said so far.',
+  });
 
   read(): BlockWire {
     return { kind: 'stop' };

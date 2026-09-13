@@ -96,9 +96,7 @@ describe('shapeStackHealth', () => {
   });
 
   it('says "1 app is running", not "1 apps are running"', () => {
-    expect(shapeStackHealth(health([app('library', true)]))).toBe(
-      'Your stack is healthy. 1 app is running: library.',
-    );
+    expect(shapeStackHealth(health([app('library', true)]))).toBe('Your stack is healthy. 1 app is running: library.');
   });
 
   it('does not claim other apps are fine when none are', () => {

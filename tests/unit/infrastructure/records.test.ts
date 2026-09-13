@@ -154,18 +154,17 @@ describe('normalizeDate and newestDate', () => {
   });
 
   it('finds the newest date and ignores undated items', () => {
-    const items = [
-      { date: '2026-09-11' },
-      { date: null },
-      { date: '2026-09-13' },
-    ] as unknown as Item[];
+    const items = [{ date: '2026-09-11' }, { date: null }, { date: '2026-09-13' }] as unknown as Item[];
     expect(newestDate(items)).toBe('2026-09-13');
   });
 });
 
 describe('buildEvidence', () => {
   it('pairs each guess with a sample from the first record', () => {
-    const evidence = buildEvidence({ ...DEFAULT_FIELD_MAP, title: '{Date}: {Price}' }, { Date: '1833-01', Price: '18.930' });
+    const evidence = buildEvidence(
+      { ...DEFAULT_FIELD_MAP, title: '{Date}: {Price}' },
+      { Date: '1833-01', Price: '18.930' },
+    );
     expect(evidence.find((row) => row.field === 'title')).toEqual({
       field: 'title',
       path: '{Date}: {Price}',

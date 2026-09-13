@@ -29,7 +29,12 @@ export class SavedKeysPanel {
       const secrets = await this.secrets.list();
       this.list.replaceChildren(
         ...(secrets.length === 0
-          ? [h('p', { className: 'muted', text: 'No keys saved yet. The Apps page asks for one when a link needs it.' })]
+          ? [
+              h('p', {
+                className: 'muted',
+                text: 'No keys saved yet. The Apps page asks for one when a link needs it.',
+              }),
+            ]
           : secrets.map((secret) => this.row(secret))),
       );
     } catch (error) {
@@ -43,7 +48,10 @@ export class SavedKeysPanel {
 
     return h('div', { className: 'key-row', dataset: { key: secret.name } }, [
       h('code', { text: secret.name }),
-      h('span', { className: 'used', text: secret.usedBy.length > 0 ? `used by ${secret.usedBy.join(', ')}` : 'not used by any app' }),
+      h('span', {
+        className: 'used',
+        text: secret.usedBy.length > 0 ? `used by ${secret.usedBy.join(', ')}` : 'not used by any app',
+      }),
       remove,
     ]);
   }

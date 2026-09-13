@@ -3,12 +3,7 @@ import { SEARCH_LIMIT_DEFAULT } from '../domain/item.js';
 import type { AppRegistryService } from './app-registry.service.js';
 import type { HealthService } from './health.service.js';
 import type { ReadService } from './read.service.js';
-import {
-  shapeAppHealth,
-  shapeItem,
-  shapeSearchResults,
-  shapeStackHealth,
-} from './response-shaper.js';
+import { shapeAppHealth, shapeItem, shapeSearchResults, shapeStackHealth } from './response-shaper.js';
 import type { SearchService } from './search.service.js';
 import type { StatusService } from './status.service.js';
 

@@ -103,7 +103,9 @@ export class SelectField extends LabeledField<string, HTMLSelectElement> {
 
   setChoices(choices: readonly Choice[]): void {
     const current = this.control.value;
-    this.control.replaceChildren(...choices.map((choice) => h('option', { text: choice.label, attrs: { value: choice.value } })));
+    this.control.replaceChildren(
+      ...choices.map((choice) => h('option', { text: choice.label, attrs: { value: choice.value } })),
+    );
     if (choices.some((choice) => choice.value === current)) this.control.value = current;
   }
 
@@ -119,7 +121,10 @@ export class SelectField extends LabeledField<string, HTMLSelectElement> {
 /** A label over a control built elsewhere, such as a select a block editor fills itself. */
 export function labelled(text: string, control: HTMLElement, className = ''): HTMLDivElement {
   if (control.id === '') control.id = uniqueId('field');
-  return h('div', { className: `field ${className}`.trim() }, [h('label', { text, attrs: { for: control.id } }), control]);
+  return h('div', { className: `field ${className}`.trim() }, [
+    h('label', { text, attrs: { for: control.id } }),
+    control,
+  ]);
 }
 
 /** A checkbox with its label beside it, for a yes-or-no setting. */

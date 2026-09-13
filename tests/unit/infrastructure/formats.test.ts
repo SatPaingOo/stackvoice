@@ -156,7 +156,8 @@ describe('parseBody: RSS', () => {
   });
 
   it('refuses a document that declares its own entities', () => {
-    const bomb = '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa"><!ENTITY b "&a;&a;">]><rss><channel><item><title>&b;</title></item></channel></rss>';
+    const bomb =
+      '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa"><!ENTITY b "&a;&a;">]><rss><channel><item><title>&b;</title></item></channel></rss>';
     expect(() => parseBody(bomb, 'rss')).toThrowError(/entities/);
   });
 

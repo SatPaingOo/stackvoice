@@ -18,8 +18,20 @@ import {
 } from '../../../../../src/presentation/web/client/shortcuts/flow-hints.js';
 import type { BlockWire, ToolWire } from '../../../../../src/presentation/web/client/shortcuts/shortcut-types.js';
 
-const search: ToolWire = { name: 'library_search', title: 'Search library', verb: 'search', takesQuery: true, needsKey: false };
-const status: ToolWire = { name: 'stack_status', title: 'Stack status', verb: 'stack_status', takesQuery: false, needsKey: false };
+const search: ToolWire = {
+  name: 'library_search',
+  title: 'Search library',
+  verb: 'search',
+  takesQuery: true,
+  needsKey: false,
+};
+const status: ToolWire = {
+  name: 'stack_status',
+  title: 'Stack status',
+  verb: 'stack_status',
+  takesQuery: false,
+  needsKey: false,
+};
 
 const flow: BlockWire[] = [
   { kind: 'ask', tool: 'library_search', args: { query: '{topic}' }, as: 'found' },
@@ -96,7 +108,8 @@ describe('insertableTokens', () => {
     const blocks = asDomain([...flow, { kind: 'say', text: tokens.join(' ') }]);
 
     expect(
-      () => new Shortcut({ name: 'every token', description: '', enabled: true, triggers: ['news about {topic}'], blocks }),
+      () =>
+        new Shortcut({ name: 'every token', description: '', enabled: true, triggers: ['news about {topic}'], blocks }),
     ).not.toThrow();
   });
 });
@@ -163,14 +176,18 @@ describe('starterBlock', () => {
 
     const blocks = asDomain([
       ask,
-      { ...(check as Extract<BlockWire, { kind: 'if' }>), then: [{ kind: 'say', text: 'Nothing about {topic}.' }, { kind: 'stop' }] },
+      {
+        ...(check as Extract<BlockWire, { kind: 'if' }>),
+        then: [{ kind: 'say', text: 'Nothing about {topic}.' }, { kind: 'stop' }],
+      },
       get,
       { ...(set as Extract<BlockWire, { kind: 'set' }>), to: '{answer.first.title}' },
       { kind: 'say', text: '{value} about {topic}. Newest: {note}.' },
     ]);
 
     expect(
-      () => new Shortcut({ name: 'starters', description: '', enabled: true, triggers: ['news about {topic}'], blocks }),
+      () =>
+        new Shortcut({ name: 'starters', description: '', enabled: true, triggers: ['news about {topic}'], blocks }),
     ).not.toThrow();
   });
 });
@@ -178,9 +195,15 @@ describe('starterBlock', () => {
 describe('describeProblem', () => {
   it.each([
     ['blocks.1.then.0.text: what to say is missing', 'Block 2 › Then › 1: What to say is missing'],
-    ['blocks.0.condition.variable: "mood" is not the name an Ask block saved its answer under', 'Block 1: "mood" is not the name an Ask block saved its answer under'],
+    [
+      'blocks.0.condition.variable: "mood" is not the name an Ask block saved its answer under',
+      'Block 1: "mood" is not the name an Ask block saved its answer under',
+    ],
     ['triggers.1: "{topic}" needs words around its slots', 'Phrase 2: "{topic}" needs words around its slots'],
-    ['blocks: has 17 blocks; at most 16 keeps a flow followable', 'This shortcut has 17 blocks; at most 16 keeps a flow followable'],
+    [
+      'blocks: has 17 blocks; at most 16 keeps a flow followable',
+      'This shortcut has 17 blocks; at most 16 keeps a flow followable',
+    ],
     ['blocks: a shortcut needs at least one block', 'A shortcut needs at least one block'],
     ['name: "???" does not make a usable tool name.', '"???" does not make a usable tool name.'],
     ['Could not reach the server.', 'Could not reach the server.'],

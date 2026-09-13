@@ -232,9 +232,11 @@ export async function runRemove(deps: CommandDeps, id: string, confirmed: boolea
 function printProposal(proposal: SourceProposal): void {
   const { location } = proposal;
   const where = location.type === 'github-repo' ? location.indexFile : `this ${location.format.toUpperCase()}`;
-  print(`  Found ${bold(String(proposal.itemCount))} records in ${where}${
-    proposal.itemsPath === null ? '' : ` under "${proposal.itemsPath}"`
-  }.`);
+  print(
+    `  Found ${bold(String(proposal.itemCount))} records in ${where}${
+      proposal.itemsPath === null ? '' : ` under "${proposal.itemsPath}"`
+    }.`,
+  );
   print();
   print(`  ${bold('Field mapping')} ${dim('(inferred)')}`);
 
@@ -251,7 +253,9 @@ function printProposal(proposal: SourceProposal): void {
   if (location.type === 'github-repo') {
     print(
       `  ${bold('Status')} reads ${location.statsFile}` +
-        dim(` — freshness from "${proposal.statusFields.lastDataDate}", count from "${proposal.statusFields.itemCount}"`),
+        dim(
+          ` — freshness from "${proposal.statusFields.lastDataDate}", count from "${proposal.statusFields.itemCount}"`,
+        ),
     );
   } else {
     print(`  ${bold('Status')} ${dim('counts the records and reads the newest date')}`);
@@ -265,7 +269,5 @@ function toolNames(app: AppDefinition): string[] {
 }
 
 function describeFields(fields: FieldMap): string {
-  return (Object.keys(fields) as (keyof FieldMap)[])
-    .map((name) => `${name}=${fields[name] ?? '-'}`)
-    .join(' ');
+  return (Object.keys(fields) as (keyof FieldMap)[]).map((name) => `${name}=${fields[name] ?? '-'}`).join(' ');
 }

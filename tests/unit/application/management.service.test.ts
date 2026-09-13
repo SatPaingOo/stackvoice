@@ -125,9 +125,7 @@ describe('addFromRepo', () => {
   });
 
   it('rejects an id that could not become a tool name', async () => {
-    await expect(build().addFromRepo({ id: 'My_App', repo: 'owner/name' })).rejects.toBeInstanceOf(
-      ValidationError,
-    );
+    await expect(build().addFromRepo({ id: 'My_App', repo: 'owner/name' })).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('writes nothing when the repository cannot be inspected', async () => {
@@ -197,7 +195,12 @@ describe('addFromSource', () => {
 
     const source = (await service.show('news')).primarySource();
 
-    expect(source.location).toEqual({ type: 'url', url: 'https://news.example.com/rss.xml', format: 'rss', headers: {} });
+    expect(source.location).toEqual({
+      type: 'url',
+      url: 'https://news.example.com/rss.xml',
+      format: 'rss',
+      headers: {},
+    });
     expect(source.itemsPath).toBe('items');
   });
 

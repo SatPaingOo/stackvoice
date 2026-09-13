@@ -8,11 +8,7 @@ import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/share
  * straight back to `/authorize`, so the OAuth flow continues untouched: this
  * page adds a step, it does not alter the protocol.
  */
-export function renderConsentPage(
-  client: OAuthClientInformationFull,
-  query: unknown,
-  retried: boolean,
-): string {
+export function renderConsentPage(client: OAuthClientInformationFull, query: unknown, retried: boolean): string {
   const name = escapeHtml(client.client_name ?? client.client_id);
   const hidden = hiddenFields(query);
   const error = retried
@@ -61,10 +57,7 @@ function hiddenFields(query: unknown): string {
 
   return Object.entries(query as Record<string, unknown>)
     .filter(([key, value]) => key !== 'owner_token' && typeof value === 'string')
-    .map(
-      ([key, value]) =>
-        `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value as string)}">`,
-    )
+    .map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value as string)}">`)
     .join('\n    ');
 }
 

@@ -70,7 +70,11 @@ export function phraseParts(phrase: string): { readonly text: string; readonly s
   return parts;
 }
 
-export function eachBlock(blocks: readonly BlockWire[], visit: (block: BlockWire, depth: number) => void, depth = 1): void {
+export function eachBlock(
+  blocks: readonly BlockWire[],
+  visit: (block: BlockWire, depth: number) => void,
+  depth = 1,
+): void {
   for (const block of blocks) {
     visit(block, depth);
     if (block.kind === 'if') {
@@ -120,7 +124,14 @@ export function insertableTokens(slots: readonly string[], blocks: readonly Bloc
   const tokens = slots.map((slot) => `{${slot}}`);
   const answers = answerNames(blocks);
   for (const name of answers) {
-    tokens.push(`{${name}}`, `{${name}.count}`, `{${name}.titles}`, `{${name}.first.title}`, `{${name}.first.summary}`, `{${name}.first.when}`);
+    tokens.push(
+      `{${name}}`,
+      `{${name}.count}`,
+      `{${name}.titles}`,
+      `{${name}.first.title}`,
+      `{${name}.first.summary}`,
+      `{${name}.first.when}`,
+    );
   }
   for (const name of savedNames(blocks)) {
     if (!answers.includes(name)) tokens.push(`{${name}}`);
@@ -175,7 +186,13 @@ export function starterBlock(kind: BlockKind, context: StarterContext): BlockWir
     case 'say':
       return { kind: 'say', text: '' };
     case 'get':
-      return { kind: 'get', fn: 'count', from: answerNames(context.blocks)[0] ?? slot ?? '', index: null, as: uniqueName('value', taken) };
+      return {
+        kind: 'get',
+        fn: 'count',
+        from: answerNames(context.blocks)[0] ?? slot ?? '',
+        index: null,
+        as: uniqueName('value', taken),
+      };
     case 'set':
       return { kind: 'set', name: uniqueName('note', taken), to: '' };
     case 'stop':

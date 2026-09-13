@@ -200,7 +200,12 @@ describe('keys', () => {
 });
 
 describe('apps with a url source', () => {
-  const withKey = { type: 'url', url: PROJECTS, format: 'json', headers: { Authorization: 'Bearer {{secret:PROJECTS_KEY}}' } };
+  const withKey = {
+    type: 'url',
+    url: PROJECTS,
+    format: 'json',
+    headers: { Authorization: 'Bearer {{secret:PROJECTS_KEY}}' },
+  };
 
   it('shows a saved header by its scheme and key name, and which app uses the key', async () => {
     await call('PUT', '/console/api/secrets/PROJECTS_KEY', { value: 'sk-live-123' });
@@ -250,7 +255,11 @@ describe('apps with a url source', () => {
   it('will not carry a key to a different site', async () => {
     await call('PUT', '/console/api/apps/projects', urlApp(withKey));
 
-    const moved = await call<{ error: string }>('PUT', '/console/api/apps/projects', urlApp({ type: 'url', url: 'https://elsewhere.example.net/x', format: 'json' }));
+    const moved = await call<{ error: string }>(
+      'PUT',
+      '/console/api/apps/projects',
+      urlApp({ type: 'url', url: 'https://elsewhere.example.net/x', format: 'json' }),
+    );
 
     expect(moved.status).toBe(400);
     expect(moved.json.error).toMatch(/different site/);
@@ -266,7 +275,11 @@ describe('apps with a url source', () => {
   });
 
   it('refuses a file path outside the data folder', async () => {
-    const saved = await call('PUT', '/console/api/apps/prices', urlApp({ type: 'file', path: '../config/secrets.yml', format: 'csv' }));
+    const saved = await call(
+      'PUT',
+      '/console/api/apps/prices',
+      urlApp({ type: 'file', path: '../config/secrets.yml', format: 'csv' }),
+    );
 
     expect(saved.status).toBe(400);
   });
@@ -303,7 +316,9 @@ describe('settings: data sources', () => {
   });
 
   it('sends the data source settings to the page', async () => {
-    expect((await call<{ settings: { sources: unknown } }>('GET', '/console/api/settings')).json.settings.sources).toEqual({
+    expect(
+      (await call<{ settings: { sources: unknown } }>('GET', '/console/api/settings')).json.settings.sources,
+    ).toEqual({
       allowPrivateNetwork: false,
       dataDir: 'data',
     });
@@ -363,10 +378,14 @@ describe('shortcuts', () => {
   });
 
   it('tries a draft with a value for each slot and returns the trace, saving nothing', async () => {
-    const tried = await call<{ spoken: string; trace: { at: string; kind: string }[] }>('POST', '/console/api/shortcuts/try', {
-      shortcut: { ...greet, name: '' },
-      inputs: { person: 'Sat Paing' },
-    });
+    const tried = await call<{ spoken: string; trace: { at: string; kind: string }[] }>(
+      'POST',
+      '/console/api/shortcuts/try',
+      {
+        shortcut: { ...greet, name: '' },
+        inputs: { person: 'Sat Paing' },
+      },
+    );
 
     expect(tried.json.spoken).toBe('Hello boss.');
     expect(tried.json.trace.map((entry) => [entry.at, entry.kind])).toEqual([

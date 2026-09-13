@@ -36,7 +36,12 @@ export class ShortcutCard {
       ]),
     ]);
 
-    const edit = h('button', { className: 'small', text: 'Edit', attrs: { type: 'button' }, on: { click: () => actions.edit(shortcut) } });
+    const edit = h('button', {
+      className: 'small',
+      text: 'Edit',
+      attrs: { type: 'button' },
+      on: { click: () => actions.edit(shortcut) },
+    });
     const remove = h('button', { className: 'small danger', text: 'Remove', attrs: { type: 'button' } });
     remove.addEventListener('click', () => void whileBusy(remove, '...', () => actions.remove(shortcut)));
 

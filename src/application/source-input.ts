@@ -21,7 +21,9 @@ export function parseSourceInput(raw: string, headers: Readonly<Record<string, s
   }
 
   if (/^https?:\/\//i.test(input)) {
-    const github = /^https?:\/\/(?:www\.)?github\.com\/([\w-]+)\/([\w.-]+?)(?:\.git)?(?:\/tree\/([^/?#]+))?\/?$/i.exec(input);
+    const github = /^https?:\/\/(?:www\.)?github\.com\/([\w-]+)\/([\w.-]+?)(?:\.git)?(?:\/tree\/([^/?#]+))?\/?$/i.exec(
+      input,
+    );
     if (github !== null) {
       return { type: 'github-repo', repo: `${github[1] as string}/${github[2] as string}`, branch: github[3] };
     }

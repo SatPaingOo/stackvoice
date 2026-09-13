@@ -73,9 +73,9 @@ test('the landing page stays readable with script turned off', async ({ browser 
   const page = await context.newPage();
   await page.goto('/');
 
-  const hidden = await page.locator('.reveal').evaluateAll((nodes) =>
-    nodes.filter((node) => getComputedStyle(node).opacity === '0').length,
-  );
+  const hidden = await page
+    .locator('.reveal')
+    .evaluateAll((nodes) => nodes.filter((node) => getComputedStyle(node).opacity === '0').length);
   expect(hidden).toBe(0);
   await context.close();
 });

@@ -4,11 +4,7 @@ import { AppRegistryService } from '../../../src/application/app-registry.servic
 import { ConversationService } from '../../../src/application/conversation.service.js';
 import { ShortcutRegistryService } from '../../../src/application/shortcut-registry.service.js';
 import { AppDefinition } from '../../../src/domain/app-definition.js';
-import {
-  DataSource,
-  DEFAULT_FIELD_MAP,
-  DEFAULT_STATUS_FIELD_MAP,
-} from '../../../src/domain/data-source.js';
+import { DataSource, DEFAULT_FIELD_MAP, DEFAULT_STATUS_FIELD_MAP } from '../../../src/domain/data-source.js';
 import { SourceUnavailableError } from '../../../src/domain/errors.js';
 import type { ConfigStore } from '../../../src/domain/ports/config-store.js';
 import type { ShortcutStore } from '../../../src/domain/ports/shortcut-store.js';
@@ -195,8 +191,8 @@ describe('ConversationService.respond', () => {
     const caller = new RecordingCaller(() => new SourceUnavailableError('mcp', 'could not call'));
     const service = await build(caller);
 
-    await expect(
-      service.respond({ utterance: 'is my stack healthy?', context: {} }),
-    ).rejects.toBeInstanceOf(SourceUnavailableError);
+    await expect(service.respond({ utterance: 'is my stack healthy?', context: {} })).rejects.toBeInstanceOf(
+      SourceUnavailableError,
+    );
   });
 });

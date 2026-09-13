@@ -91,13 +91,12 @@ export class LocalOAuthProvider implements OAuthServerProvider {
     }
   }
 
-  async authorize(
-    client: OAuthClientInformationFull,
-    params: AuthorizationParams,
-    res: Response,
-  ): Promise<void> {
+  async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
     if (!this.ownerApproved(res)) {
-      res.status(200).type('html').send(renderConsentPage(client, res.req.query, this.hasRetried(res)));
+      res
+        .status(200)
+        .type('html')
+        .send(renderConsentPage(client, res.req.query, this.hasRetried(res)));
       return;
     }
 
@@ -119,10 +118,7 @@ export class LocalOAuthProvider implements OAuthServerProvider {
     res.redirect(target.toString());
   }
 
-  async challengeForAuthorizationCode(
-    client: OAuthClientInformationFull,
-    authorizationCode: string,
-  ): Promise<string> {
+  async challengeForAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<string> {
     const pending = this.takeValidCode(authorizationCode, client.client_id, false);
     return pending.codeChallenge;
   }

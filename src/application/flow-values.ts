@@ -158,7 +158,10 @@ export function describeWhen(raw: string, now: Date): string {
 
 /** One line to speak: single spaces, and no space left before punctuation by an empty slot. */
 export function tidy(spoken: string): string {
-  return spoken.replace(/\s+/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
+  return spoken
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    .trim();
 }
 
 function itemsOf(value: FlowValue): readonly Item[] {
@@ -173,5 +176,8 @@ function text(value: string): FlowValue {
 
 /** Feed titles often end in a full stop, which reads badly once the title sits inside a sentence. */
 function cleanTitle(title: string): string {
-  return title.replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
+  return title
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.\s]+$/, '');
 }

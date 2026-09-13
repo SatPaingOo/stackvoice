@@ -89,21 +89,11 @@ async function main(): Promise<number> {
   const readerFactory = new ReaderFactory(readers);
 
   const registry = new AppRegistryService(store, logger);
-  const management = new ManagementService(
-    store,
-    inspector,
-    logger,
-    new YamlShortcutStore(shortcutsPath),
-  );
+  const management = new ManagementService(store, inspector, logger, new YamlShortcutStore(shortcutsPath));
 
   const deps: CommandDeps = {
     management,
-    health: new HealthService(
-      '0.3.0',
-      new SystemClock(),
-      registry,
-      new StatusService(registry, readerFactory),
-    ),
+    health: new HealthService('0.3.0', new SystemClock(), registry, new StatusService(registry, readerFactory)),
   };
 
   switch (group) {

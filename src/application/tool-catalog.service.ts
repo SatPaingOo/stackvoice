@@ -16,7 +16,7 @@ export class ToolCatalogService {
         name: 'stack_status',
         title: 'Stack status',
         description:
-          "Report whether the user's own data stack is healthy: which apps are configured, whether their most recent runs succeeded, and how fresh the data is. Use when the user asks about the state of their stack, for example \"is everything running?\" or \"did my pipelines work last night?\".",
+          'Report whether the user\'s own data stack is healthy: which apps are configured, whether their most recent runs succeeded, and how fresh the data is. Use when the user asks about the state of their stack, for example "is everything running?" or "did my pipelines work last night?".',
         verb: 'stack_status',
         appId: null,
         shortcutName: null,
@@ -40,11 +40,14 @@ export class ToolCatalogService {
       const tools = shortcut.requiredTools();
       const runs = tools.length === 0 ? '' : ` Runs ${listTools(tools)} and answers in one go.`;
       const inputs =
-        shortcut.slots.length === 0 ? '' : ` Fill ${listTools(shortcut.slots)} with the words the user said in their place.`;
+        shortcut.slots.length === 0
+          ? ''
+          : ` Fill ${listTools(shortcut.slots)} with the words the user said in their place.`;
       specs.push({
         name: shortcut.toolName,
         title: titleCase(shortcut.name),
-        description: `${shortcut.description}${runs} Use when the user says ${orPhrases(shortcut.phrases())}.${inputs}`.trim(),
+        description:
+          `${shortcut.description}${runs} Use when the user says ${orPhrases(shortcut.phrases())}.${inputs}`.trim(),
         verb: 'shortcut',
         appId: null,
         shortcutName: shortcut.name,

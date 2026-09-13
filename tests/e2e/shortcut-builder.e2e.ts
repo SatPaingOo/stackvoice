@@ -19,7 +19,10 @@ async function openBuilder(page: Page): Promise<void> {
   await expect(page.locator('#shortcutModal')).toBeVisible();
 }
 
-test('builds a flow with a slot and an If, tries it, saves it, and the simulator routes to it', async ({ page, request }) => {
+test('builds a flow with a slot and an If, tries it, saves it, and the simulator routes to it', async ({
+  page,
+  request,
+}) => {
   await openBuilder(page);
   await page.fill('#name', 'greet person');
   await expect(page.locator('#toolName')).toHaveText('Becomes the tool greet_person');
@@ -133,7 +136,9 @@ test.describe('on a phone', () => {
       .evaluate((body) => body.scrollWidth > body.clientWidth);
     expect(overflows).toBe(false);
 
-    const sideways = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    const sideways = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
     expect(sideways).toBe(false);
   });
 });

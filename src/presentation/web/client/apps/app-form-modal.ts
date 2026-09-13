@@ -36,7 +36,13 @@ export class AppFormModal {
   private readonly picker = new SourcePicker();
   private readonly keyBox = new ApiKeyBox();
   private readonly found = h('div', { className: 'found', attrs: { id: 'found' } });
-  private readonly appId = new TextField({ label: 'App id', hint: 'the tool prefix, like notes_search', mono: true, placeholder: 'notes', id: 'id' });
+  private readonly appId = new TextField({
+    label: 'App id',
+    hint: 'the tool prefix, like notes_search',
+    mono: true,
+    placeholder: 'notes',
+    id: 'id',
+  });
   private readonly label = new TextField({ label: 'Name', placeholder: 'My notes', id: 'label' });
   private readonly description = new TextAreaField({
     label: 'What is in it',
@@ -57,8 +63,12 @@ export class AppFormModal {
     id: 'itemsPath',
   });
   private readonly statusFields = new StatusFieldsEditor();
-  private readonly statusBox = h('div', { className: 'field' }, [h('label', { text: 'Where the freshness and count live' })]);
-  private readonly advanced = h('details', { className: 'advanced', attrs: { id: 'advanced' } }, [h('summary', { text: 'Where it is read from' })]);
+  private readonly statusBox = h('div', { className: 'field' }, [
+    h('label', { text: 'Where the freshness and count live' }),
+  ]);
+  private readonly advanced = h('details', { className: 'advanced', attrs: { id: 'advanced' } }, [
+    h('summary', { text: 'Where it is read from' }),
+  ]);
   private readonly sourceStep: HTMLDivElement;
   private readonly detailsStep: HTMLDivElement;
   private readonly columnsButton = button('Show the columns in this data', 'small ghost', 'loadColumns');
@@ -95,7 +105,13 @@ export class AppFormModal {
     ]);
 
     this.modal.body.append(this.notice.element, this.sourceStep, this.keyBox.element, this.detailsStep);
-    this.modal.footer.append(this.backButton, h('span', { className: 'spacer' }), this.cancelButton, this.inspectButton, this.saveButton);
+    this.modal.footer.append(
+      this.backButton,
+      h('span', { className: 'spacer' }),
+      this.cancelButton,
+      this.inspectButton,
+      this.saveButton,
+    );
 
     // Any edit a person makes marks the form as worth asking about before it closes.
     this.modal.body.addEventListener('input', () => {
@@ -161,7 +177,10 @@ export class AppFormModal {
     this.modal.setTitle(`Edit ${app.label}`, 'Saving takes effect immediately.');
     this.showStep('details');
     if (app.missingSecrets.length > 0) {
-      this.notice.show('warn', `The key ${app.missingSecrets.join(', ')} is not saved on this server. Paste it in the key section, then save.`);
+      this.notice.show(
+        'warn',
+        `The key ${app.missingSecrets.join(', ')} is not saved on this server. Paste it in the key section, then save.`,
+      );
     }
     this.dirty = false;
     this.modal.open();
@@ -228,7 +247,8 @@ export class AppFormModal {
       this.notice.show('err', 'An app id is required.');
       return;
     }
-    const sendsNewKey = this.location.type === 'url' && this.keyBox.wanted && (this.editing === null || this.keyBox.changed);
+    const sendsNewKey =
+      this.location.type === 'url' && this.keyBox.wanted && (this.editing === null || this.keyBox.changed);
     const problem = sendsNewKey ? this.keyBox.problem() : null;
     if (problem !== null) {
       this.notice.show('err', problem);
@@ -273,7 +293,8 @@ export class AppFormModal {
   private async loadColumns(): Promise<void> {
     if (this.location === null) return;
     const location = this.locationInput(this.location);
-    const input = location.type === 'github-repo' ? location.repo : location.type === 'url' ? location.url : location.path;
+    const input =
+      location.type === 'github-repo' ? location.repo : location.type === 'url' ? location.url : location.path;
 
     await whileBusy(this.columnsButton, 'Looking...', async () => {
       try {
@@ -302,7 +323,8 @@ export class AppFormModal {
     if (base.type !== 'url') return base;
 
     if (this.keyBox.droppedKey) return { ...base, headers: {} };
-    if (this.keyBox.wanted && (this.editing === null || this.keyBox.changed)) return { ...base, headers: this.keyBox.headers() };
+    if (this.keyBox.wanted && (this.editing === null || this.keyBox.changed))
+      return { ...base, headers: this.keyBox.headers() };
     return this.editing === null ? { ...base, headers: {} } : base;
   }
 
@@ -343,7 +365,9 @@ export class AppFormModal {
   private showFound(location: LocationWire, count: number | null): void {
     this.found.replaceChildren(
       h('span', { className: 'kind-tag', text: kindOf(location) }),
-      h('span', { text: `${count === null ? '' : `${count.toLocaleString()} records · `}${describeLocation(location)}` }),
+      h('span', {
+        text: `${count === null ? '' : `${count.toLocaleString()} records · `}${describeLocation(location)}`,
+      }),
     );
   }
 
@@ -389,7 +413,13 @@ function button(text: string, className: string, id: string): HTMLButtonElement 
 function toInput(location: LocationWire): LocationInput {
   switch (location.type) {
     case 'github-repo':
-      return { type: location.type, repo: location.repo, branch: location.branch, indexFile: location.indexFile, statsFile: location.statsFile };
+      return {
+        type: location.type,
+        repo: location.repo,
+        branch: location.branch,
+        indexFile: location.indexFile,
+        statsFile: location.statsFile,
+      };
     case 'url':
       return { type: location.type, url: location.url, format: location.format };
     case 'file':

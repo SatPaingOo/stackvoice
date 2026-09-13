@@ -13,7 +13,11 @@ import type { TryResult } from './shortcut-types.js';
 export class TryPanel {
   readonly element: HTMLElement;
   private readonly inputs = h('div', { className: 'try-inputs' });
-  private readonly button = h('button', { className: 'small', text: 'Try it', attrs: { type: 'button', id: 'tryRun' } });
+  private readonly button = h('button', {
+    className: 'small',
+    text: 'Try it',
+    attrs: { type: 'button', id: 'tryRun' },
+  });
   private readonly notice = new Notice();
   private readonly answer = h('div', { className: 'try-answer', attrs: { id: 'tryAnswer', 'aria-live': 'polite' } });
   private readonly trace = h('ol', { className: 'trace', attrs: { id: 'tryTrace' } });
@@ -39,7 +43,10 @@ export class TryPanel {
     this.slots = [...slots];
     this.inputs.replaceChildren(
       ...slots.map((slot) => {
-        const input = h('input', { className: 'mono', attrs: { type: 'text', id: `try-${slot}`, spellcheck: 'false' } });
+        const input = h('input', {
+          className: 'mono',
+          attrs: { type: 'text', id: `try-${slot}`, spellcheck: 'false' },
+        });
         input.value = this.values.get(slot) ?? '';
         input.addEventListener('input', () => this.values.set(slot, input.value));
         return h('div', { className: 'field' }, [h('label', { text: `{${slot}}`, attrs: { for: input.id } }), input]);

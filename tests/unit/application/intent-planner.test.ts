@@ -32,14 +32,12 @@ const call = (plan: Plan): { tool: string; args: Record<string, unknown> } => {
 };
 
 describe('status intents', () => {
-  it.each([
-    'is my stack healthy?',
-    'is everything ok',
-    'did everything run last night',
-    'all good?',
-  ])('routes "%s" to the global tool', (utterance) => {
-    expect(call(planner.plan(utterance, apps)).tool).toBe('stack_status');
-  });
+  it.each(['is my stack healthy?', 'is everything ok', 'did everything run last night', 'all good?'])(
+    'routes "%s" to the global tool',
+    (utterance) => {
+      expect(call(planner.plan(utterance, apps)).tool).toBe('stack_status');
+    },
+  );
 
   it('routes to one app when that app is named', () => {
     expect(call(planner.plan('did my library run last night?', apps)).tool).toBe('library_status');
@@ -82,9 +80,7 @@ describe('search intents', () => {
   });
 
   it('targets the app that was named', () => {
-    expect(call(planner.plan('anything on Iran in my market intelligence?', apps)).tool).toBe(
-      'markets_search',
-    );
+    expect(call(planner.plan('anything on Iran in my market intelligence?', apps)).tool).toBe('markets_search');
   });
 
   it('defaults to the first searchable app when none is named', () => {
@@ -145,9 +141,7 @@ describe('shortcuts', () => {
   it('needs the whole name, so a partial word does not hijack an ordinary question', () => {
     const news: PlannerShortcut = { toolName: 'news_brief', phrases: ['news brief'] };
 
-    expect(call(planner.plan('anything about the news in Iran', apps, {}, [news])).tool).toBe(
-      'library_search',
-    );
+    expect(call(planner.plan('anything about the news in Iran', apps, {}, [news])).tool).toBe('library_search');
   });
 
   it('prefers the longer name when two shortcuts overlap', () => {
@@ -162,7 +156,10 @@ describe('shortcuts', () => {
 });
 
 describe('shortcuts with slots', () => {
-  const news: PlannerShortcut = { toolName: 'news_about_topic', phrases: ['news about {topic}', 'anything new on {topic}'] };
+  const news: PlannerShortcut = {
+    toolName: 'news_about_topic',
+    phrases: ['news about {topic}', 'anything new on {topic}'],
+  };
 
   it('fills the slot with what was said, keeping its capitals', () => {
     expect(call(planner.plan('News about OpenAI', apps, {}, [news]))).toEqual({

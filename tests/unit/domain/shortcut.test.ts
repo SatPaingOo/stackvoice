@@ -82,7 +82,9 @@ describe('phrases and slots', () => {
   });
 
   it('tidies its phrases and drops empty ones', () => {
-    const shortcut = new Shortcut(props({ triggers: ['  news   about {topic} ', '   '], blocks: [ask('library_search', 'found')] }));
+    const shortcut = new Shortcut(
+      props({ triggers: ['  news   about {topic} ', '   '], blocks: [ask('library_search', 'found')] }),
+    );
 
     expect(shortcut.triggers).toEqual(['news about {topic}']);
   });

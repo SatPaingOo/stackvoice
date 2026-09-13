@@ -31,7 +31,12 @@ class AppsScreen implements AppCardActions {
       this.form.setExistingIds(apps.map((app) => app.id));
       this.list.replaceChildren(
         ...(apps.length === 0
-          ? [emptyState('Nothing connected yet', 'Add your first app and your assistant can start answering from your own data.')]
+          ? [
+              emptyState(
+                'Nothing connected yet',
+                'Add your first app and your assistant can start answering from your own data.',
+              ),
+            ]
           : apps.map((app) => new AppCard(app, this).element)),
       );
     } catch (error) {

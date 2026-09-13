@@ -25,7 +25,19 @@ const CANDIDATES: Record<keyof FieldMap, readonly string[]> = {
   key: ['key', 'id', 'guid', 'slug', 'uuid', 'ref'],
   title: ['title', 'headline', 'name', 'subject', 'label', 'summary'],
   summary: ['tldr', 'summary', 'description', 'abstract', 'excerpt', 'blurb', 'snippet', 'content', 'body', 'text'],
-  date: ['date', 'published', 'published_at', 'pubDate', 'date_utc', 'created_at', 'updated_at', 'updated', 'timestamp', 'time', 'dt'],
+  date: [
+    'date',
+    'published',
+    'published_at',
+    'pubDate',
+    'date_utc',
+    'created_at',
+    'updated_at',
+    'updated',
+    'timestamp',
+    'time',
+    'dt',
+  ],
   topic: ['topic', 'category', 'collection', 'event_type', 'type', 'kind', 'section'],
   region: ['region', 'country', 'market', 'location', 'place', 'city'],
   // A page a person can open before an API's own address: GitHub's `url` is api.github.com, `html_url` the page.
@@ -201,7 +213,8 @@ function matchKey(sample: readonly unknown[], candidate: string): string | null 
   if (candidate.includes('.')) return null;
 
   const first = sample.find(isPlainObject);
-  const actual = first === undefined ? undefined : Object.keys(first).find((key) => key.toLowerCase() === candidate.toLowerCase());
+  const actual =
+    first === undefined ? undefined : Object.keys(first).find((key) => key.toLowerCase() === candidate.toLowerCase());
   return actual !== undefined && actual !== candidate && usableOnMost(sample, actual) ? actual : null;
 }
 

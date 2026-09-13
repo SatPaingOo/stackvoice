@@ -32,7 +32,10 @@ export class ConditionEditor {
   private readonly kind = select('condition-kind', KINDS);
   private readonly countOf: NameSelect;
   private readonly countOp = select('condition-count-op', COUNT_OPS);
-  private readonly countValue = h('input', { className: 'condition-number', attrs: { type: 'number', min: '0', max: '1000' } });
+  private readonly countValue = h('input', {
+    className: 'condition-number',
+    attrs: { type: 'number', min: '0', max: '1000' },
+  });
   private readonly template: TemplateField;
   private readonly textOp = select('condition-text-op', TEXT_OPS);
   private readonly value: TemplateField;
@@ -41,7 +44,11 @@ export class ConditionEditor {
 
   constructor(condition: ConditionWire, context: FlowContext) {
     this.kind.value = condition.kind;
-    this.countOf = new NameSelect(condition.kind === 'count' ? condition.variable : '', () => context.answers(), 'condition-variable');
+    this.countOf = new NameSelect(
+      condition.kind === 'count' ? condition.variable : '',
+      () => context.answers(),
+      'condition-variable',
+    );
     this.countOp.value = condition.kind === 'count' ? condition.op : 'is';
     this.countValue.value = condition.kind === 'count' ? String(condition.value) : '0';
     this.template = new TemplateField({
@@ -59,7 +66,11 @@ export class ConditionEditor {
       tokens: () => context.tokens(),
       className: 'condition-value',
     });
-    this.failedOf = new NameSelect(condition.kind === 'failed' ? condition.variable : '', () => context.answers(), 'condition-failed');
+    this.failedOf = new NameSelect(
+      condition.kind === 'failed' ? condition.variable : '',
+      () => context.answers(),
+      'condition-failed',
+    );
 
     this.boxes = {
       count: h('div', { className: 'block-grid' }, [
@@ -67,7 +78,11 @@ export class ConditionEditor {
         labelled('Count', this.countOp),
         labelled('Number', this.countValue),
       ]),
-      text: h('div', { className: 'block-grid' }, [this.template.element, labelled('Check', this.textOp), this.value.element]),
+      text: h('div', { className: 'block-grid' }, [
+        this.template.element,
+        labelled('Check', this.textOp),
+        this.value.element,
+      ]),
       failed: h('div', { className: 'block-grid' }, [labelled('Answer', this.failedOf.element)]),
     };
 
@@ -93,7 +108,12 @@ export class ConditionEditor {
         };
       case 'text': {
         const op = this.textOp.value as TextOperator;
-        return { kind: 'text', template: this.template.value, op, value: op === 'contains' || op === 'is' ? this.value.value : '' };
+        return {
+          kind: 'text',
+          template: this.template.value,
+          op,
+          value: op === 'contains' || op === 'is' ? this.value.value : '',
+        };
       }
       case 'failed':
         return { kind: 'failed', variable: this.failedOf.value };

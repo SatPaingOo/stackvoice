@@ -83,9 +83,13 @@ describe('renderTemplate', () => {
 
   it('fills slots and follows functions through dots', () => {
     // A title inside a sentence loses its own full stop.
-    expect(renderTemplate('{found.count} stories about {topic}. Newest: {found.first.title}, {found.first.when}.', vars, NOW)).toBe(
-      '2 stories about gold. Newest: Story 1, yesterday.',
-    );
+    expect(
+      renderTemplate(
+        '{found.count} stories about {topic}. Newest: {found.first.title}, {found.first.when}.',
+        vars,
+        NOW,
+      ),
+    ).toBe('2 stories about gold. Newest: Story 1, yesterday.');
   });
 
   it('reads an answer on its own as what the tool said', () => {
@@ -119,21 +123,31 @@ describe('evaluateCondition', () => {
   });
 
   it('compares text the way it is heard, ignoring case', () => {
-    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'contains', value: 'gold' }, vars, NOW)).toBe(true);
-    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'is', value: 'gold rises again' }, vars, NOW)).toBe(true);
+    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'contains', value: 'gold' }, vars, NOW)).toBe(
+      true,
+    );
+    expect(
+      evaluateCondition({ kind: 'text', template: '{line}', op: 'is', value: 'gold rises again' }, vars, NOW),
+    ).toBe(true);
   });
 
   it('fills a template in the value it compares with', () => {
-    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'contains', value: '{topic}' }, vars, NOW)).toBe(true);
+    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'contains', value: '{topic}' }, vars, NOW)).toBe(
+      true,
+    );
   });
 
   it('checks for empty text', () => {
     expect(evaluateCondition({ kind: 'text', template: '{missing}', op: 'is_empty', value: '' }, vars, NOW)).toBe(true);
-    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'is_not_empty', value: '' }, vars, NOW)).toBe(true);
+    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'is_not_empty', value: '' }, vars, NOW)).toBe(
+      true,
+    );
   });
 
   it('never matches contains with nothing to look for', () => {
-    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'contains', value: '{missing}' }, vars, NOW)).toBe(false);
+    expect(evaluateCondition({ kind: 'text', template: '{line}', op: 'contains', value: '{missing}' }, vars, NOW)).toBe(
+      false,
+    );
   });
 
   it('knows a failed answer from a successful one, and from one that never ran', () => {

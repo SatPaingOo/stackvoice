@@ -59,7 +59,14 @@ const app = (
 
 const writeApp = (lines: string[]): Promise<void> => writeFile(join(dir, 'news.yml'), `${lines.join('\n')}\n`, 'utf8');
 
-const HEAD = ['id: news', 'label: "News"', 'description: "Headlines."', 'sources:', '  - id: news', '    label: "news"'];
+const HEAD = [
+  'id: news',
+  'label: "News"',
+  'description: "Headlines."',
+  'sources:',
+  '  - id: news',
+  '    label: "news"',
+];
 
 describe('YamlConfigStore with url and file sources', () => {
   it('round-trips a url source with its query string and a secret header', async () => {
@@ -99,7 +106,9 @@ describe('YamlConfigStore with url and file sources', () => {
   });
 
   it('keeps a column named like a YAML keyword as text', async () => {
-    await store.saveApp(app({ type: 'file', path: 'flags.csv', format: 'csv' }, { fields: { topic: 'yes', region: 'null' } }));
+    await store.saveApp(
+      app({ type: 'file', path: 'flags.csv', format: 'csv' }, { fields: { topic: 'yes', region: 'null' } }),
+    );
 
     const fields = (await store.getApp('news'))?.primarySource().fields;
 
@@ -132,7 +141,12 @@ describe('YamlConfigStore with url and file sources', () => {
   });
 
   it('rejects credentials written into an address', async () => {
-    await writeApp([...HEAD, '    type: url', '    url: "https://me:hunter2@api.example.com/items"', '    format: json']);
+    await writeApp([
+      ...HEAD,
+      '    type: url',
+      '    url: "https://me:hunter2@api.example.com/items"',
+      '    format: json',
+    ]);
 
     await expect(store.listApps()).rejects.toThrowError(/credentials in a header/);
   });

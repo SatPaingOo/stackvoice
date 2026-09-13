@@ -36,10 +36,7 @@ export class Shortcut {
 
     const toolName = Shortcut.toolNameFor(name);
     if (!/^[a-z][a-z0-9_]{1,47}$/.test(toolName)) {
-      throw new ValidationError(
-        `"${name}" does not make a usable tool name. Use letters, numbers and spaces.`,
-        'name',
-      );
+      throw new ValidationError(`"${name}" does not make a usable tool name. Use letters, numbers and spaces.`, 'name');
     }
 
     const triggers = props.triggers

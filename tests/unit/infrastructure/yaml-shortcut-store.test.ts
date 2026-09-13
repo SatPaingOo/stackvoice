@@ -102,7 +102,12 @@ describe('list', () => {
           { kind: 'set', name: 'line', to: 'Then {second.title}' },
         ],
       },
-      { kind: 'if', condition: { kind: 'failed', variable: 'found' }, then: [{ kind: 'say', text: '{line}' }], otherwise: [] },
+      {
+        kind: 'if',
+        condition: { kind: 'failed', variable: 'found' },
+        then: [{ kind: 'say', text: '{line}' }],
+        otherwise: [],
+      },
     ]);
   });
 
@@ -177,7 +182,12 @@ describe('save', () => {
         otherwise: [{ kind: 'get', fn: 'item', from: 'found', index: 2, as: 'second' }],
       },
       // A name YAML would otherwise read as something other than text.
-      { kind: 'if', condition: { kind: 'failed', variable: 'found' }, then: [{ kind: 'set', name: 'null', to: '' }], otherwise: [] },
+      {
+        kind: 'if',
+        condition: { kind: 'failed', variable: 'found' },
+        then: [{ kind: 'set', name: 'null', to: '' }],
+        otherwise: [],
+      },
       { kind: 'say', text: '{found.count} about {topic}. {second.title} {null}' },
     ],
   });
@@ -252,7 +262,11 @@ describe('the shortcuts that ship with the repo', () => {
   it('load, including a flow that takes a slot', async () => {
     const shortcuts = await new YamlShortcutStore('config/shortcuts.yml').list();
 
-    expect(shortcuts.map((shortcut) => shortcut.toolName)).toEqual(['morning_brief', 'market_check', 'news_about_topic']);
+    expect(shortcuts.map((shortcut) => shortcut.toolName)).toEqual([
+      'morning_brief',
+      'market_check',
+      'news_about_topic',
+    ]);
     expect(shortcuts.find((shortcut) => shortcut.toolName === 'news_about_topic')?.slots).toEqual(['topic']);
   });
 });

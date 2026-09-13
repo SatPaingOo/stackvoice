@@ -171,7 +171,10 @@ function parseBlock(raw: unknown, field: string): Block {
         kind: 'get',
         fn: oneOf(entry['fn'], FLOW_FUNCTIONS, `${field}.fn`),
         from: name(entry['from'], `${field}.from`),
-        index: entry['index'] === undefined || entry['index'] === null ? null : integer(entry['index'], `${field}.index`, 1, MAX_ITEM_INDEX),
+        index:
+          entry['index'] === undefined || entry['index'] === null
+            ? null
+            : integer(entry['index'], `${field}.index`, 1, MAX_ITEM_INDEX),
         as: name(entry['as'], `${field}.as`),
       };
     case 'set':
@@ -218,7 +221,8 @@ function parseArgs(raw: unknown, field: string): Record<string, ArgValue> {
   for (const [key, value] of Object.entries(entry)) {
     if (!ARG_NAME_PATTERN.test(key)) throw new ValidationError(`"${key}" is not an argument name`, `${field}.${key}`);
     if (typeof value === 'string') {
-      if (value.length > MAX_FLOW_TEXT) throw new ValidationError(`is longer than ${MAX_FLOW_TEXT} characters`, `${field}.${key}`);
+      if (value.length > MAX_FLOW_TEXT)
+        throw new ValidationError(`is longer than ${MAX_FLOW_TEXT} characters`, `${field}.${key}`);
       args[key] = value;
     } else if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean') {
       args[key] = value;
@@ -416,10 +420,16 @@ function validateTriggers(triggers: readonly string[]): string[] {
     const slots = slotsOf(trigger);
     const words = trigger.replace(SLOT_PATTERN, ' ');
     if (/[{}]/.test(words)) {
-      throw new ValidationError(`"${trigger}" has a slot that is not a lowercase name in braces, such as {topic}`, field);
+      throw new ValidationError(
+        `"${trigger}" has a slot that is not a lowercase name in braces, such as {topic}`,
+        field,
+      );
     }
     if (!/[\p{L}\p{N}]/u.test(words)) {
-      throw new ValidationError(`"${trigger}" needs words around its slots, or it would match anything anyone says`, field);
+      throw new ValidationError(
+        `"${trigger}" needs words around its slots, or it would match anything anyone says`,
+        field,
+      );
     }
     if (new Set(slots).size !== slots.length) {
       throw new ValidationError(`"${trigger}" uses the same slot twice`, field);

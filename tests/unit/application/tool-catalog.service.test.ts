@@ -3,11 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ToolCatalogService } from '../../../src/application/tool-catalog.service.js';
 import { AppDefinition } from '../../../src/domain/app-definition.js';
 import { Shortcut } from '../../../src/domain/shortcut.js';
-import {
-  DataSource,
-  DEFAULT_FIELD_MAP,
-  DEFAULT_STATUS_FIELD_MAP,
-} from '../../../src/domain/data-source.js';
+import { DataSource, DEFAULT_FIELD_MAP, DEFAULT_STATUS_FIELD_MAP } from '../../../src/domain/data-source.js';
 
 const source = new DataSource({
   id: 's',
@@ -63,9 +59,7 @@ describe('shortcuts in the catalog', () => {
   });
 
   it('skips a disabled shortcut', () => {
-    expect(catalog.generate([], [shortcut('morning brief', false)]).map((s) => s.name)).toEqual([
-      'stack_status',
-    ]);
+    expect(catalog.generate([], [shortcut('morning brief', false)]).map((s) => s.name)).toEqual(['stack_status']);
   });
 
   it('never lets a shortcut shadow a generated tool', () => {
@@ -126,9 +120,7 @@ describe('ToolCatalogService.generate', () => {
   });
 
   it('generates nothing for a disabled app', () => {
-    expect(names([app('hidden', { search: true, read: true, status: true }, false)])).toEqual([
-      'stack_status',
-    ]);
+    expect(names([app('hidden', { search: true, read: true, status: true }, false)])).toEqual(['stack_status']);
   });
 
   it('handles apps whose primitives differ', () => {
@@ -137,13 +129,7 @@ describe('ToolCatalogService.generate', () => {
       app('markets', { search: false, read: false, status: true }),
     ];
 
-    expect(names(apps)).toEqual([
-      'stack_status',
-      'library_search',
-      'library_read',
-      'library_status',
-      'markets_status',
-    ]);
+    expect(names(apps)).toEqual(['stack_status', 'library_search', 'library_read', 'library_status', 'markets_status']);
   });
 
   it('builds the description from the app label and description, so the assistant knows when to call it', () => {

@@ -6,7 +6,10 @@ import { ValidationError } from '../../../src/domain/errors.js';
 describe('parseSourceInput', () => {
   it.each([
     ['SatPaingOo/information-hub', { type: 'github-repo', repo: 'SatPaingOo/information-hub' }],
-    ['https://github.com/SatPaingOo/eventpulse', { type: 'github-repo', repo: 'SatPaingOo/eventpulse', branch: undefined }],
+    [
+      'https://github.com/SatPaingOo/eventpulse',
+      { type: 'github-repo', repo: 'SatPaingOo/eventpulse', branch: undefined },
+    ],
     ['https://github.com/me/data.git', { type: 'github-repo', repo: 'me/data', branch: undefined }],
     ['https://github.com/me/data/tree/gh-pages', { type: 'github-repo', repo: 'me/data', branch: 'gh-pages' }],
   ])('reads %s as a repository', (input, expected) => {

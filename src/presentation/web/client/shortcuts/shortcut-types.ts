@@ -29,10 +29,26 @@ export type ConditionWire =
   | { readonly kind: 'failed'; readonly variable: string };
 
 export type BlockWire =
-  | { readonly kind: 'ask'; readonly tool: string; readonly args: Readonly<Record<string, ArgValue>>; readonly as: string }
-  | { readonly kind: 'if'; readonly condition: ConditionWire; readonly then: readonly BlockWire[]; readonly otherwise: readonly BlockWire[] }
+  | {
+      readonly kind: 'ask';
+      readonly tool: string;
+      readonly args: Readonly<Record<string, ArgValue>>;
+      readonly as: string;
+    }
+  | {
+      readonly kind: 'if';
+      readonly condition: ConditionWire;
+      readonly then: readonly BlockWire[];
+      readonly otherwise: readonly BlockWire[];
+    }
   | { readonly kind: 'say'; readonly text: string }
-  | { readonly kind: 'get'; readonly fn: FlowFunction; readonly from: string; readonly index: number | null; readonly as: string }
+  | {
+      readonly kind: 'get';
+      readonly fn: FlowFunction;
+      readonly from: string;
+      readonly index: number | null;
+      readonly as: string;
+    }
   | { readonly kind: 'set'; readonly name: string; readonly to: string }
   | { readonly kind: 'stop' };
 

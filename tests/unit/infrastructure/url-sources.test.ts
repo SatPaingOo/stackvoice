@@ -19,11 +19,7 @@ import { CompositeSourceInspector } from '../../../src/infrastructure/adapters/c
 import { assertDataDirIsolated } from '../../../src/infrastructure/adapters/data-file.js';
 import { UrlSourceReader } from '../../../src/infrastructure/adapters/url.adapter.js';
 import { UrlSourceInspector } from '../../../src/infrastructure/adapters/url.inspector.js';
-import type {
-  TextFetcher,
-  TextRequestOptions,
-  TextResponse,
-} from '../../../src/infrastructure/http/http-client.js';
+import type { TextFetcher, TextRequestOptions, TextResponse } from '../../../src/infrastructure/http/http-client.js';
 
 /** Serves bodies by exact address and records every request, headers included. No network. */
 class FakeWeb implements TextFetcher {
@@ -230,7 +226,11 @@ describe('UrlSourceInspector', () => {
     const fetcher = web();
 
     await expect(
-      inspector(fetcher).inspect({ type: 'url', url: API, headers: { Authorization: 'Bearer {{secret:MISSING_KEY}}' } }),
+      inspector(fetcher).inspect({
+        type: 'url',
+        url: API,
+        headers: { Authorization: 'Bearer {{secret:MISSING_KEY}}' },
+      }),
     ).rejects.toThrowError(/MISSING_KEY/);
     expect(fetcher.requests).toEqual([]);
   });
@@ -338,7 +338,10 @@ describe('UrlSourceReader', () => {
   it('reads a CSV file through a template title', async () => {
     const prices = source(
       { type: 'file', path: 'exports/prices.csv', format: 'csv' },
-      { itemsPath: null, fields: { key: 'Date', title: '{Date}: {Price}', summary: null, date: 'Date', topic: null, url: null } },
+      {
+        itemsPath: null,
+        fields: { key: 'Date', title: '{Date}: {Price}', summary: null, date: 'Date', topic: null, url: null },
+      },
     );
 
     const items = await reader(web()).search(prices, { limit: 10 });

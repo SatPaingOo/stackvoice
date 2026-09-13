@@ -72,7 +72,10 @@ test('pressing Enter in the source box looks at it, and what it found can still 
   await expect(card).toHaveCount(0);
 });
 
-test('a key pasted for a link is stored on the server and only referenced in the request', async ({ page, request }) => {
+test('a key pasted for a link is stored on the server and only referenced in the request', async ({
+  page,
+  request,
+}) => {
   const captured: { body?: { input: string; headers: Record<string, string> } } = {};
   await page.route('**/console/api/inspect', async (route) => {
     captured.body = route.request().postDataJSON() as { input: string; headers: Record<string, string> };

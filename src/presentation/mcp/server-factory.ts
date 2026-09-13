@@ -22,10 +22,7 @@ export interface McpServerDeps {
  * app changes what this function registers without changing this function.
  */
 export function createMcpServer(deps: McpServerDeps): McpServer {
-  const server = new McpServer(
-    { name: 'stackvoice', version: deps.version },
-    { capabilities: { tools: {} } },
-  );
+  const server = new McpServer({ name: 'stackvoice', version: deps.version }, { capabilities: { tools: {} } });
 
   const specs = deps.catalog.generate(deps.registry.list(), deps.shortcuts.list());
   for (const spec of specs) {

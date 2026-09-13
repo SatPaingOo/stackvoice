@@ -23,9 +23,7 @@ export class HealthService {
   ) {}
 
   async reportStack(): Promise<StackHealth> {
-    const apps = await Promise.all(
-      this.registry.listEnabled().map((app) => this.status.report(app)),
-    );
+    const apps = await Promise.all(this.registry.listEnabled().map((app) => this.status.report(app)));
 
     return {
       ok: apps.every((app) => app.ok),

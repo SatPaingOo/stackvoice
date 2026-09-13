@@ -4,11 +4,7 @@ import { AppRegistryService } from '../../../src/application/app-registry.servic
 import { HealthService, type Clock } from '../../../src/application/health.service.js';
 import { StatusService } from '../../../src/application/status.service.js';
 import { AppDefinition } from '../../../src/domain/app-definition.js';
-import {
-  DataSource,
-  DEFAULT_FIELD_MAP,
-  DEFAULT_STATUS_FIELD_MAP,
-} from '../../../src/domain/data-source.js';
+import { DataSource, DEFAULT_FIELD_MAP, DEFAULT_STATUS_FIELD_MAP } from '../../../src/domain/data-source.js';
 import type { SourceHealth } from '../../../src/domain/health.js';
 import type { ConfigStore } from '../../../src/domain/ports/config-store.js';
 import type { DataSourceReader, DataSourceReaderFactory } from '../../../src/domain/ports/data-source-reader.js';
@@ -110,9 +106,7 @@ describe('HealthService.reportStack', () => {
   });
 
   it('is unhealthy when any app is unhealthy', async () => {
-    const report = await (
-      await buildHealth([app('library'), app('markets')], { markets: false })
-    ).reportStack();
+    const report = await (await buildHealth([app('library'), app('markets')], { markets: false })).reportStack();
 
     expect(report.ok).toBe(false);
     expect(report.apps.find((a) => a.appId === 'markets')?.ok).toBe(false);

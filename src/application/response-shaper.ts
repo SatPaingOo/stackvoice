@@ -81,11 +81,7 @@ export function listPhrase(items: readonly string[]): string {
  * A voice assistant cannot read a JSON array aloud, so this is deliberately not
  * a list dump: it says how many there are, then reads the newest few titles.
  */
-export function shapeSearchResults(
-  appLabel: string,
-  items: readonly Item[],
-  params: SearchParams,
-): string {
+export function shapeSearchResults(appLabel: string, items: readonly Item[], params: SearchParams): string {
   if (items.length === 0) {
     const about = params.query !== undefined && params.query.trim() !== '' ? ` about ${params.query}` : '';
     return toSpoken(`I found nothing${about} in your ${appLabel}.`);
@@ -119,7 +115,10 @@ export function shapeAppHealth(appLabel: string, health: AppHealth, now: Date): 
   const when = source.lastRunAt === null ? null : humanizeSince(new Date(source.lastRunAt), now);
   const ran = when === null ? '' : ` It last ran ${when}.`;
   const holds = source.itemCount === null ? '' : ` It holds ${source.itemCount} items`;
-  const fresh = source.lastDataDate === null ? '' : `${holds === '' ? ' Data is' : ', fresh to'} ${describeDate(source.lastDataDate)}`;
+  const fresh =
+    source.lastDataDate === null
+      ? ''
+      : `${holds === '' ? ' Data is' : ', fresh to'} ${describeDate(source.lastDataDate)}`;
   return toSpoken(`Your ${appLabel} is healthy.${ran}${holds}${fresh}${holds === '' && fresh === '' ? '' : '.'}`);
 }
 
@@ -137,6 +136,9 @@ function describeDate(value: string): string {
  * read-back list into "Ecuador., President Trump...".
  */
 function trimTitle(title: string): string {
-  const clean = title.replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
+  const clean = title
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.\s]+$/, '');
   return clean.length <= 90 ? clean : `${clean.slice(0, 87).trimEnd()}…`;
 }

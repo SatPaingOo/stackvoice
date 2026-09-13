@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { AppDefinition } from '../../../src/domain/app-definition.js';
-import {
-  DataSource,
-  DEFAULT_FIELD_MAP,
-  DEFAULT_STATUS_FIELD_MAP,
-} from '../../../src/domain/data-source.js';
+import { DataSource, DEFAULT_FIELD_MAP, DEFAULT_STATUS_FIELD_MAP } from '../../../src/domain/data-source.js';
 import { ValidationError } from '../../../src/domain/errors.js';
 
 const source = (id: string, repo = 'owner/name'): DataSource =>
@@ -63,10 +59,7 @@ describe('AppDefinition invariants', () => {
 
 describe('AppDefinition.enabledVerbs', () => {
   it('returns only the enabled verbs, in a stable order', () => {
-    expect(app({ primitives: { search: false, read: true, status: true } }).enabledVerbs()).toEqual([
-      'read',
-      'status',
-    ]);
+    expect(app({ primitives: { search: false, read: true, status: true } }).enabledVerbs()).toEqual(['read', 'status']);
   });
 
   it('returns nothing when every primitive is off', () => {

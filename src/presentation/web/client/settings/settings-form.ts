@@ -70,15 +70,24 @@ export class SettingsForm {
     await whileBusy(this.saveButton, 'Saving...', async () => {
       try {
         const saved = await this.settings.save({
-          server: { host: this.input.host.value.trim(), port: Number(this.input.port.value), logLevel: this.input.logLevel.value as LogLevel },
-          auth: { mode: (mode?.value ?? 'none') as AuthMode, token: this.input.token.value, publicUrl: this.input.publicUrl.value.trim() },
+          server: {
+            host: this.input.host.value.trim(),
+            port: Number(this.input.port.value),
+            logLevel: this.input.logLevel.value as LogLevel,
+          },
+          auth: {
+            mode: (mode?.value ?? 'none') as AuthMode,
+            token: this.input.token.value,
+            publicUrl: this.input.publicUrl.value.trim(),
+          },
           console: { enabled: this.input.console.checked },
           simulator: { enabled: this.input.simulator.checked },
           cache: { ttlSeconds: Number(this.input.ttl.value) },
           sources: { allowPrivateNetwork: this.input.privateNet.checked, dataDir: this.input.dataDir.value.trim() },
         });
         this.fill(saved);
-        if (saved.restartRequired) this.notice.show('warn', 'Saved. Restart the server for these changes to take effect.');
+        if (saved.restartRequired)
+          this.notice.show('warn', 'Saved. Restart the server for these changes to take effect.');
         else this.notice.show('ok', 'Saved.');
       } catch (error) {
         this.notice.show('err', messageOf(error));

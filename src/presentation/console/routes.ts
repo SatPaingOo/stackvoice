@@ -331,11 +331,7 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
 
 // ---- helpers ---------------------------------------------------------------
 
-async function handle(
-  res: Response,
-  deps: ConsoleDeps,
-  run: () => Promise<Record<string, unknown>>,
-): Promise<void> {
+async function handle(res: Response, deps: ConsoleDeps, run: () => Promise<Record<string, unknown>>): Promise<void> {
   try {
     res.json(await run());
   } catch (error) {
@@ -607,7 +603,9 @@ function readShortcut(body: unknown): ShortcutProps {
 function readInputs(value: unknown): Record<string, string> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+    Object.entries(value as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string',
+    ),
   );
 }
 

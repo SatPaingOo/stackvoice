@@ -13,12 +13,14 @@ import {
 } from '../../../../../src/presentation/web/client/apps/source-hints.js';
 
 describe('looksLikeRepo', () => {
-  it.each(['owner/name', 'SatPaingOo/information-hub', 'https://github.com/owner/name', 'https://github.com/owner/name/tree/gh-pages'])(
-    'treats %s as a repository',
-    (input) => {
-      expect(looksLikeRepo(input)).toBe(true);
-    },
-  );
+  it.each([
+    'owner/name',
+    'SatPaingOo/information-hub',
+    'https://github.com/owner/name',
+    'https://github.com/owner/name/tree/gh-pages',
+  ])('treats %s as a repository', (input) => {
+    expect(looksLikeRepo(input)).toBe(true);
+  });
 
   it.each(['exports/prices.csv', 'reports/latest.json', 'https://example.com/owner/name', 'prices.csv', ''])(
     'does not treat %s as a repository',
@@ -105,9 +107,9 @@ describe('kindOf and describeLocation', () => {
   });
 
   it('describes a link by host and path', () => {
-    expect(describeLocation({ type: 'url', url: 'https://api.example.com/v1/items', format: 'json', headers: [] })).toBe(
-      'api.example.com/v1/items',
-    );
+    expect(
+      describeLocation({ type: 'url', url: 'https://api.example.com/v1/items', format: 'json', headers: [] }),
+    ).toBe('api.example.com/v1/items');
   });
 });
 

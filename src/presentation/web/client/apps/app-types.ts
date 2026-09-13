@@ -58,8 +58,19 @@ export type SourceType = LocationWire['type'];
  * secret references, or leaves them out to keep the ones already saved.
  */
 export type LocationInput =
-  | { readonly type: 'github-repo'; readonly repo: string; readonly branch: string; readonly indexFile: string; readonly statsFile: string }
-  | { readonly type: 'url'; readonly url: string; readonly format: DataFormat; readonly headers?: Readonly<Record<string, string>> }
+  | {
+      readonly type: 'github-repo';
+      readonly repo: string;
+      readonly branch: string;
+      readonly indexFile: string;
+      readonly statsFile: string;
+    }
+  | {
+      readonly type: 'url';
+      readonly url: string;
+      readonly format: DataFormat;
+      readonly headers?: Readonly<Record<string, string>>;
+    }
   | { readonly type: 'file'; readonly path: string; readonly format: DataFormat };
 
 export interface SourceHealthWire {

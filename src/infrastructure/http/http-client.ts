@@ -189,7 +189,10 @@ export class HttpClient implements JsonFetcher, TextFetcher {
 
 /** Decodes with the charset the server declared, falling back to UTF-8. */
 function decode(bytes: Buffer, contentType: string | null): string {
-  const charset = /charset=([^;]+)/i.exec(contentType ?? '')?.[1]?.trim().replace(/"/g, '');
+  const charset = /charset=([^;]+)/i
+    .exec(contentType ?? '')?.[1]
+    ?.trim()
+    .replace(/"/g, '');
   try {
     return new TextDecoder(charset ?? 'utf-8').decode(bytes);
   } catch {

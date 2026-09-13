@@ -14,16 +14,36 @@ import type { SecretsGateway } from './secrets-api.js';
 export class KeyFormModal {
   private readonly modal = new Modal({ title: 'Add a key', size: 'sm' });
   private readonly notice = new Notice();
-  private readonly name = new TextField({ label: 'Name', hint: 'capital letters, digits and _', placeholder: 'WEATHER_KEY', mono: true, id: 'newKeyName' });
-  private readonly value = new TextField({ label: 'Key', type: 'password', placeholder: 'paste the key', id: 'newKeyValue' });
-  private readonly saveButton = h('button', { className: 'primary', text: 'Save key', attrs: { type: 'button', id: 'saveKey' } });
+  private readonly name = new TextField({
+    label: 'Name',
+    hint: 'capital letters, digits and _',
+    placeholder: 'WEATHER_KEY',
+    mono: true,
+    id: 'newKeyName',
+  });
+  private readonly value = new TextField({
+    label: 'Key',
+    type: 'password',
+    placeholder: 'paste the key',
+    id: 'newKeyValue',
+  });
+  private readonly saveButton = h('button', {
+    className: 'primary',
+    text: 'Save key',
+    attrs: { type: 'button', id: 'saveKey' },
+  });
   private readonly savedListeners: ((name: string) => void)[] = [];
 
   constructor(private readonly secrets: SecretsGateway) {
     this.modal.element.id = 'keyModal';
     this.modal.body.append(this.notice.element, this.name.element, this.value.element);
     this.modal.footer.append(
-      h('button', { className: 'ghost', text: 'Cancel', attrs: { type: 'button' }, on: { click: () => this.modal.close() } }),
+      h('button', {
+        className: 'ghost',
+        text: 'Cancel',
+        attrs: { type: 'button' },
+        on: { click: () => this.modal.close() },
+      }),
       this.saveButton,
     );
     this.saveButton.addEventListener('click', () => void this.save());

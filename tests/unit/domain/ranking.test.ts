@@ -108,19 +108,13 @@ describe('rankItems', () => {
   });
 
   it('sorts undated entries last', () => {
-    const items = [
-      item({ key: 'undated', title: 'Gold' }),
-      item({ key: 'dated', title: 'Gold', date: '2026-01-01' }),
-    ];
+    const items = [item({ key: 'undated', title: 'Gold' }), item({ key: 'dated', title: 'Gold', date: '2026-01-01' })];
 
     expect(rankItems(items, params({ query: 'gold' })).map((i) => i.key)).toEqual(['dated', 'undated']);
   });
 
   it('drops entries that match no query word at all', () => {
-    const items = [
-      item({ key: 'keep', title: 'Gold' }),
-      item({ key: 'drop', title: 'Silver' }),
-    ];
+    const items = [item({ key: 'keep', title: 'Gold' }), item({ key: 'drop', title: 'Silver' })];
 
     expect(rankItems(items, params({ query: 'gold' })).map((i) => i.key)).toEqual(['keep']);
   });

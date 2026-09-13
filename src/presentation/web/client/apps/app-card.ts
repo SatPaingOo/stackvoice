@@ -24,7 +24,10 @@ export class AppCard {
       ]),
       app.missingSecrets.length === 0
         ? null
-        : h('div', { className: 'note warn', text: `Needs the key ${app.missingSecrets.join(', ')}. Open Edit and paste it.` }),
+        : h('div', {
+            className: 'note warn',
+            text: `Needs the key ${app.missingSecrets.join(', ')}. Open Edit and paste it.`,
+          }),
       h(
         'div',
         { className: 'chips' },
@@ -32,13 +35,22 @@ export class AppCard {
       ),
     ]);
 
-    const toggle = h('button', { className: 'small', text: app.enabled ? 'Disable' : 'Enable', attrs: { type: 'button' } });
+    const toggle = h('button', {
+      className: 'small',
+      text: app.enabled ? 'Disable' : 'Enable',
+      attrs: { type: 'button' },
+    });
     toggle.addEventListener('click', () => void whileBusy(toggle, '...', () => actions.toggle(app)));
 
     const remove = h('button', { className: 'small danger', text: 'Remove', attrs: { type: 'button' } });
     remove.addEventListener('click', () => void whileBusy(remove, '...', () => actions.remove(app)));
 
-    const edit = h('button', { className: 'small', text: 'Edit', attrs: { type: 'button' }, on: { click: () => actions.edit(app) } });
+    const edit = h('button', {
+      className: 'small',
+      text: 'Edit',
+      attrs: { type: 'button' },
+      on: { click: () => actions.edit(app) },
+    });
 
     this.element = h('div', { className: 'card item', dataset: { app: app.id } }, [
       main,
@@ -55,7 +67,8 @@ export function healthLine(app: AppWire): string {
   if (!app.health.ok) return source?.lastError ?? 'Not healthy';
 
   const parts: string[] = [];
-  if (source?.itemCount !== null && source?.itemCount !== undefined) parts.push(`${source.itemCount.toLocaleString()} records`);
+  if (source?.itemCount !== null && source?.itemCount !== undefined)
+    parts.push(`${source.itemCount.toLocaleString()} records`);
   if (source?.lastDataDate) parts.push(`fresh to ${source.lastDataDate.slice(0, 10)}`);
   return parts.join(' · ') || 'Healthy';
 }

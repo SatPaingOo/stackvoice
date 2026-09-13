@@ -45,7 +45,10 @@ export function nameFrom(text: string): string {
 
 /** An app id the server accepts: lowercase, starting with a letter, 2 to 32 characters. */
 export function toAppId(text: string): string {
-  let id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  let id = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   if (!/^[a-z]/.test(id)) id = `app-${id}`;
   id = id.slice(0, 32).replace(/-+$/, '');
   return id.length >= 2 ? id : 'my-app';

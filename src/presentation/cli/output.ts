@@ -8,8 +8,7 @@ const useColor = process.stdout.isTTY === true && process.env['NO_COLOR'] === un
 
 // Literal escape bytes in source are easy to lose to a copy-paste; spell them.
 const ESC = '\u001b';
-const wrap = (code: string, text: string): string =>
-  useColor ? `${ESC}[${code}m${text}${ESC}[0m` : text;
+const wrap = (code: string, text: string): string => (useColor ? `${ESC}[${code}m${text}${ESC}[0m` : text);
 
 export const bold = (text: string): string => wrap('1', text);
 export const dim = (text: string): string => wrap('2', text);

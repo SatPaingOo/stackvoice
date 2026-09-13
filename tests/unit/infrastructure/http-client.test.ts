@@ -125,8 +125,10 @@ describe('HttpClient.getText', () => {
 
   it('gives up on a redirect loop', async () => {
     const { fetch } = fakeFetch({
-      'https://example.org/a': () => new Response(null, { status: 302, headers: { location: 'https://example.org/b' } }),
-      'https://example.org/b': () => new Response(null, { status: 302, headers: { location: 'https://example.org/a' } }),
+      'https://example.org/a': () =>
+        new Response(null, { status: 302, headers: { location: 'https://example.org/b' } }),
+      'https://example.org/b': () =>
+        new Response(null, { status: 302, headers: { location: 'https://example.org/a' } }),
     });
 
     await expect(client(fetch).getText('https://example.org/a', 'x')).rejects.toThrowError(/redirected more than/);

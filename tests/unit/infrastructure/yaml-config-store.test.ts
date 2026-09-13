@@ -85,7 +85,10 @@ describe('YamlConfigStore.listApps', () => {
   });
 
   it('surfaces a domain invariant as a ConfigError naming the file', async () => {
-    await write('library.yml', `${valid('library')}  - id: s1\n    type: github-repo\n    label: "dup"\n    repo: owner/name\n`);
+    await write(
+      'library.yml',
+      `${valid('library')}  - id: s1\n    type: github-repo\n    label: "dup"\n    repo: owner/name\n`,
+    );
 
     await expect(new YamlConfigStore(dir).listApps()).rejects.toThrowError(/duplicate source id/);
   });

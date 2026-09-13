@@ -191,10 +191,12 @@ async function main(): Promise<void> {
   // Alexa+ round-trip budget is 500 ms and a cold GitHub fetch alone exceeds it.
   // Status and search read different documents, so warm both.
   void Promise.all(
-    registry.listEnabled().flatMap((app) => [
-      status.report(app),
-      app.primitives.search ? search.search(app.id, { limit: 1 }) : Promise.resolve([]),
-    ]),
+    registry
+      .listEnabled()
+      .flatMap((app) => [
+        status.report(app),
+        app.primitives.search ? search.search(app.id, { limit: 1 }) : Promise.resolve([]),
+      ]),
   )
     .then(() => logger.info('cache warmed', { entries: cache.size }))
     .catch((error: unknown) => logger.warn('cache warm failed', { reason: String(error) }));

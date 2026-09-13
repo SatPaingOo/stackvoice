@@ -74,11 +74,7 @@ export class ToolMapper {
     }
   }
 
-  private registerNoArgs(
-    server: McpServer,
-    spec: ToolSpec,
-    outputSchema?: Record<string, z.ZodTypeAny>,
-  ): void {
+  private registerNoArgs(server: McpServer, spec: ToolSpec, outputSchema?: Record<string, z.ZodTypeAny>): void {
     server.registerTool(
       spec.name,
       outputSchema === undefined
@@ -210,9 +206,7 @@ export class ToolMapper {
       return result;
     } catch (error) {
       const message =
-        error instanceof StackVoiceError
-          ? error.message
-          : 'That did not work. Please try again in a moment.';
+        error instanceof StackVoiceError ? error.message : 'That did not work. Please try again in a moment.';
       this.deps.logger.warn('tool failed', {
         tool,
         ms: Date.now() - started,

@@ -94,11 +94,11 @@ describe('resolveHeaders', () => {
   it('names the secret that is missing', async () => {
     const store = new YamlSecretStore(path, {});
 
-    await expect(resolveHeaders({ Authorization: 'Bearer {{secret:NOTION_TOKEN}}' }, store, 'notes')).rejects.toThrowError(
-      SourceUnavailableError,
-    );
-    await expect(resolveHeaders({ Authorization: 'Bearer {{secret:NOTION_TOKEN}}' }, store, 'notes')).rejects.toThrowError(
-      /NOTION_TOKEN/,
-    );
+    await expect(
+      resolveHeaders({ Authorization: 'Bearer {{secret:NOTION_TOKEN}}' }, store, 'notes'),
+    ).rejects.toThrowError(SourceUnavailableError);
+    await expect(
+      resolveHeaders({ Authorization: 'Bearer {{secret:NOTION_TOKEN}}' }, store, 'notes'),
+    ).rejects.toThrowError(/NOTION_TOKEN/);
   });
 });

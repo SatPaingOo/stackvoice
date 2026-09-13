@@ -31,7 +31,11 @@ describe('parseBlocks', () => {
       },
       { kind: 'get', fn: 'item', from: 'found', index: 2, as: 'second' },
       { kind: 'set', name: 'line', to: 'Second is {second.title}' },
-      { kind: 'if', condition: { kind: 'text', template: '{line}', op: 'is_empty' }, otherwise: [{ kind: 'say', text: '{line}' }] },
+      {
+        kind: 'if',
+        condition: { kind: 'text', template: '{line}', op: 'is_empty' },
+        otherwise: [{ kind: 'say', text: '{line}' }],
+      },
       { kind: 'if', condition: { kind: 'failed', variable: 'found' }, then: [{ kind: 'say', text: 'Down.' }] },
     ];
 
@@ -51,7 +55,12 @@ describe('parseBlocks', () => {
         then: [],
         otherwise: [{ kind: 'say', text: '{line}' }],
       },
-      { kind: 'if', condition: { kind: 'failed', variable: 'found' }, then: [{ kind: 'say', text: 'Down.' }], otherwise: [] },
+      {
+        kind: 'if',
+        condition: { kind: 'failed', variable: 'found' },
+        then: [{ kind: 'say', text: 'Down.' }],
+        otherwise: [],
+      },
     ]);
   });
 
@@ -141,7 +150,12 @@ describe('validateFlow', () => {
   it('refuses counting something no Ask block saved', () => {
     const blocks: Block[] = [
       { kind: 'set', name: 'mood', to: 'good' },
-      { kind: 'if', condition: { kind: 'count', variable: 'mood', op: 'is', value: 0 }, then: [say('x')], otherwise: [] },
+      {
+        kind: 'if',
+        condition: { kind: 'count', variable: 'mood', op: 'is', value: 0 },
+        then: [say('x')],
+        otherwise: [],
+      },
     ];
 
     expect(() => validate(blocks)).toThrowError(/not the name an Ask block/);
@@ -166,7 +180,12 @@ describe('validateFlow', () => {
   });
 
   it('allows an If inside an If, and nothing deeper', () => {
-    const inner = (then: Block[]): Block => ({ kind: 'if', condition: { kind: 'failed', variable: 'found' }, then, otherwise: [] });
+    const inner = (then: Block[]): Block => ({
+      kind: 'if',
+      condition: { kind: 'failed', variable: 'found' },
+      then,
+      otherwise: [],
+    });
 
     expect(() => validate([ask(), inner([inner([say('two deep')])])])).not.toThrow();
     expect(() => validate([ask(), inner([inner([inner([say('three deep')])])])])).toThrowError(/no deeper/);
@@ -215,7 +234,10 @@ describe('blocksFromSteps', () => {
   });
 
   it('reads {results} as every answer in order', () => {
-    expect(blocksFromSteps(steps, 'Here it is. {results}').at(-1)).toEqual({ kind: 'say', text: 'Here it is. {step1} {step2}' });
+    expect(blocksFromSteps(steps, 'Here it is. {results}').at(-1)).toEqual({
+      kind: 'say',
+      text: 'Here it is. {step1} {step2}',
+    });
   });
 
   it('adds no Say for an empty reply, which is what joining the answers means', () => {

@@ -20,7 +20,12 @@ export class ApiKeyBox {
   private readonly header = new TextField({ label: 'Header', mono: true, id: 'hName' });
   private readonly prefix = new TextField({ label: 'Before the key', hint: 'often Bearer', mono: true, id: 'hPrefix' });
   private readonly name = new TextField({ label: 'Saved as', placeholder: 'MY_API_KEY', mono: true, id: 'secretName' });
-  private readonly key = new TextField({ label: 'Key', type: 'password', placeholder: 'paste the key', id: 'secretValue' });
+  private readonly key = new TextField({
+    label: 'Key',
+    type: 'password',
+    placeholder: 'paste the key',
+    id: 'secretValue',
+  });
   private readonly state = h('p', { className: 'hint-line' });
   private readonly info = h('p', { className: 'soft' });
   private readonly names = h('datalist', { attrs: { id: uniqueId('secret-names') } });
@@ -109,7 +114,10 @@ export class ApiKeyBox {
 
     // A header written into the app file by hand keeps its value unless a key is saved here instead.
     this.info.hidden = header === undefined || header.secret !== null;
-    this.info.textContent = header === undefined ? '' : `This app sends a ${header.name} header set in its app file. Saving a key here replaces it.`;
+    this.info.textContent =
+      header === undefined
+        ? ''
+        : `This app sends a ${header.name} header set in its app file. Saving a key here replaces it.`;
     this.dropRow.hidden = header === undefined || header.secret === null;
     this.showState();
   }
@@ -131,8 +139,10 @@ export class ApiKeyBox {
   problem(): string | null {
     const name = this.name.value.trim();
     if (this.header.value.trim() === '') return 'Say which header carries the key. Most APIs use Authorization.';
-    if (!SECRET_NAME.test(name)) return 'Save the key under a name in capital letters, digits and underscores, such as MY_API_KEY.';
-    if (this.key.value.trim() === '' && !this.known.includes(name)) return 'Paste the key, or pick a name that is already saved.';
+    if (!SECRET_NAME.test(name))
+      return 'Save the key under a name in capital letters, digits and underscores, such as MY_API_KEY.';
+    if (this.key.value.trim() === '' && !this.known.includes(name))
+      return 'Paste the key, or pick a name that is already saved.';
     return null;
   }
 
@@ -161,6 +171,7 @@ export class ApiKeyBox {
 
   private showState(): void {
     const name = this.name.value.trim();
-    this.state.textContent = name !== '' && this.known.includes(name) ? `A key is saved as ${name}. Leave the key empty to keep it.` : '';
+    this.state.textContent =
+      name !== '' && this.known.includes(name) ? `A key is saved as ${name}. Leave the key empty to keep it.` : '';
   }
 }

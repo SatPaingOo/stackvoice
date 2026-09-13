@@ -38,7 +38,12 @@ export interface ShortcutFormDeps {
 export class ShortcutFormModal {
   private readonly modal: Modal;
   private readonly notice = new Notice();
-  private readonly name = new TextField({ label: 'Name', hint: 'becomes the tool', placeholder: 'news about topic', id: 'name' });
+  private readonly name = new TextField({
+    label: 'Name',
+    hint: 'becomes the tool',
+    placeholder: 'news about topic',
+    id: 'name',
+  });
   private readonly toolName = h('p', { className: 'hint-line', attrs: { id: 'toolName' } });
   private readonly description = new TextAreaField({
     label: 'What it does',
@@ -49,8 +54,16 @@ export class ShortcutFormModal {
   private readonly flowSlot = h('div');
   private readonly counts = h('p', { className: 'flow-counts', attrs: { id: 'flowCounts' } });
   private readonly tryPanel: TryPanel;
-  private readonly saveButton = h('button', { className: 'primary', text: 'Save shortcut', attrs: { type: 'button', id: 'save' } });
-  private readonly cancelButton = h('button', { className: 'ghost', text: 'Cancel', attrs: { type: 'button', id: 'cancel' } });
+  private readonly saveButton = h('button', {
+    className: 'primary',
+    text: 'Save shortcut',
+    attrs: { type: 'button', id: 'save' },
+  });
+  private readonly cancelButton = h('button', {
+    className: 'ghost',
+    text: 'Cancel',
+    attrs: { type: 'button', id: 'cancel' },
+  });
   private readonly savedListeners: (() => void)[] = [];
   private readonly context: FlowContext;
   private tools: readonly ToolWire[] = [];

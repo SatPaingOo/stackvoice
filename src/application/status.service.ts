@@ -15,9 +15,7 @@ export class StatusService {
   }
 
   async report(app: AppDefinition): Promise<AppHealth> {
-    const sources = await Promise.all(
-      app.sources.map((source) => this.readers.forSource(source).status(source)),
-    );
+    const sources = await Promise.all(app.sources.map((source) => this.readers.forSource(source).status(source)));
 
     return {
       appId: app.id,
