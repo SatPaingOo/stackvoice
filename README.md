@@ -38,7 +38,8 @@
 
 ## Install
 
-Node.js 20 or later.
+Node.js 22 (22.12 or later) or 24. The test runner, Vitest 5, does not support
+older lines or the odd-numbered releases.
 
 ```bash
 npm install

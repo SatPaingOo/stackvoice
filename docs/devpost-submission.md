@@ -139,7 +139,7 @@ token at the top and keep the rest.
 
 ### Run it
 
-You need Node.js 20 or later, Git, and an internet connection: the two demo apps
+You need Node.js 22 (22.12 or later) or 24, Git, and an internet connection: the two demo apps
 read public data from GitHub. For voice, use Chrome or Edge; typing works in any
 browser.
 

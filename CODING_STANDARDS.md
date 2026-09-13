@@ -1,7 +1,7 @@
 # StackVoice — Coding Standards
 
 Engineering standards for the StackVoice codebase: **OOP + SOLID + Clean
-Architecture** in strict TypeScript on Node.js 20+. Every rule below exists to
+Architecture** in strict TypeScript on Node.js 22 (22.12 or later) or 24. Every rule below exists to
 keep the core (domain + application) pure, testable, and open for new apps and
 source types without rewriting.
 
