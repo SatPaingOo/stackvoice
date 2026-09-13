@@ -151,17 +151,17 @@ npm run dev
 ```
 
 Wait for the log line `stackvoice listening`. The server is at
-http://localhost:8765 and asks for no sign-in, because it listens on localhost
+http://127.0.0.1:8765 and asks for no sign-in, because it listens on localhost
 only.
 
 ### 1. Ask it something
 
-Open http://localhost:8765/simulator and type, or tap the microphone and say:
+Open http://127.0.0.1:8765/simulator and type, or tap the microphone and say:
 
 | Say | What runs |
 |---|---|
 | Is my stack healthy? | `stack_status` |
-| What did you find about AI in my library? | `library_search` with the query `AI` |
+| What did you find about AI in my library? | `library_search` with the query `ai` |
 | Tell me more | `library_read` for the first result |
 | News about AI | The shortcut `news_about_topic`, with `topic` filled from what you said |
 
@@ -172,7 +172,7 @@ conversation, tap **Start a conversation**, and say "stop" to end it.
 
 ### 2. Add a source of your own
 
-1. Open http://localhost:8765/console and click **Add an app**.
+1. Open http://127.0.0.1:8765/console and click **Add an app**.
 2. Click the **News feed** example, or paste any RSS feed, JSON API or CSV link.
 3. Click **Look at it**. Every guessed field shows a sample from the data.
 4. Optional: click a field, then click a column to change it.
@@ -182,7 +182,7 @@ conversation, tap **Start a conversation**, and say "stop" to end it.
 
 ### 3. Build a voice shortcut
 
-1. Open http://localhost:8765/console/shortcuts and click **Add a shortcut**.
+1. Open http://127.0.0.1:8765/console/shortcuts and click **Add a shortcut**.
 2. Name it `quick news`, and write the phrase `quick news about {topic}`.
 3. Click **Ask**. It starts on `library_search`, searching for `{topic}`, saved as
    `answer`.
@@ -201,17 +201,17 @@ conversation, tap **Start a conversation**, and say "stop" to end it.
 npx @modelcontextprotocol/inspector
 ```
 
-Choose the Streamable HTTP transport, connect to http://localhost:8765/mcp, and
+Choose the Streamable HTTP transport, connect to http://127.0.0.1:8765/mcp, and
 list the tools. `news_about_topic` has a required `topic` input.
 
 ### 5. Optional: OAuth 2.1
 
 Stop the server, and in `config/settings.yml` set `auth.mode: oauth`, a
-`token` of your choice, and `public_url: "http://localhost:8765"`. Start it again.
+`token` of your choice, and `public_url: "http://127.0.0.1:8765"`. Start it again.
 
 ```bash
-curl http://localhost:8765/.well-known/oauth-authorization-server
-curl -i http://localhost:8765/mcp
+curl http://127.0.0.1:8765/.well-known/oauth-authorization-server
+curl -i http://127.0.0.1:8765/mcp
 ```
 
 The first lists `S256` as the PKCE method. The second returns `401` with a
@@ -220,6 +220,9 @@ because an authorization code flow needs a person at a browser.
 
 ### Worth knowing
 
+- Use `127.0.0.1` rather than `localhost`. The server listens on IPv4 only, and
+  Node.js-based clients such as the MCP Inspector may resolve `localhost` to the
+  IPv6 address first and fail to connect.
 - StackVoice has not run on a real Alexa+ device; the Alexa+ MCP Toolkit is
   US-only. The simulator is the demonstration.
 - Voice uses the browser's own speech service, which may send audio to Google in

@@ -200,8 +200,12 @@ Every write validates first and backs up whatever it replaces into
 The server speaks plain MCP, so any client works:
 
 ```bash
-npx @modelcontextprotocol/inspector      # point it at http://localhost:8765/mcp
+npx @modelcontextprotocol/inspector      # point it at http://127.0.0.1:8765/mcp
 ```
+
+Use `127.0.0.1` rather than `localhost` for a Node.js-based client such as the
+Inspector. The server listens on IPv4 only, and Node.js may resolve `localhost`
+to the IPv6 address first.
 
 For anything beyond localhost, set `auth.mode` in `config/settings.yml`: `token`
 for one shared bearer token, or `oauth` for the full OAuth 2.1 + PKCE flow that
