@@ -1,0 +1,17 @@
+# Build output, dependencies and test artifacts
+dist/
+node_modules/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+tests/e2e/.work/
+tests/e2e/.data/
+
+# Hand-written config with aligned comments, and user data
+config/
+data/
+
+# Prose and tables are laid out by hand; the lockfile belongs to npm
+*.md
+package-lock.json

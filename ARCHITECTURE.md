@@ -284,7 +284,6 @@ StackVoice/
 - OAuth tokens live in memory, and the simulator stands down in `oauth` mode.
 - User-facing strings are hardcoded English. The project canon asks for i18n keys
   with English and Burmese values.
-- No linter is configured; unused code is caught by the TypeScript compiler only.
 - The simulator's intent planner is English phrasing rules and misreads questions
   outside those patterns.
 - A hand edit to `config/shortcuts.yml` is picked up only on restart or on the

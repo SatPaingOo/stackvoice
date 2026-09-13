@@ -57,14 +57,14 @@ export function parseBody(body: string, format: DataFormat): unknown {
 
 function parseJson(body: string): unknown {
   try {
-    return JSON.parse(body.replace(/^﻿/, ''));
+    return JSON.parse(body.replace(/^\uFEFF/, ''));
   } catch (cause) {
     throw new ParseError('the body is not valid JSON', { cause });
   }
 }
 
 function parseCsvBody(body: string): Record<string, string>[] {
-  const text = body.replace(/^﻿/, '');
+  const text = body.replace(/^\uFEFF/, '');
   const delimiter = detectDelimiter(text.split(/\r?\n/, 1)[0] ?? '') ?? ',';
   try {
     return parseCsv(text, {

@@ -46,6 +46,7 @@ export function table(headers: readonly string[], rows: readonly (readonly strin
 }
 
 function visibleLength(text: string): number {
+  // eslint-disable-next-line no-control-regex -- terminal colour codes start with the escape character
   return text.replace(/\u001b\[\d+m/g, '').length;
 }
 

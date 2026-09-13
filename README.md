@@ -233,8 +233,13 @@ classes. Details, key decisions and known issues are in
 npm test          # unit tests, no network
 npm run test:e2e  # browser tests against the real server, in the Edge you already have
 npm run typecheck # server and browser code
+npm run lint      # ESLint, with type information for src/
+npm run format    # Prettier; format:check only reports
 npm run build     # compile both into dist/
 ```
+
+Lint also enforces the dependency rule: code in `src/domain` and
+`src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
 On 2026-09-13, 605 unit tests and 38 browser tests passed.
 

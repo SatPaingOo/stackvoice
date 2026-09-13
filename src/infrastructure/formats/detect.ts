@@ -15,7 +15,7 @@ const SNIFF_CHARS = 4096;
  * than mis-parsed into nonsense.
  */
 export function detectFormat(body: string, contentType: string | null = null): DataFormat | null {
-  const trimmed = body.replace(/^﻿/, '').trimStart();
+  const trimmed = body.replace(/^\uFEFF/, '').trimStart();
   const head = trimmed.slice(0, SNIFF_CHARS);
   if (head === '') return null;
 

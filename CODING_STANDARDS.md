@@ -45,8 +45,9 @@ Companion: ARCHITECTURE.md (structure), CONFIGURATION.md (schemas).
 | **I** | Ports stay small. Never grow a port with a method only one implementation needs. Split before you need to. |
 | **D** | Dependencies point inward: `domain/` defines ports, `infrastructure/` implements them, composition root (`main.ts`/`cli.ts`) wires. `application/` imports only `domain/`. |
 
-Enforcement: a PR that adds an import from `infrastructure/` or
-`presentation/` (or the MCP SDK) into `domain/` or `application/` is rejected.
+Enforcement: `npm run lint` fails on an import from `infrastructure/`,
+`presentation/`, an SDK, a boundary library or a Node.js built-in inside
+`domain/` or `application/`.
 
 ## 4. Clean Architecture dependency rule
 
@@ -70,7 +71,12 @@ presentation → application → domain  ← infrastructure (implements domain p
   config as immutable once loaded; mutations go through services that write fresh
   state.
 - **No unused imports/variables.** Enforced by `noUnusedLocals` and
-  `noUnusedParameters` in both tsconfig files; no linter is configured yet.
+  `noUnusedParameters` in both tsconfig files, and by ESLint's
+  `no-unused-vars` as an error.
+- **Lint and format:** `npm run lint` (ESLint flat config, typed rules for
+  `src/`, including `no-floating-promises`) and `npm run format` (Prettier,
+  120 columns, single quotes, trailing commas). Markdown and `config/` are
+  laid out by hand and left out of formatting.
 - Async everywhere it touches I/O; no sync `fs` reads in request paths.
 - Use `node:` prefix for builtins (`node:fs`, `node:path`).
 
