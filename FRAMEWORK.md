@@ -133,7 +133,7 @@ docs/devpost-submission.md
 
 | Stage | Window | Milestone | Done when |
 |---|---|---|---|
-| **7 — Host** | 2026-09-21 to 10-04 | Always-free VM, HTTPS, `token` mode, demo apps loaded | A judge can open `/simulator` from a link, and `/console` with the token from the testing instructions |
+| **7 — Host** | 2026-10-04 to 10-11 | Render free web service, HTTPS, `token` mode, demo apps loaded (DEPLOY_PLAN.md) | A judge can open `/simulator` from a link, and `/console` with the token from the testing instructions |
 | **8 — Friction log + product feedback** | to 2026-10-15 | Friction entries for every Amazon tool actually used; the required product feedback text | Both sections ready to paste into the form |
 | **9 — Demo video** | 2026-10-05 to 10-15 | Under 3 minutes, English, public, following docs/devpost-submission.md | Uploaded and linked |
 | **10 — Submit** | 2026-10-19 to 10-20 | Repository made public; Devpost form complete | Submitted, with 10-21 to 10-23 as buffer |
@@ -162,6 +162,9 @@ docs/devpost-submission.md
    instructions.
 3. **Real Alexa+ untested (medium).** The Toolkit is US-only. The rules accept a
    simulated experience; the README and the video say plainly that it is one.
+   Found on 2026-10-04: Alexa+ account linking needs a statically registered
+   OAuth client, which StackVoice does not support, so a real device could not
+   link to it yet.
 4. **Latency (medium).** Warm calls were 40–180 ms on 2026-09-12 and the cache is
    warmed at startup, but a cold GitHub fetch exceeds the Alexa+ budget of 500 ms.
    Not verifiable without a device.

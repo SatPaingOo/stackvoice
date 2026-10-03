@@ -278,7 +278,7 @@ StackVoice/
 | Console browser code as framework-free TypeScript classes | React or another framework | No new dependency and no bundler; one extra `tsc` project gives types and components |
 | Server-rendered page frames with client dialogs | A single-page app with a client router | Every page stays linkable and reloadable with no router, and the landing page reads without script; only the forms need to be interactive |
 
-## 12. Known issues (2026-09-13)
+## 12. Known issues (2026-10-04)
 
 - The verbs read only an app's first source.
 - OAuth tokens live in memory, and the simulator stands down in `oauth` mode.
@@ -290,6 +290,14 @@ StackVoice/
   next change in `config/apps/`, because the watcher watches that folder only.
 - A key placed in a URL's query string, rather than in a header, is not treated
   as a secret: it is written into the app file and appears in debug logs.
+- Alexa+ account linking needs a statically registered OAuth client with a
+  secret, all of Alexa's redirect URIs, and refresh tokens. The local
+  authorization server supports only dynamic registration, in memory.
+- In `token` mode the simulator's API is open: it calls `/mcp` with the token on
+  the visitor's behalf, so anyone with the link can run the read-only tools.
+- Nothing limits repeated guesses at the owner token on the console sign-in or
+  the OAuth consent screen.
+- The console's session cookie is not marked `Secure`, even behind HTTPS.
 
 ---
 

@@ -101,6 +101,7 @@ sentences and not an array, only showed up by building a client and listening.
 ### What's next
 
 - Onboarding to real Alexa+ once the MCP Toolkit is available where I can use it.
+- Statically registered OAuth clients, which Alexa+ account linking requires.
 - Reading more than one source per app.
 - Pages and answers in Burmese as well as English.
 
@@ -233,11 +234,46 @@ because an authorization code flow needs a person at a browser.
 - `npm test` runs the unit tests with no network. `npm run test:e2e` runs the
   browser tests and needs Microsoft Edge installed.
 
-## Still to write
+## Product feedback
 
-- **Product feedback** (required): which Amazon tools, APIs and SDKs were used and
-  for what, what worked, what needs work, onboarding, and whether I would build
-  with them again. Draw on FRICTION_LOG.md.
+Draft for the required product feedback field. Change anything that does not
+match your own experience before submitting.
+
+**What I used, and for what.** The Alexa+ MCP Toolkit documentation, meaning the
+overview, the quickstart and the account linking page, told me which transport,
+auth and latency requirements the server had to meet. The open MCP spec
+2025-11-25 and the MCP TypeScript SDK are what the server is built on. The
+hackathon's simulated Alexa+ path is how the project is demonstrated, because
+the Toolkit and Alexa+ are available in the US only. I did not run the `alexa-ai`
+CLI or link a device.
+
+**What worked well.** Building to the open MCP standard meant any MCP client
+could test the server, so nothing Alexa-specific stood in the way of the core.
+The quickstart is concrete about Streamable HTTP, PKCE with S256, the metadata
+endpoint, the 401 challenge and the 500 ms budget. Allowing a simulated Alexa+
+experience let an entrant outside the US take part at all.
+
+**What needs work.**
+- The track description did not link the MCP Toolkit pages, which took a week
+  to find.
+- Requirements are spread across pages. Auth and latency appear only in the
+  quickstart, and the fact that Alexa+ links only to a statically registered
+  OAuth client, not through Dynamic Client Registration as the MCP spec
+  recommends, appears only on the account linking page.
+- There is no guidance on writing tools for a voice surface: how long a result
+  can be before it stops being listenable, or how descriptions are used to route.
+- There is no way to try an add-on outside the US, so routing, spoken answers and
+  real latency could not be checked.
+
+**Onboarding.** The open-standard half was quick: the server answered over
+Streamable HTTP with OAuth on the first day of coding. The Alexa-specific half
+was slow, because each hard requirement had to be found on a different page.
+
+**Would I build with it again?** Yes for MCP as the way to give an assistant
+hands. For Alexa+ itself, once the Toolkit can be tried where I live and its
+requirements are on one page.
+
+## Still to write
 - **The hosted link and console token**, added to the testing instructions once
   the server is hosted.
 - **Gallery images** for the project page.

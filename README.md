@@ -32,9 +32,10 @@
   fills.
 - **A console and a CLI** to add, correct, enable and remove apps, save API keys,
   and see whether each source is healthy and fresh.
-- **Ready for a real client.** MCP spec 2025-11-25 over Streamable HTTP, with a
-  built-in OAuth 2.1 authorization server using PKCE (S256), as the Alexa+ MCP
-  Toolkit requires.
+- **Built on the open standard.** MCP spec 2025-11-25 over Streamable HTTP,
+  with a built-in OAuth 2.1 authorization server using PKCE (S256). Real Alexa+
+  account linking also needs a client registered by hand, which is not built yet;
+  see Limitations.
 
 ## Install
 
@@ -231,6 +232,7 @@ classes. Details, key decisions and known issues are in
 | [CODING_STANDARDS.md](./CODING_STANDARDS.md) | Where this project's rules differ from the defaults |
 | [FRICTION_LOG.md](./FRICTION_LOG.md) | Where Amazon's tooling fought the build |
 | [docs/devpost-submission.md](./docs/devpost-submission.md) | Draft text for the hackathon submission and the demo video outline |
+| [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) | How the hosted demo for judges is set up on a free Render service |
 
 ## Development
 
@@ -269,6 +271,10 @@ stay on your server.
   scraped web pages.
 - **Freshness for links and files** is the newest date among the records. Only
   GitHub sources report a last run, from GitHub Actions.
+- **Alexa+ account linking is not supported yet.** Alexa+ links only to a
+  client registered by hand on the authorization server, with a client secret,
+  every Alexa redirect URI and refresh tokens. StackVoice registers clients
+  dynamically, as the MCP spec recommends, and keeps them in memory.
 - **One owner.** Access is one owner token. OAuth tokens live in memory, so a
   restart signs every client out, and the simulator stands down in `oauth` mode.
 - **Latency.** Tools answered in 40–180 ms with a warm cache on 2026-09-12. The
