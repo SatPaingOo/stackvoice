@@ -3,7 +3,7 @@
 Draft text for the hackathon submission form, kept beside the code so it changes
 with the product. The pitch itself is owned by FRAMEWORK.md §2; the evidence for
 what separates StackVoice is in RESEARCH.md §8. Rule references are to the
-official rules as checked on 2026-09-13.
+official rules as checked on 2026-10-04.
 
 ## Form fields
 
@@ -65,7 +65,7 @@ call under the answer.
   user's behalf.
 - Shortcut flows as six fixed blocks and an interpreter, with no user code.
 - A console built from framework-free TypeScript component classes.
-- 640 unit tests and 38 browser tests on 2026-10-04.
+- 651 unit tests and 38 browser tests on 2026-10-04.
 
 ### Challenges we ran into
 
@@ -258,8 +258,10 @@ experience let an entrant outside the US take part at all.
   to find.
 - Requirements are spread across pages. Auth and latency appear only in the
   quickstart, and the fact that Alexa+ links only to a statically registered
-  OAuth client, not through Dynamic Client Registration as the MCP spec
-  recommends, appears only on the account linking page.
+  OAuth client appears only on the account linking page. MCP spec 2025-11-25
+  allows that, but the MCP SDK's own authorization router registers clients
+  dynamically, so a server built from it cannot be linked until that page is
+  found.
 - There is no guidance on writing tools for a voice surface: how long a result
   can be before it stops being listenable, or how descriptions are used to route.
 - There is no way to try an add-on outside the US, so routing, spoken answers and
@@ -272,6 +274,53 @@ was slow, because each hard requirement had to be found on a different page.
 **Would I build with it again?** Yes for MCP as the way to give an assistant
 hands. For Alexa+ itself, once the Toolkit can be tried where I live and its
 requirements are on one page.
+
+## Open Source mini challenge
+
+The rules ask for a contribution URL, the project repository URL, a GitHub
+username, and what was done, how it works and why it matters. They describe the
+challenge as "a new, additional open-source project" or a contribution to a
+public repository, so confirm with Devpost that the entry's own repository
+counts before relying on this (FRAMEWORK.md §8, risk 7).
+
+| Field | Value |
+|---|---|
+| Contribution URL | https://github.com/SatPaingOo/stackvoice |
+| Project repository URL | https://github.com/SatPaingOo/stackvoice |
+| GitHub username | SatPaingOo |
+
+**What I did.** Wrote StackVoice from its first commit during the submission
+period and published it under the MIT license, with its tests, docs and a
+browser test suite.
+
+**How it works.** A self-hosted MCP server reads a pasted feed, API, spreadsheet,
+repository or file, infers which fields are the title, summary, date and link,
+and exposes `search`, `read` and `status` tools for it. Answers are shaped into
+sentences for speech. Shortcuts run fixed blocks, never user code.
+
+**Why it matters.** Anyone with data of their own can give an MCP assistant
+access to it without writing a server. The parts are reusable on their own: the
+source inspector, the speakable response shaper, the network guard against
+server-side request forgery, and the flow interpreter.
+
+## Feature requests
+
+Optional field. Each request needs a description, why it matters to this
+project, and a priority. Draft; change anything that does not match your own
+experience.
+
+1. **A way to try MCP add-ons with Alexa+ outside the US.** Even a text-only
+   test console would do. Without one, routing, spoken answers and real latency
+   could not be checked, and the project is shown through a simulator.
+   **Critical.**
+2. **Every add-on requirement on one page.** Transport, OAuth with PKCE, the
+   client registration mechanism, the full list of Alexa redirect URIs and the
+   500 ms budget are split between the quickstart and the account linking page
+   today. The registration requirement was found after the authorization server
+   was built. **Important.**
+3. **Guidance on tool results for voice.** How long a result can be before it
+   stops being listenable, and how tool descriptions are used to route a
+   request. StackVoice had to guess at both. **Nice-to-have.**
 
 ## Still to write
 - **The hosted link and console token**, added to the testing instructions once

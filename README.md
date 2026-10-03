@@ -276,8 +276,10 @@ stay on your server.
   GitHub sources report a last run, from GitHub Actions.
 - **Alexa+ account linking is not supported yet.** Alexa+ links only to a
   client registered by hand on the authorization server, with a client secret,
-  every Alexa redirect URI and refresh tokens. StackVoice registers clients
-  dynamically, as the MCP spec recommends, and keeps them in memory.
+  every Alexa redirect URI and refresh tokens. StackVoice supports only Dynamic
+  Client Registration, which MCP spec 2025-11-25 keeps for backwards
+  compatibility, and keeps clients in memory. Pre-registered clients and Client
+  ID Metadata Documents, the spec's other two mechanisms, are not built.
 - **One owner.** Access is one owner token. OAuth tokens live in memory, so a
   restart signs every client out, and the simulator stands down in `oauth` mode.
 - **Latency.** Tools answered in 40–180 ms with a warm cache on 2026-09-12. The

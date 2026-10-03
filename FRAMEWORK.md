@@ -9,38 +9,56 @@ submission remain.
 
 ---
 
-## 1. Verified constraints (official rules, re-checked 2026-09-13)
+## 1. Verified constraints (official rules, re-checked 2026-10-04)
 
-Source: the hackathon's official rules, overview and dates pages on Devpost.
+Source: the hackathon's official rules, updates and dates pages on Devpost. The
+rules carry an update dated 2026-09-16 to the code repository requirement.
 
 | Requirement | What StackVoice does | State on 2026-10-04 |
 |---|---|---|
 | A working MCP server, spec 2025-11-25 or later, over Streamable HTTP, **or** a simulated Alexa+ experience | Both: a real server, and a simulator that calls it as an MCP client | done |
 | The required technology imported and called at runtime, not only named | `@modelcontextprotocol/sdk` server and client, called in `src/` | done |
-| A public GitHub repository with all source, assets and run instructions, and an open-source license visible at the top | MIT, detected by GitHub. The repository is private until submission; its whole history was checked for secrets on 2026-10-04 and none were found | **open** |
-| A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission | Outline in [docs/devpost-submission.md](./docs/devpost-submission.md) | **open** |
+| A GitHub repository with all source, assets and run instructions. Since 2026-09-16 it may be public with an open-source license visible at the top, **or** private and shared with testing@devpost.com and six Amazon GitHub accounts named in the rules | MIT, detected by GitHub. The Open Source mini challenge needs a public repository, so it goes public at submission. Its whole history was checked for secrets on 2026-10-04 and none were found | **open** |
+| A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission. On the simulated path it must clearly show the simulated experience | Outline in [docs/devpost-submission.md](./docs/devpost-submission.md) | **open** |
 | A text description, the primary track and any mini challenge | Draft in docs/devpost-submission.md; Alexa+ track, Open Source mini challenge | drafted |
-| Product feedback on every Amazon tool, API or SDK used | Draft in docs/devpost-submission.md, to be checked against the author's own experience | drafted |
-| Free testing access for judges until the judging period ends, with credentials if anything is private | A free Render service in `token` mode, planned in [DEPLOY_PLAN.md](./DEPLOY_PLAN.md); not deployed | **open** |
+| Open Source mini challenge: contribution URL, project repository URL, GitHub username, and what was done, how it works and why it matters | Drafted in docs/devpost-submission.md. The rules call it "a new, additional open-source project"; whether the entry's own repository counts is to be asked (risk 7 in §8) | drafted |
+| Product feedback on every Amazon tool, API or SDK used, answering five set questions | Draft in docs/devpost-submission.md, to be checked against the author's own experience | drafted |
+| Optional: feature requests, each with why it matters and a priority (Critical, Important or Nice-to-have) | Draft in docs/devpost-submission.md | drafted |
+| The project available to judges free of charge until the judging period ends, "via code repository and demo video", with credentials if anything is private. Judges need not test it, and may judge on the description, images and video alone | Run instructions in the repository. A free Render service in `token` mode is planned in [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) so judges can try it without installing; not deployed | **open** |
 | Disclosure of work that existed before the submission period | information-hub predates it; see docs/devpost-submission.md | drafted |
 | All materials in English | Code, docs and pages are English | done |
-| Friction log, for up to a 10% bonus in Stage 2 judging | Three entries in FRICTION_LOG.md, more drafted for review | in progress |
+| Friction log, for up to a 10% bonus, recommended by Amazon's team in Stage 1 and applied in Stage 2 | Three entries in FRICTION_LOG.md, more drafted for review | in progress |
 
-**Dates.** Submissions 2026-08-31 10:15 PDT to **2026-10-23 12:00 PDT**. Judging
-2026-10-26 to 2026-11-20. Winners announced 2026-12-03.
+**Dates.** Submissions 2026-08-31 10:15 PDT to **2026-10-23 12:00 PDT**. The
+rules give the judging period as 2026-11-09 to 2026-11-20; the dates page still
+shows it starting 2026-10-26, and the rules prevail where they differ. Either
+way, the hosted demo must stay up until 2026-11-20. Winners announced on or
+around 2026-12-03. Amazon holds office hours on 2026-10-06 at 10:30 PDT and
+2026-10-19 at 09:00 PDT.
 
 **Judging.** Stage 1 is pass or fail: does the project fit the theme and apply
 the required technology. Stage 2 weighs four criteria equally: Tech
-Implementation, Design, Potential Impact and Quality of the Idea.
+Implementation, Design, Potential Impact and Quality of the Idea. Judging may
+use expert panels, peer review or automated AI-driven analysis. For Alexa+, the
+rules call a single-turn Q&A bot or a basic MCP wrapper around an existing API
+obvious, and name as creative: agentic workflows across services, add-ons that
+keep state across sessions, purchasing, media support such as cards, MCP Apps
+and Agent Skills.
 
 **Prizes, Alexa+ track.** 1st $25,000 + $15,000 AWS credits · 2nd $15,000 +
 $5,000 · 3rd $4,000 + $1,000. Open Source and AWS Builder mini challenges each
 award $5,000 + $5,000 AWS credits.
 
+**AWS credits.** Entrants may request $150 in AWS Promotional Credits through a
+form by 2026-10-21 12:00 PT, while supplies last. StackVoice does not need them
+unless it is hosted on AWS.
+
 **Eligibility.** The rules exclude Brazil, Quebec, Russia, Crimea, Cuba, Iran,
-North Korea, and anyone where US or local law prohibits taking part or receiving
-a prize. Myanmar is not named. That is not the same as confirmed eligibility;
-see risk 1 in §8.
+North Korea, any other country comprehensively sanctioned by the US Treasury's
+Office of Foreign Assets Control, and anyone where US or local law prohibits
+taking part or receiving a prize. Myanmar is not named, and US sanctions on it
+target listed people and entities rather than the whole country. That is not
+the same as confirmed eligibility; see risk 1 in §8.
 
 ## 2. Concept & pitch (revised 2026-09-13)
 
@@ -91,10 +109,10 @@ the questions a person asks the same way every day.
 
 | Criterion | How StackVoice meets it |
 |---|---|
-| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; clean layers; 640 unit and 38 browser tests on 2026-10-04 |
+| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; clean layers; 651 unit and 38 browser tests on 2026-10-04 |
 | Design | One box for any source, with every guess shown on real data; a shortcut builder that works like phone shortcuts; spoken answers; landing page, console and simulator that read as one product from phone to desktop |
 | Potential Impact | Anyone with a feed, a sheet or an API can use it, not only developers; self-hosted at $0; keys never leave the server |
-| Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads |
+| Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads. Against the rules' Alexa+ examples: shortcuts are workflows across apps with conditions, and a conversation keeps context ("tell me more"). State across sessions, cards and MCP Apps are not built, so the pitch must not let it read as a basic wrapper |
 
 ## 5. Cost model
 
@@ -104,7 +122,8 @@ also be $0 and must stay up until judging ends on 2026-11-20. A Cloudflare Tunne
 from a personal computer would need that computer on for two months, so the plan
 is a free Render web service (DEPLOY_PLAN.md). It sleeps after 15 minutes without
 visitors and wakes on the next one, which takes about a minute. The hackathon
-provides no credits.
+offers $150 in AWS credits on request (§1), which only matter if it is hosted
+on AWS.
 
 ## 6. Docs map
 
@@ -160,7 +179,8 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
    rules also exclude anyone US law bars from receiving a prize. US sanctions on
    Myanmar target listed people and entities rather than the whole country, which
    suggests participation is allowed, but only Devpost can confirm it and say how
-   a prize would be paid. Ask Devpost support before Stage 9.
+   a prize would be paid. Ask Devpost support before Stage 9, or at the office
+   hours on 2026-10-06.
 2. **Hosting must last until 2026-11-20 (high).** A tunnel from a personal
    computer will not. The simulator stands down in `oauth` mode, so the hosted
    demo runs in `token` mode, and the console's token goes in the testing
@@ -176,11 +196,19 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 4. **Latency (medium).** Warm calls were 40–180 ms on 2026-09-12 and the cache is
    warmed at startup, but a cold GitHub fetch exceeds the Alexa+ budget of 500 ms.
    Not verifiable without a device.
-5. **Differentiation (medium).** Config-driven MCP servers exist. Pitch the three
+5. **Differentiation (medium).** Config-driven MCP servers exist, and the rules
+   call a basic MCP wrapper around an existing API obvious. Pitch the three
    separators in §2, never config-driven alone.
 6. **A public simulator on the hosted server (low).** Anyone with the link can
    ask about the demo data. The data is already public and every tool is
    read-only, but the hosted settings must keep private network access off.
+7. **Open Source mini challenge (medium).** The rules ask for "a new,
+   additional open-source project" or a contribution to a public repository,
+   alongside the primary track entry, with a contribution URL and a project
+   repository URL. Whether the entry's own new repository counts is unclear.
+   The rules ask for ambiguity to be raised in writing; ask Devpost with the
+   eligibility question. If it does not count, the fallback is a real
+   contribution to a public repository that the build depended on.
 
 Resolved: Alexa+ docs found and the simulated path confirmed (2026-09-12); remote
 auth built as OAuth 2.1 (2026-09-12); SDK Streamable HTTP server support confirmed
