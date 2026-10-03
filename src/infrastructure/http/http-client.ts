@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { SourceUnavailableError } from '../../domain/errors.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import { assertFetchable, type NetworkPolicy, type Resolver } from './network-guard.js';
+import { redactUrl } from './redact-url.js';
 import { TtlCache } from './ttl-cache.js';
 
 /**
@@ -71,17 +72,17 @@ export class HttpClient implements JsonFetcher, TextFetcher {
       const response = await this.fetchWithRetry(url, sourceId, { accept: 'application/json' }, 'follow');
 
       if (!response.ok) {
-        throw new SourceUnavailableError(sourceId, `${url} returned ${response.status}`);
+        throw new SourceUnavailableError(sourceId, `${redactUrl(url)} returned ${response.status}`);
       }
 
       let body: unknown;
       try {
         body = await response.json();
       } catch (cause) {
-        throw new SourceUnavailableError(sourceId, `${url} did not return valid JSON`, { cause });
+        throw new SourceUnavailableError(sourceId, `${redactUrl(url)} did not return valid JSON`, { cause });
       }
 
-      this.options.logger.debug('fetched', { url, sourceId, ms: Date.now() - started });
+      this.options.logger.debug('fetched', { url: redactUrl(url), sourceId, ms: Date.now() - started });
       return body as T;
     });
   }
@@ -110,29 +111,29 @@ export class HttpClient implements JsonFetcher, TextFetcher {
         if (response.status >= 300 && response.status < 400) {
           const location = response.headers.get('location');
           if (location === null) {
-            throw new SourceUnavailableError(sourceId, `${current} redirected without saying where to`);
+            throw new SourceUnavailableError(sourceId, `${redactUrl(current)} redirected without saying where to`);
           }
           current = new URL(location, current).toString();
           continue;
         }
 
         if (!response.ok) {
-          throw new SourceUnavailableError(sourceId, `${current} returned ${response.status}`);
+          throw new SourceUnavailableError(sourceId, `${redactUrl(current)} returned ${response.status}`);
         }
 
         const body = await this.readCapped(response, current, sourceId);
-        this.options.logger.debug('fetched', { url: current, sourceId, ms: Date.now() - started });
+        this.options.logger.debug('fetched', { url: redactUrl(current), sourceId, ms: Date.now() - started });
         return { body, contentType: response.headers.get('content-type'), url: current };
       }
 
-      throw new SourceUnavailableError(sourceId, `${url} redirected more than ${MAX_REDIRECTS} times`);
+      throw new SourceUnavailableError(sourceId, `${redactUrl(url)} redirected more than ${MAX_REDIRECTS} times`);
     });
   }
 
   private async readCapped(response: Response, url: string, sourceId: string): Promise<string> {
     const limit = this.options.maxBytes ?? DEFAULT_MAX_BYTES;
     const tooLarge = (): SourceUnavailableError =>
-      new SourceUnavailableError(sourceId, `${url} is larger than ${Math.round(limit / 1024 / 1024)} MB`);
+      new SourceUnavailableError(sourceId, `${redactUrl(url)} is larger than ${Math.round(limit / 1024 / 1024)} MB`);
 
     const declared = Number(response.headers.get('content-length'));
     if (Number.isFinite(declared) && declared > limit) throw tooLarge();
@@ -183,7 +184,7 @@ export class HttpClient implements JsonFetcher, TextFetcher {
       }
     }
 
-    throw new SourceUnavailableError(sourceId, `could not reach ${url}`, { cause: lastCause });
+    throw new SourceUnavailableError(sourceId, `could not reach ${redactUrl(url)}`, { cause: lastCause });
   }
 }
 

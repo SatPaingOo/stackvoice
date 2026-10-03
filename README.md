@@ -163,7 +163,8 @@ The CLI prints the same guesses with samples, then writes `config/apps/<id>.yml`
   New tools once the server picks it up: news_search, news_read, news_status
 ```
 
-The server watches `config/apps/` and reloads on its own.
+The server watches `config/apps/` and `config/shortcuts.yml`, and reloads on its
+own.
 
 ### Shortcuts
 
@@ -250,7 +251,7 @@ npm run build     # compile both into dist/
 Lint also enforces the dependency rule: code in `src/domain` and
 `src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
-On 2026-10-04, 640 unit tests and 38 browser tests passed.
+On 2026-10-04, 651 unit tests and 38 browser tests passed.
 
 ## Cost model
 

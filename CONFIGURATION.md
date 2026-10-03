@@ -447,7 +447,8 @@ Everything above just writes YAML, so you can write it yourself:
 
 ### Picking it up
 
-The server watches `config/apps/` and reloads when it changes. Each MCP session
+The server watches `config/apps/` and `config/shortcuts.yml`, and reloads when
+either changes. Each MCP session
 reads the registry when it connects, so the next conversation sees the new tools
 without a restart. A file that fails to parse is logged and ignored: the running
 server keeps the config it already validated rather than going dark.

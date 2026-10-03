@@ -213,7 +213,7 @@ async function main(): Promise<void> {
   // Adding an app should not mean restarting. Each MCP session reads the
   // registry when it connects, so reloading is enough for the next conversation
   // to see the new tools.
-  const watcher = new ConfigWatcher({ appsDir, logger, reload });
+  const watcher = new ConfigWatcher({ appsDir, shortcutsFile: shortcutsPath, logger, reload });
   watcher.start();
 
   const shutdown = (signal: string): void => {

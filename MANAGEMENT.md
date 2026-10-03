@@ -143,8 +143,9 @@ freshness is the newest date among their records.
 - Keys live in `config/secrets.yml`, written readable by its owner only, or in
   `STACKVOICE_SECRET_*` environment variables. App files hold references only.
 - Logs never include tokens, key values, file contents or the values a tool was
-  called with. At debug level each fetched URL is logged in full, so a key belongs
-  in a header, never in a URL's query string.
+  called with. Logs and error messages show a fetched address with its query
+  values hidden. A key still belongs in a header, never in a URL's query string:
+  there it is written into the app file as it is.
 
 ## 6. Designed but not built
 

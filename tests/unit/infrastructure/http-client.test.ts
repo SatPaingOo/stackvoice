@@ -170,3 +170,54 @@ describe('HttpClient.getText', () => {
     expect(response.body).toBe('café');
   });
 });
+
+describe('a key in the query string', () => {
+  const KEYED = 'https://api.example.com/v1/items?api_key=sk-live-123&page=2';
+
+  /** Keeps every debug line, so a test can look for the key in them. */
+  function recordingClient(fetchImpl: typeof fetch): { client: HttpClient; lines: string[] } {
+    const lines: string[] = [];
+    const logger: Logger = {
+      ...silentLogger,
+      debug: (message, fields) => lines.push(`${message} ${JSON.stringify(fields ?? {})}`),
+    };
+    const http = new HttpClient({
+      timeoutMs: 2000,
+      cache: new TtlCache(60_000),
+      logger,
+      fetch: fetchImpl,
+      resolver: publicResolver,
+    });
+    return { client: http, lines };
+  }
+
+  it('is left out of an error, which becomes the spoken lastError', async () => {
+    const { fetch } = fakeFetch({ [KEYED]: () => new Response('no', { status: 401 }) });
+
+    const error = await client(fetch)
+      .getText(KEYED, 'x')
+      .catch((caught: unknown) => caught as Error);
+
+    expect(error.message).toContain('https://api.example.com/v1/items?api_key=…&page=… returned 401');
+    expect(error.message).not.toContain('sk-live-123');
+  });
+
+  it('is left out of the debug log, while the request still carries it', async () => {
+    const { fetch, calls } = fakeFetch({ [KEYED]: () => new Response('{"items":[]}') });
+    const { client: http, lines } = recordingClient(fetch);
+
+    await http.getText(KEYED, 'x');
+
+    expect(calls[0]?.url).toBe(KEYED);
+    expect(lines.join('\n')).not.toContain('sk-live-123');
+    expect(lines.join('\n')).toContain('api_key=…');
+  });
+
+  it('is left out of a JSON error too', async () => {
+    const { fetch } = fakeFetch({});
+
+    await expect(client(fetch).getJson(KEYED, 'x')).rejects.toThrowError(
+      'https://api.example.com/v1/items?api_key=…&page=… returned 404',
+    );
+  });
+});

@@ -117,13 +117,14 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `http/http-client.ts` | — | Timeout, one retry, TTL cache keyed by URL and a header fingerprint; for links, a 5 MB cap and redirects followed by hand |
 | `http/network-guard.ts` | — | Refuses private, loopback and cloud metadata addresses on every redirect hop, including IPv4-mapped IPv6 |
 | `http/ttl-cache.ts` | — | In-memory cache, 300 s by default |
+| `http/redact-url.ts` | — | An address as logs and error messages show it: query values hidden, fragment dropped |
 | `config/yaml-config-store.ts` | ConfigStore | `config/apps/*.yml`; atomic write and backup |
 | `config/yaml-shortcut-store.ts` | ShortcutStore | A hand-writable block shorthand; still reads shortcuts written before flows |
 | `config/yaml-settings-store.ts` | SettingsStore | `config/settings.yml` |
 | `config/yaml-secret-store.ts` | SecretStore | `config/secrets.yml`, owner-readable only; `STACKVOICE_SECRET_*` wins |
 | `config/secret-headers.ts` | — | Fills `{{secret:NAME}}` into a request at the last moment, in memory |
 | `config/*.schema.ts` | — | zod schemas for every file |
-| `config/config-watcher.ts` | — | Reloads the registries when a file in `config/apps/` changes. Saves from the console reload directly |
+| `config/config-watcher.ts` | — | Reloads the registries when a file in `config/apps/` or `config/shortcuts.yml` changes. Saves from the console reload directly |
 | `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; tokens in memory |
 | `auth/attempt-limiter.ts` · `secret-compare.ts` | — | Wrong owner tokens counted per client address, one counter for the console sign-in, `/mcp` and the consent screen; owner tokens compared in constant time over SHA-256 digests |
 | `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint |
@@ -221,8 +222,8 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
   console turns that into "Block 3 › Then › 1".
 - **Logging:** structured JSON through the Logger port, with tool names, app ids
   and secret names as fields. Never tokens, key values, file contents or the
-  values a tool was called with. At debug level each fetched URL is logged in
-  full. A refused owner token is logged with the client address it was counted
+  values a tool was called with. At debug level each fetched URL is logged with
+  its query values hidden, as it is in every error message. A refused owner token is logged with the client address it was counted
   against, never with the token.
 - **Caching:** a TTL cache keyed by URL and a fingerprint of the request headers,
   300 s by default, warmed at startup so a tool call rarely waits on the network.
@@ -237,7 +238,7 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
 | presentation | Console API and sign-in, the auth guard on `/mcp`, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
 | end-to-end | Every page, the add-app and shortcut-builder dialogs, simulator voice and conversation | Playwright against the real server in the installed Edge, on a scratch copy of the config |
 
-On 2026-10-04, 640 unit tests and 38 browser tests passed.
+On 2026-10-04, 651 unit tests and 38 browser tests passed.
 
 ## 10. Directory structure
 
@@ -289,10 +290,10 @@ StackVoice/
   with English and Burmese values.
 - The simulator's intent planner is English phrasing rules and misreads questions
   outside those patterns.
-- A hand edit to `config/shortcuts.yml` is picked up only on restart or on the
-  next change in `config/apps/`, because the watcher watches that folder only.
-- A key placed in a URL's query string, rather than in a header, is not treated
-  as a secret: it is written into the app file and appears in debug logs.
+- A key placed in a URL's query string, rather than in a header, is not stored
+  as a secret: it is written into the app file, and the console's edit dialog
+  shows the address as saved to the signed-in owner. Logs, errors and spoken
+  answers show the address with every query value hidden.
 - Alexa+ account linking needs a statically registered OAuth client with a
   secret, all of Alexa's redirect URIs, and refresh tokens. The local
   authorization server supports only dynamic registration, in memory.
