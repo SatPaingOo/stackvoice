@@ -35,7 +35,7 @@ Served at `/console` when `console.enabled` is true.
 | Apps | Add an app in a dialog from any source, see every inferred field with a sample from the data, and correct a field by clicking a column. Edit, enable, disable or remove an app. Each card shows the source kind, health, freshness and the tools the app gives the assistant |
 | Shortcuts | Build a shortcut from blocks: phrases with slots, Ask, If and Otherwise, Say, Get, Set, Stop. **Try it** runs the draft with sample slot values and shows every block that ran |
 | Settings | Access mode and owner token, the public address, data sources, which pages are served, server options, and **saved keys** by name |
-| Sign-in | Asks for the owner token when the server is exposed beyond localhost |
+| Sign-in | Asks for the owner token when the server is exposed beyond localhost, and says how long to wait after too many wrong ones |
 
 A save reloads the registry at once, so new tools are live in the next
 conversation without a restart. Closing a dialog with unsaved changes asks first,
@@ -148,7 +148,7 @@ freshness is the newest date among their records.
 
 ## 6. Designed but not built
 
-| Feature | State on 2026-09-13 |
+| Feature | State on 2026-10-04 |
 |---|---|
 | Admin MCP tools, which would let the assistant change config by voice | Cut on 2026-09-12 when scope was set to core and simulator (FRAMEWORK.md §7). No tool can change config |
 | `stackvoice logs` | Not built. The server writes structured JSON logs to standard output |
@@ -156,4 +156,4 @@ freshness is the newest date among their records.
 
 ---
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-04

@@ -124,7 +124,7 @@ minutes have passed since its first wrong token. A right token clears the
 count. A request with no token at all does not count, because that is how a
 client learns it needs one. The counter lives in memory, so a restart clears it.
 
-`server.trusted_proxies` decides which address is counted:
+`server.trusted_proxies`, a whole number from 0 to 5, decides which address is counted:
 
 | Where the server runs | `trusted_proxies` | Why |
 |---|---|---|
@@ -543,4 +543,4 @@ each slot and lists every block that ran, before anything is saved.
 
 ---
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-04

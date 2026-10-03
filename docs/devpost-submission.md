@@ -16,7 +16,7 @@ official rules as checked on 2026-09-13.
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
 | Demo video | To record; see the outline below |
-| Try it | To host; see FRAMEWORK.md §7 Stage 7 |
+| Try it | To host; see DEPLOY_PLAN.md |
 
 ## About the project
 
@@ -65,7 +65,7 @@ call under the answer.
   user's behalf.
 - Shortcut flows as six fixed blocks and an interpreter, with no user code.
 - A console built from framework-free TypeScript component classes.
-- 605 unit tests and 38 browser tests on 2026-09-13.
+- 640 unit tests and 38 browser tests on 2026-10-04.
 
 ### Challenges we ran into
 

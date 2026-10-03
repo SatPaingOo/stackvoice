@@ -28,12 +28,13 @@ Companion: ARCHITECTURE.md (structure), CONFIGURATION.md (schemas).
 - **Classes = state + behavior that belongs together, with one responsibility.**
   `AppDefinition` owns its invariants (id format, unique ids) — a plain object
   can't, which is why we model it as a class/aggregate.
-- **Value objects for constrained fields:** `AppId`, `SourceType` — validated at
-  construction; invalid values cannot exist.
+- **Constrained fields are checked at construction:** `AppDefinition` checks its
+  id against `APP_ID_PATTERN`, and `DataSource` checks its location (http or
+  https only, no credentials, no `..`), so an invalid one cannot exist.
 - **Services are classes with constructor injection.** No `new` inside a service
   for a collaborator it should receive; no service locators.
 - **No anemic domain:** if a method expresses domain logic, put it on the entity
-  (`app.requiresSource(id)`, `app.enabledVerbs()`), not in a service.
+  (`app.primarySource()`, `app.enabledVerbs()`), not in a service.
 
 ## 3. SOLID checklist (concrete for this codebase)
 
@@ -86,7 +87,7 @@ presentation → application → domain  ← infrastructure (implements domain p
 |---|---|---|
 | Files (class per file) | `kebab-case.ts` | `app-definition.ts`, `github-repo.adapter.ts` |
 | Classes / entities | PascalCase | `AppDefinition`, `ManagementService` |
-| Functions / methods | camelCase, verb-first | `listApps()`, `generateToolSpecs()` |
+| Functions / methods | camelCase, verb-first | `listApps()`, `generate(apps, shortcuts)` |
 | Ports | noun role, no `I` prefix | `ConfigStore`, `DataSourceReader`, `Logger` |
 | Adapters | `<thing>.<role>.ts` | `yaml-config-store.ts`, `github-repo.adapter.ts` |
 | Test files | `*.test.ts` beside or in `tests/` mirroring `src/` | `tests/unit/application/management.service.test.ts` |
@@ -111,6 +112,8 @@ presentation → application → domain  ← infrastructure (implements domain p
   management mutation), `warn` (recoverable source errors), `error` (unhandled).
 - **Never log:** auth tokens, secrets, full user queries. Log tool *names* and
   arg *keys*, not values.
+- A refused owner token is logged with the client address it was counted
+  against, so a lockout can be traced, and never with the token itself.
 
 ## 9. Config handling
 
@@ -167,4 +170,4 @@ presentation → application → domain  ← infrastructure (implements domain p
 
 ---
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-04

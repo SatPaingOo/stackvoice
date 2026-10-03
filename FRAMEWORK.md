@@ -2,9 +2,10 @@
 
 **Ask your own stuff, not the internet.**
 
-Status: **built, preparing submission** (2026-09-13). The MCP server, OAuth,
-simulator, console, CLI, universal sources and shortcut flows are done. Hosting,
-the demo video and the Devpost submission remain.
+Status: **built, preparing submission** (2026-10-04). The MCP server, OAuth,
+simulator, console, CLI, universal sources and shortcut flows are done, and the
+server is hardened for hosting. Hosting, the demo video and the Devpost
+submission remain.
 
 ---
 
@@ -12,18 +13,18 @@ the demo video and the Devpost submission remain.
 
 Source: the hackathon's official rules, overview and dates pages on Devpost.
 
-| Requirement | What StackVoice does | State on 2026-09-13 |
+| Requirement | What StackVoice does | State on 2026-10-04 |
 |---|---|---|
 | A working MCP server, spec 2025-11-25 or later, over Streamable HTTP, **or** a simulated Alexa+ experience | Both: a real server, and a simulator that calls it as an MCP client | done |
 | The required technology imported and called at runtime, not only named | `@modelcontextprotocol/sdk` server and client, called in `src/` | done |
-| A public GitHub repository with all source, assets and run instructions, and an open-source license visible at the top | MIT, detected by GitHub. The repository is private until submission | **open** |
+| A public GitHub repository with all source, assets and run instructions, and an open-source license visible at the top | MIT, detected by GitHub. The repository is private until submission; its whole history was checked for secrets on 2026-10-04 and none were found | **open** |
 | A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission | Outline in [docs/devpost-submission.md](./docs/devpost-submission.md) | **open** |
 | A text description, the primary track and any mini challenge | Draft in docs/devpost-submission.md; Alexa+ track, Open Source mini challenge | drafted |
-| Product feedback on every Amazon tool, API or SDK used | Not written; to draw on FRICTION_LOG.md | **open** |
-| Free testing access for judges until the judging period ends, with credentials if anything is private | Needs a hosted server (§7 Stage 7) | **open** |
+| Product feedback on every Amazon tool, API or SDK used | Draft in docs/devpost-submission.md, to be checked against the author's own experience | drafted |
+| Free testing access for judges until the judging period ends, with credentials if anything is private | A free Render service in `token` mode, planned in [DEPLOY_PLAN.md](./DEPLOY_PLAN.md); not deployed | **open** |
 | Disclosure of work that existed before the submission period | information-hub predates it; see docs/devpost-submission.md | drafted |
 | All materials in English | Code, docs and pages are English | done |
-| Friction log, for up to a 10% bonus in Stage 2 judging | Three entries in FRICTION_LOG.md | in progress |
+| Friction log, for up to a 10% bonus in Stage 2 judging | Three entries in FRICTION_LOG.md, more drafted for review | in progress |
 
 **Dates.** Submissions 2026-08-31 10:15 PDT to **2026-10-23 12:00 PDT**. Judging
 2026-10-26 to 2026-11-20. Winners announced 2026-12-03.
@@ -86,11 +87,11 @@ The assistant does the understanding and chooses the tool. The server's job is
 well-described, focused tools that return speakable answers. Shortcuts are for
 the questions a person asks the same way every day.
 
-## 4. Judging map (revised 2026-09-13)
+## 4. Judging map (revised 2026-10-04)
 
 | Criterion | How StackVoice meets it |
 |---|---|
-| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a flow interpreter with a trace; clean layers; 605 unit and 38 browser tests on 2026-09-13 |
+| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; clean layers; 640 unit and 38 browser tests on 2026-10-04 |
 | Design | One box for any source, with every guess shown on real data; a shortcut builder that works like phone shortcuts; spoken answers; landing page, console and simulator that read as one product from phone to desktop |
 | Potential Impact | Anyone with a feed, a sheet or an API can use it, not only developers; self-hosted at $0; keys never leave the server |
 | Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads |
@@ -101,15 +102,17 @@ Everything $0: Node.js and the MCP SDK are open source, the demo data is public,
 speech uses browser APIs, and the demo video is recorded locally. Hosting must
 also be $0 and must stay up until judging ends on 2026-11-20. A Cloudflare Tunnel
 from a personal computer would need that computer on for two months, so the plan
-is an always-free cloud VM. The hackathon provides no credits.
+is a free Render web service (DEPLOY_PLAN.md). It sleeps after 15 minutes without
+visitors and wakes on the next one, which takes about a minute. The hackathon
+provides no credits.
 
 ## 6. Docs map
 
 README.md (entry) · FRAMEWORK.md (this) · RESEARCH.md · ARCHITECTURE.md ·
 CONFIGURATION.md · MANAGEMENT.md · CODING_STANDARDS.md · FRICTION_LOG.md ·
-docs/devpost-submission.md
+DEPLOY_PLAN.md · docs/devpost-submission.md
 
-## 7. Roadmap (revised 2026-09-13; submit target 2026-10-20, deadline 2026-10-23 12:00 PDT)
+## 7. Roadmap (revised 2026-10-04; submit target 2026-10-20, deadline 2026-10-23 12:00 PDT)
 
 ### Done
 
@@ -128,6 +131,8 @@ docs/devpost-submission.md
 | 5.3 — Dialog components | 2026-09-13 | Add and edit in dialogs built from typed client classes |
 | 5.4 — Shortcut flows | 2026-09-13 | Blocks, slots as tool inputs, simulator routing, block builder with Try it |
 | 6 — Docs and pitch | 2026-09-13 | Docs match the product; pitch and submission draft written |
+| 6.1 — Tooling | 2026-09-13 | ESLint with the layer rule, Prettier, Vitest 5; testing instructions checked from a fresh clone |
+| 6.2 — Hardening for hosting | 2026-10-04 | Simulator sessions closed after each call; a port that cannot be bound fails the start; wrong-token lockout and a Secure session cookie; history checked for secrets; dependency advisories cleared; deploy plan written |
 
 ### Remaining
 
@@ -149,7 +154,7 @@ docs/devpost-submission.md
   follow from the same claim: anyone, with whatever data they have, in their own
   words.
 
-## 8. Open risks (revised 2026-09-13)
+## 8. Open risks (revised 2026-10-04)
 
 1. **Eligibility (high).** Myanmar is not named among excluded places, but the
    rules also exclude anyone US law bars from receiving a prize. US sanctions on
@@ -159,7 +164,10 @@ docs/devpost-submission.md
 2. **Hosting must last until 2026-11-20 (high).** A tunnel from a personal
    computer will not. The simulator stands down in `oauth` mode, so the hosted
    demo runs in `token` mode, and the console's token goes in the testing
-   instructions.
+   instructions. The free Render service sleeps after 15 minutes without
+   visitors, and the wrong-token lockout depends on `server.trusted_proxies`
+   matching Render's proxy, which DEPLOY_PLAN.md §4 checks after the first
+   deploy.
 3. **Real Alexa+ untested (medium).** The Toolkit is US-only. The rules accept a
    simulated experience; the README and the video say plainly that it is one.
    Found on 2026-10-04: Alexa+ account linking needs a statically registered
@@ -180,4 +188,4 @@ auth built as OAuth 2.1 (2026-09-12); SDK Streamable HTTP server support confirm
 
 ---
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-04

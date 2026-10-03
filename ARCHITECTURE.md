@@ -125,6 +125,7 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `config/*.schema.ts` | — | zod schemas for every file |
 | `config/config-watcher.ts` | — | Reloads the registries when a file in `config/apps/` changes. Saves from the console reload directly |
 | `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; tokens in memory |
+| `auth/attempt-limiter.ts` · `secret-compare.ts` | — | Wrong owner tokens counted per client address, one counter for the console sign-in, `/mcp` and the consent screen; owner tokens compared in constant time over SHA-256 digests |
 | `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint |
 | `logging/pino.logger.ts` | Logger | Structured JSON |
 | `system-clock.ts` | — | The one place that reads the time |
@@ -221,7 +222,8 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
 - **Logging:** structured JSON through the Logger port, with tool names, app ids
   and secret names as fields. Never tokens, key values, file contents or the
   values a tool was called with. At debug level each fetched URL is logged in
-  full.
+  full. A refused owner token is logged with the client address it was counted
+  against, never with the token.
 - **Caching:** a TTL cache keyed by URL and a fingerprint of the request headers,
   300 s by default, warmed at startup so a tool call rarely waits on the network.
 
@@ -232,10 +234,10 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
 | domain | Invariants, flow parsing and validation, ranking | Plain unit tests, no I/O |
 | application | Management, catalog, planner, shortcut interpreter, conversation | Fake ports and an injected clock |
 | infrastructure | Format detection and parsing, network guard, inspectors, readers, YAML round trips, secrets | Fixture bodies, fake fetchers, temporary directories; no network |
-| presentation | Console API, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
+| presentation | Console API and sign-in, the auth guard on `/mcp`, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
 | end-to-end | Every page, the add-app and shortcut-builder dialogs, simulator voice and conversation | Playwright against the real server in the installed Edge, on a scratch copy of the config |
 
-On 2026-09-13, 605 unit tests and 38 browser tests passed.
+On 2026-10-04, 640 unit tests and 38 browser tests passed.
 
 ## 10. Directory structure
 
@@ -277,6 +279,7 @@ StackVoice/
 | Shortcut flows as six fixed blocks | User-written scripts or expressions | No code to sandbox, limits that can be checked on save, and a builder a non-developer can use |
 | Console browser code as framework-free TypeScript classes | React or another framework | No new dependency and no bundler; one extra `tsc` project gives types and components |
 | Server-rendered page frames with client dialogs | A single-page app with a client router | Every page stays linkable and reloadable with no router, and the landing page reads without script; only the forms need to be interactive |
+| One wrong-token counter per address, shared by every door that takes the owner token | A counter per door; a rate-limit library | All three doors check the same secret, so separate counters would triple a guesser's attempts. The counting is a few lines with no new dependency |
 
 ## 12. Known issues (2026-10-04)
 
@@ -300,4 +303,4 @@ StackVoice/
 
 ---
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-04

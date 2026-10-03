@@ -2,7 +2,7 @@
 
 **Turns your own feeds, APIs, spreadsheets, repositories and files into tools a voice assistant can call, and answers in sentences you can listen to.**
 
-**Status:** working, preparing submission · Amazon *Build, Ship, Shape* hackathon, Alexa+ track (deadline 2026-10-23 12:00 PDT) · last reviewed 2026-09-13
+**Status:** working, preparing submission · Amazon *Build, Ship, Shape* hackathon, Alexa+ track (deadline 2026-10-23 12:00 PDT) · last reviewed 2026-10-04
 
 > The assistant you already talk to can search the whole web, yet it cannot tell
 > you what is in your own feeds, spreadsheets and data projects. StackVoice is a
@@ -48,7 +48,7 @@ npm run dev
 ```
 
 `npm run dev` compiles the console's browser code into `dist/public`, then starts
-the server on http://localhost:8765. While changing files under
+the server on http://127.0.0.1:8765. While changing files under
 `src/presentation/web/client`, keep `npm run dev:client` running beside it.
 
 Out of the box it reads two live data projects of mine,
@@ -74,7 +74,7 @@ Every page adapts from a phone to a desktop and needs no CDN.
 
 ### Talking to it
 
-Open **http://localhost:8765/simulator** and ask:
+Open **http://127.0.0.1:8765/simulator** and ask:
 
 > "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more" · "News about AI"
 
@@ -101,7 +101,7 @@ claims, so a spreadsheet served as plain text or a feed without `.xml` in its
 name still works. A link to an ordinary web page is refused with a hint to look
 for its feed instead.
 
-**In a browser.** Open **http://localhost:8765/console**, click **Add an app**,
+**In a browser.** Open **http://127.0.0.1:8765/console**, click **Add an app**,
 and paste into the dialog. StackVoice finds the records, even when an API nests
 them inside its response, and shows every guess with a sample from your own data.
 Records with no title of their own get one built from their columns, so a row of
@@ -211,7 +211,9 @@ to the IPv6 address first.
 
 For anything beyond localhost, set `auth.mode` in `config/settings.yml`: `token`
 for one shared bearer token, or `oauth` for the full OAuth 2.1 + PKCE flow that
-Alexa+ requires. See [CONFIGURATION.md](./CONFIGURATION.md) §2.
+Alexa+ requires. Ten wrong tokens from one address lock it out for up to 15
+minutes. Behind a host's proxy, also set `server.trusted_proxies`. See
+[CONFIGURATION.md](./CONFIGURATION.md) §2.
 
 ## Architecture
 
@@ -248,7 +250,7 @@ npm run build     # compile both into dist/
 Lint also enforces the dependency rule: code in `src/domain` and
 `src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
-On 2026-09-13, 605 unit tests and 38 browser tests passed.
+On 2026-10-04, 640 unit tests and 38 browser tests passed.
 
 ## Cost model
 
@@ -288,4 +290,4 @@ MIT. See [LICENSE](./LICENSE).
 
 ---
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-04
