@@ -21,7 +21,7 @@ export interface McpLoopbackClientOptions {
  * only honest if the thing being demonstrated is the MCP server, transport,
  * auth and all. If the loopback client can drive it, so can Alexa+.
  *
- * A session is opened per request and closed after. Voice turns are seconds
+ * A session is opened per request and ended after. Voice turns are seconds
  * apart, and a fresh session each time keeps the simulator stateless.
  */
 export class McpLoopbackClient implements ToolCaller {
@@ -54,6 +54,9 @@ export class McpLoopbackClient implements ToolCaller {
       this.options.logger.warn('loopback call failed', { tool: name, reason: String(cause) });
       throw new SourceUnavailableError('mcp', `could not call ${name}`, { cause });
     } finally {
+      // Ends the session on the server too. Closing only the client left one
+      // session per question open on the server for as long as it ran.
+      await transport.terminateSession().catch(() => undefined);
       await client.close().catch(() => undefined);
     }
   }
