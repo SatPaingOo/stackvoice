@@ -17,7 +17,7 @@ const silentLogger: Logger = {
 };
 
 const settingsOn = (port: number): Settings => ({
-  server: { host: '127.0.0.1', port, logLevel: 'warn' },
+  server: { host: '127.0.0.1', port, logLevel: 'warn', trustedProxies: 0 },
   management: { cli: true },
   auth: { mode: 'none', token: '', publicUrl: '' },
   console: { enabled: false },

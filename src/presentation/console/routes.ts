@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import express, { type Express, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 
@@ -18,6 +18,8 @@ import type { SettingsStore } from '../../domain/ports/settings-store.js';
 import type { AuthMode, LogLevel, Settings } from '../../domain/settings.js';
 import { Shortcut, type ShortcutProps } from '../../domain/shortcut.js';
 import type { SourceProposal } from '../../domain/source-proposal.js';
+import { describeLockout, retryAfterSeconds, type AttemptLimiter } from '../../infrastructure/auth/attempt-limiter.js';
+import { sameSecret } from '../../infrastructure/auth/secret-compare.js';
 import { renderLandingPage } from '../web/landing.js';
 import { ASSETS_PATH } from '../web/layout.js';
 import { renderAppsPage } from './apps-page.js';
@@ -36,6 +38,8 @@ export interface ConsoleDeps {
   readonly logger: Logger;
   /** Empty means no sign-in: only ever the case when the server is bound to localhost. */
   readonly ownerToken: string;
+  /** Wrong sign-in tokens per address, shared with `/mcp` and the OAuth consent page. */
+  readonly attempts: AttemptLimiter;
   /** Reloads the registries so a save takes effect without a restart. */
   readonly reload: () => Promise<void>;
   /** The settings the process started with, and where to write changes. */
@@ -142,15 +146,37 @@ export function installConsole(app: Express, deps: ConsoleDeps): void {
     const body = req.body as { token?: unknown };
     const submitted = typeof body.token === 'string' ? body.token : '';
 
-    if (requiresLogin && !matches(deps.ownerToken, submitted)) {
-      res.status(401).json({ error: 'That token did not match auth.token in config/settings.yml.' });
-      return;
+    if (requiresLogin) {
+      const address = req.ip ?? 'unknown';
+      const waitMs = deps.attempts.retryAfterMs(address);
+      if (waitMs > 0) {
+        res
+          .status(429)
+          .set('Retry-After', retryAfterSeconds(waitMs))
+          .json({ error: describeLockout(waitMs) });
+        return;
+      }
+      if (!sameSecret(deps.ownerToken, submitted)) {
+        // An empty box is not a guess, so it does not count towards a lockout.
+        if (submitted !== '') {
+          deps.attempts.recordFailure(address);
+          deps.logger.warn('console sign-in refused: wrong owner token', { address });
+        }
+        res.status(401).json({ error: 'That token did not match auth.token in config/settings.yml.' });
+        return;
+      }
+      deps.attempts.recordSuccess(address);
     }
 
     const token = randomBytes(24).toString('base64url');
     sessions.set(token, Date.now() + SESSION_TTL_MS);
     res
-      .cookie(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'strict', maxAge: SESSION_TTL_MS })
+      .cookie(SESSION_COOKIE, token, {
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: reachedOverHttps(req),
+        maxAge: SESSION_TTL_MS,
+      })
       .json({ ok: true });
   });
 
@@ -425,7 +451,8 @@ function readSettings(body: unknown, previous: Settings): Settings {
       : previous.sources.allowPrivateNetwork;
 
   return {
-    server: { host, port, logLevel: logLevel as LogLevel },
+    // The page has no field for proxies: it is set once, in the file, where the server is hosted.
+    server: { host, port, logLevel: logLevel as LogLevel, trustedProxies: previous.server.trustedProxies },
     auth: { mode: mode as AuthMode, token, publicUrl },
     console: { enabled: (raw['console'] ?? {})['enabled'] !== false },
     simulator: { enabled: (raw['simulator'] ?? {})['enabled'] !== false },
@@ -668,10 +695,17 @@ function describeHeader(name: string, value: string): { name: string; prefix: st
   return { name, prefix: match[1] ?? '', secret: match[2] as string };
 }
 
-function matches(expected: string, actual: string): boolean {
-  const a = Buffer.from(expected);
-  const b = Buffer.from(actual);
-  return a.length === b.length && timingSafeEqual(a, b);
+/**
+ * True when the browser reached the server over https, so the session cookie can
+ * be marked Secure. A host such as Render or a tunnel ends https and forwards
+ * plain http, saying so in `X-Forwarded-Proto`. The header is read even when the
+ * proxy is not trusted: a forged one can only make the cookie stricter, and a
+ * browser on plain http then refuses to keep it.
+ */
+function reachedOverHttps(req: Request): boolean {
+  if (req.secure) return true;
+  const forwarded = req.header('x-forwarded-proto') ?? '';
+  return forwarded.split(',')[0]?.trim().toLowerCase() === 'https';
 }
 
 function readCookie(req: Request, name: string): string | null {

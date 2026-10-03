@@ -130,7 +130,13 @@ freshness is the newest date among their records.
   or `oauth` (OAuth 2.1 with PKCE, which Alexa+ requires). Either is enforced on
   every request to `/mcp`; `/healthz` stays open as a liveness probe.
 - In `token` or `oauth` mode the console asks for the owner token and keeps a
-  session cookie for twelve hours.
+  session cookie for twelve hours. The cookie is `HttpOnly`, `SameSite=Strict`,
+  and `Secure` whenever the page was reached over HTTPS.
+- Ten wrong owner tokens from one address lock that address out of the console
+  sign-in, `/mcp` and the consent screen for up to 15 minutes, even for the
+  right token. Behind a host's proxy, set `server.trusted_proxies` so each
+  visitor is counted on their own (CONFIGURATION.md §2).
+- Owner tokens are compared in constant time, over hashes of equal length.
 - In `oauth` mode the consent screen asks for the owner token, because a
   self-hosted server has one user and no identity provider. Tokens are held in
   memory, so a restart signs every client out.

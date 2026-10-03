@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 import type { OAuthRegisteredClientsStore } from '@modelcontextprotocol/sdk/server/auth/clients.js';
 import {
@@ -17,10 +17,13 @@ import type {
 import type { Response } from 'express';
 
 import type { Logger } from '../../domain/ports/logger.js';
+import { describeLockout, retryAfterSeconds, type AttemptLimiter } from './attempt-limiter.js';
 import { renderConsentPage } from './consent-page.js';
+import { sameSecret } from './secret-compare.js';
 
 const CODE_TTL_MS = 5 * 60 * 1000;
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
+const WRONG_TOKEN = 'That token did not match. Check auth.token in config/settings.yml.';
 
 interface PendingCode {
   readonly clientId: string;
@@ -42,6 +45,16 @@ export interface LocalOAuthProviderOptions {
   /** The secret the owner types on the consent screen. Empty means auto-approve. */
   readonly ownerToken: string;
   readonly logger: Logger;
+  /** Wrong owner tokens per address, shared with the other doors that take the token. */
+  readonly attempts: AttemptLimiter;
+}
+
+/** Why the consent page is shown instead of a redirect with a code. */
+interface Refusal {
+  readonly status: 200 | 429;
+  /** What the page says above the form; null on the first visit. */
+  readonly problem: string | null;
+  readonly retryAfterMs: number;
 }
 
 /** In-memory client registry. Self-hosted, single owner: a database would be ceremony. */
@@ -92,11 +105,13 @@ export class LocalOAuthProvider implements OAuthServerProvider {
   }
 
   async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
-    if (!this.ownerApproved(res)) {
+    const refusal = this.refuseConsent(res);
+    if (refusal !== null) {
+      if (refusal.retryAfterMs > 0) res.set('Retry-After', retryAfterSeconds(refusal.retryAfterMs));
       res
-        .status(200)
+        .status(refusal.status)
         .type('html')
-        .send(renderConsentPage(client, res.req.query, this.hasRetried(res)));
+        .send(renderConsentPage(client, res.req.query, refusal.problem));
       return;
     }
 
@@ -213,22 +228,28 @@ export class LocalOAuthProvider implements OAuthServerProvider {
     return pending;
   }
 
-  /** Compares the submitted owner token in constant time. */
-  private ownerApproved(res: Response): boolean {
-    if (this.options.ownerToken === '') return true;
+  /**
+   * Null when the owner approved. A locked-out address is refused before its
+   * token is looked at, and only a token actually submitted counts as a guess.
+   */
+  private refuseConsent(res: Response): Refusal | null {
+    if (this.options.ownerToken === '') return null;
+
+    const address = res.req.ip ?? 'unknown';
+    const waitMs = this.options.attempts.retryAfterMs(address);
+    if (waitMs > 0) return { status: 429, problem: describeLockout(waitMs), retryAfterMs: waitMs };
 
     const body = res.req.body as Record<string, unknown> | undefined;
     const submitted = typeof body?.['owner_token'] === 'string' ? (body['owner_token'] as string) : '';
-    if (submitted === '') return false;
+    if (submitted === '') return { status: 200, problem: null, retryAfterMs: 0 };
 
-    const expected = Buffer.from(this.options.ownerToken);
-    const actual = Buffer.from(submitted);
-    return expected.length === actual.length && timingSafeEqual(expected, actual);
-  }
+    if (!sameSecret(this.options.ownerToken, submitted)) {
+      this.options.attempts.recordFailure(address);
+      this.options.logger.warn('oauth consent refused: wrong owner token', { address });
+      return { status: 200, problem: WRONG_TOKEN, retryAfterMs: 0 };
+    }
 
-  /** True when the owner already submitted a token and it was wrong. */
-  private hasRetried(res: Response): boolean {
-    const body = res.req.body as Record<string, unknown> | undefined;
-    return typeof body?.['owner_token'] === 'string' && body['owner_token'] !== '';
+    this.options.attempts.recordSuccess(address);
+    return null;
   }
 }

@@ -11,8 +11,9 @@ export const settingsSchema = z.object({
       host: z.string().min(1).default('127.0.0.1'),
       port: z.number().int().min(1).max(65535).default(8765),
       log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+      trusted_proxies: z.number().int().min(0).max(5).default(0),
     })
-    .default({ host: '127.0.0.1', port: 8765, log_level: 'info' }),
+    .default({ host: '127.0.0.1', port: 8765, log_level: 'info', trusted_proxies: 0 }),
   management: z
     .object({
       cli: z.boolean().default(true),

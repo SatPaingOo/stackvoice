@@ -8,7 +8,9 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import express, { type Request, type RequestHandler, type Response } from 'express';
 
 import type { Settings } from '../../domain/settings.js';
+import { describeLockout, retryAfterSeconds, type AttemptLimiter } from '../../infrastructure/auth/attempt-limiter.js';
 import { LocalOAuthProvider } from '../../infrastructure/auth/local-oauth-provider.js';
+import { sameSecret } from '../../infrastructure/auth/secret-compare.js';
 import { installConsole, type ConsoleDeps } from '../console/routes.js';
 import { installSimulator, type SimulatorDeps } from '../simulator/routes.js';
 import { createMcpServer, type McpServerDeps } from './server-factory.js';
@@ -25,6 +27,8 @@ export interface HttpServerDeps extends McpServerDeps {
   readonly simulator: SimulatorDeps | null;
   /** Absent when the console is disabled. */
   readonly console: ConsoleDeps | null;
+  /** Wrong owner tokens per address, shared with the console's sign-in. */
+  readonly attempts: AttemptLimiter;
 }
 
 /**
@@ -42,6 +46,9 @@ export function createHttpServer(deps: HttpServerDeps): {
   listen(): Promise<HttpServer>;
 } {
   const app = express();
+  // Behind a host's proxy, the client's address is in X-Forwarded-For. Believing
+  // that header from anyone else would let a guesser choose a fresh address per try.
+  if (deps.settings.server.trustedProxies > 0) app.set('trust proxy', deps.settings.server.trustedProxies);
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false }));
 
@@ -141,10 +148,10 @@ function installAuth(app: express.Express, deps: HttpServerDeps): RequestHandler
   }
 
   if (auth.mode === 'token') {
-    return sharedTokenGuard(auth.token);
+    return sharedTokenGuard(auth.token, deps);
   }
 
-  const provider = new LocalOAuthProvider({ ownerToken: auth.token, logger: deps.logger });
+  const provider = new LocalOAuthProvider({ ownerToken: auth.token, logger: deps.logger, attempts: deps.attempts });
   const issuer = new URL(auth.publicUrl);
 
   app.use(
@@ -163,13 +170,36 @@ function installAuth(app: express.Express, deps: HttpServerDeps): RequestHandler
   });
 }
 
-/** Constant-time-ish shared bearer check for the simple mode. */
-function sharedTokenGuard(token: string): RequestHandler {
+/**
+ * The shared bearer check for `token` mode, compared in constant time.
+ *
+ * A request with no Authorization header is a client finding out that it needs
+ * one, so only a wrong token counts towards a lockout. A locked-out address is
+ * refused before its token is looked at.
+ */
+function sharedTokenGuard(token: string, deps: Pick<HttpServerDeps, 'attempts' | 'logger'>): RequestHandler {
   const expected = `Bearer ${token}`;
   return (req, res, next) => {
-    if (req.header('authorization') === expected) {
+    const address = req.ip ?? 'unknown';
+    const waitMs = deps.attempts.retryAfterMs(address);
+    if (waitMs > 0) {
+      res
+        .status(429)
+        .set('Retry-After', retryAfterSeconds(waitMs))
+        .json({ error: describeLockout(waitMs) });
+      return;
+    }
+
+    const submitted = req.header('authorization');
+    if (submitted !== undefined && sameSecret(expected, submitted)) {
+      deps.attempts.recordSuccess(address);
       next();
       return;
+    }
+
+    if (submitted !== undefined) {
+      deps.attempts.recordFailure(address);
+      deps.logger.warn('mcp request refused: wrong bearer token', { address });
     }
     res.status(401).set('WWW-Authenticate', 'Bearer realm="stackvoice"').json({ error: 'unauthorized' });
   };

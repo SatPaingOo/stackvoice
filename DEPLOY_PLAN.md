@@ -58,6 +58,7 @@ until then, with credentials if anything is private.
      host: 0.0.0.0
      port: 10000
      log_level: info
+     trusted_proxies: 1
 
    auth:
      mode: token
@@ -85,6 +86,11 @@ until then, with credentials if anything is private.
    this file over `config/settings.yml`, so the Settings page can still save
    until the next restart.
 
+   `trusted_proxies: 1` is there because every request reaches the server
+   through Render's proxy. Without it, wrong tokens from one person would lock
+   every visitor out. Whether Render needs 1 or more has not been checked; the
+   last check in §4 settles it.
+
 6. Deploy, then run the checks in §4.
 7. Optional: point a free uptime monitor at `/healthz` every 10 minutes from
    submission to 2026-11-20, so judges rarely meet a sleeping server. That keeps
@@ -103,8 +109,9 @@ simulator, so the hosted copy uses one shared token.
 - `/console` and its API ask for the token, and `/mcp` needs it as a bearer token.
 - Private network access stays off, so a pasted link cannot reach Render's
   internal network.
-- The console's session cookie is not marked `Secure`; Render serves HTTPS, but
-  this is recorded as a known issue in ARCHITECTURE.md §12.
+- Ten wrong tokens from one address lock it out of `/console` and `/mcp` for up
+  to 15 minutes. The console's session cookie is marked `Secure`, because
+  Render serves HTTPS and says so in `X-Forwarded-Proto`.
 
 ## 4. Checks after each deploy
 
@@ -116,6 +123,17 @@ curl -i https://<service-name>.onrender.com/mcp
 The first answers `{"ok":true,...}`. The second answers `401`. Then open
 `/simulator` and ask "Is my stack healthy?", and open `/console` and sign in with
 the token.
+
+After the first deploy, check which address the lockout counts:
+
+1. On `/console`, sign in once with a wrong token.
+2. In the service's logs on Render, find `console sign-in refused: wrong owner
+   token` and its `address`.
+3. Compare it with your own public address, as shown by any "what is my IP"
+   page. If they differ, raise `trusted_proxies` by one in the secret file,
+   redeploy, and repeat.
+
+A wrong token here uses one of your ten; the right one clears the count.
 
 ## 5. Testing instructions for the form
 

@@ -29,6 +29,7 @@ server:
   host: 127.0.0.1          # default localhost; set 0.0.0.0 behind a tunnel/proxy
   port: 8765
   log_level: info          # debug | info | warn | error
+  trusted_proxies: 0       # proxies in front of the server, such as a host's load balancer
 
 auth:
   mode: none               # none | token | oauth
@@ -112,6 +113,33 @@ Because StackVoice is self-hosted there is no identity provider to delegate to
 and only one user — you. The consent screen therefore asks for `auth.token`
 rather than a username and password. Tokens live in memory: restarting the
 server signs every client out.
+
+### Wrong tokens and proxies
+
+Three places take `auth.token`: the console's sign-in, `/mcp` in `token` mode,
+and the consent screen in `oauth` mode. They share one counter per client
+address. After 10 wrong tokens from one address, all three refuse that address
+with `429` and a `Retry-After` header, even for the right token, until 15
+minutes have passed since its first wrong token. A right token clears the
+count. A request with no token at all does not count, because that is how a
+client learns it needs one. The counter lives in memory, so a restart clears it.
+
+`server.trusted_proxies` decides which address is counted:
+
+| Where the server runs | `trusted_proxies` | Why |
+|---|---|---|
+| Reached directly, or on localhost | `0` | Anyone could send an `X-Forwarded-For` header and claim a new address on every guess, so none is believed |
+| Behind one proxy, such as a host's load balancer | `1` | Every request arrives from the proxy. Without this, one person guessing would lock out everyone |
+| Behind a chain of proxies | The number in the chain | Each proxy adds the address it received from |
+
+Each refused token is logged with the address that was counted. After
+deploying behind a proxy, send one wrong token and compare that address with
+your own public address. If it is not yours, raise `trusted_proxies` by one.
+
+The console's session cookie is marked `Secure` whenever the browser reached
+the server over HTTPS, including through a proxy that says so in
+`X-Forwarded-Proto`. Over plain HTTP on localhost it is not, because a browser
+would refuse to keep it.
 
 ## 3. App file — `config/apps/{id}.yml`
 

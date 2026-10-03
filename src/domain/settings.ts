@@ -9,6 +9,14 @@ export interface ServerSettings {
   readonly host: string;
   readonly port: number;
   readonly logLevel: LogLevel;
+  /**
+   * How many proxies sit in front of the server, such as a host's load balancer.
+   * Wrong owner tokens are counted per client address, and behind a proxy every
+   * request comes from the proxy's address unless the proxy's own header is
+   * believed. 0 believes no header: the right value for a server reached directly,
+   * because there anyone could send the header and pick a new address per guess.
+   */
+  readonly trustedProxies: number;
 }
 
 export interface ManagementSettings {

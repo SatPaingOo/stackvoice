@@ -5,6 +5,7 @@ server:
   host: 127.0.0.1          # default localhost; use 0.0.0.0 behind a tunnel/proxy
   port: 8765
   log_level: info          # debug | info | warn | error
+  trusted_proxies: 0       # proxies in front of the server; 0 when reached directly
 
 auth:
   # none  — localhost development only (default)

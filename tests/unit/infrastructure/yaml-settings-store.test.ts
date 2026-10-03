@@ -23,12 +23,20 @@ describe('YamlSettingsStore.load', () => {
   it('maps snake_case YAML onto the camelCase domain shape', async () => {
     const path = await fileWith(
       'ok.yml',
-      ['server:', '  host: 0.0.0.0', '  port: 9000', '  log_level: debug', 'cache:', '  ttl_seconds: 60'].join('\n'),
+      [
+        'server:',
+        '  host: 0.0.0.0',
+        '  port: 9000',
+        '  log_level: debug',
+        '  trusted_proxies: 1',
+        'cache:',
+        '  ttl_seconds: 60',
+      ].join('\n'),
     );
 
     const settings = await new YamlSettingsStore(path).load();
 
-    expect(settings.server).toEqual({ host: '0.0.0.0', port: 9000, logLevel: 'debug' });
+    expect(settings.server).toEqual({ host: '0.0.0.0', port: 9000, logLevel: 'debug', trustedProxies: 1 });
     expect(settings.cache.ttlSeconds).toBe(60);
   });
 
@@ -39,6 +47,8 @@ describe('YamlSettingsStore.load', () => {
 
     expect(settings.server.host).toBe('127.0.0.1');
     expect(settings.server.logLevel).toBe('info');
+    // No forwarded address is believed unless the file says a proxy is in front.
+    expect(settings.server.trustedProxies).toBe(0);
     expect(settings.management.cli).toBe(true);
     expect(settings.cache.ttlSeconds).toBe(300);
   });

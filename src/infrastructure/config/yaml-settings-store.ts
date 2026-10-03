@@ -46,6 +46,7 @@ export class YamlSettingsStore implements SettingsStore {
         host: raw.server.host,
         port: raw.server.port,
         logLevel: raw.server.log_level,
+        trustedProxies: raw.server.trusted_proxies,
       },
       management: {
         cli: raw.management.cli,
@@ -101,6 +102,7 @@ function render(settings: Settings): string {
     `  host: ${settings.server.host}          # 127.0.0.1 keeps it local; 0.0.0.0 behind a tunnel`,
     `  port: ${String(settings.server.port)}`,
     `  log_level: ${settings.server.logLevel}          # debug | info | warn | error`,
+    `  trusted_proxies: ${String(settings.server.trustedProxies)}       # proxies in front of the server; 0 when reached directly`,
     '',
     'auth:',
     '  # none  — localhost development only',

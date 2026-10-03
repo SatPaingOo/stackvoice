@@ -13,7 +13,7 @@ let path: string;
 const store = (): YamlSettingsStore => new YamlSettingsStore(path, join(dir, 'backups'));
 
 const settings = (over: Partial<Settings> = {}): Settings => ({
-  server: { host: '0.0.0.0', port: 9100, logLevel: 'warn' },
+  server: { host: '0.0.0.0', port: 9100, logLevel: 'warn', trustedProxies: 1 },
   auth: { mode: 'token', token: 'owner-secret', publicUrl: 'https://stackvoice.example.com' },
   console: { enabled: true },
   simulator: { enabled: false },

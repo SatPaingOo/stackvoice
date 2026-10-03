@@ -16,6 +16,7 @@ import { ToolRunner } from './application/tool-runner.service.js';
 import { StackVoiceError } from './domain/errors.js';
 import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
+import { AttemptLimiter } from './infrastructure/auth/attempt-limiter.js';
 import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
 import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspector.js';
 import { CompositeSourceInspector } from './infrastructure/adapters/composite.inspector.js';
@@ -40,6 +41,9 @@ import type { SimulatorDeps } from './presentation/simulator/routes.js';
 export const VERSION = '0.3.0';
 
 const FETCH_TIMEOUT_MS = 8000;
+// Ten wrong owner tokens per address, then a wait of up to fifteen minutes.
+const WRONG_TOKENS_ALLOWED = 10;
+const WRONG_TOKEN_WINDOW_MS = 15 * 60 * 1000;
 
 /**
  * Composition root. The only place that knows every concrete class: it builds
@@ -142,6 +146,9 @@ async function main(): Promise<void> {
     );
   }
 
+  // One counter for every door that takes the owner token, so each door does not add its own ten guesses.
+  const attempts = new AttemptLimiter({ maxFailures: WRONG_TOKENS_ALLOWED, windowMs: WRONG_TOKEN_WINDOW_MS });
+
   const console_: ConsoleDeps | null = settings.console.enabled
     ? {
         management: new ManagementService(store, inspector, logger, shortcutStore),
@@ -154,6 +161,7 @@ async function main(): Promise<void> {
         // console is as reachable as the config file itself and a sign-in adds
         // nothing. The moment the server is exposed, it asks for the token.
         ownerToken: settings.auth.mode === 'none' ? '' : settings.auth.token,
+        attempts,
         reload,
         settings,
         settingsStore,
@@ -173,6 +181,7 @@ async function main(): Promise<void> {
     settings,
     simulator,
     console: console_,
+    attempts,
   });
   const server = await http_.listen();
 

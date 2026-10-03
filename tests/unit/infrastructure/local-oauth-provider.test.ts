@@ -12,6 +12,7 @@ import type { Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Logger } from '../../../src/domain/ports/logger.js';
+import { AttemptLimiter } from '../../../src/infrastructure/auth/attempt-limiter.js';
 import { LocalOAuthProvider } from '../../../src/infrastructure/auth/local-oauth-provider.js';
 
 const silentLogger: Logger = {
@@ -30,13 +31,20 @@ class FakeResponse {
   status_ = 0;
   body = '';
   redirectedTo: string | null = null;
-  readonly req: { query: Record<string, string>; body: Record<string, unknown> };
+  readonly headers: Record<string, string> = {};
+  readonly req: { query: Record<string, string>; body: Record<string, unknown>; ip: string };
 
-  constructor(submittedToken?: string) {
+  constructor(submittedToken?: string, ip = '203.0.113.7') {
     this.req = {
       query: { client_id: 'c', response_type: 'code' },
       body: submittedToken === undefined ? {} : { owner_token: submittedToken },
+      ip,
     };
+  }
+
+  set(name: string, value: string): this {
+    this.headers[name.toLowerCase()] = value;
+    return this;
   }
 
   status(code: number): this {
@@ -80,7 +88,18 @@ const params = (over: Partial<AuthorizationParams> = {}): AuthorizationParams =>
 });
 
 const makeProvider = (ownerToken = OWNER_TOKEN): LocalOAuthProvider =>
-  new LocalOAuthProvider({ ownerToken, logger: silentLogger });
+  new LocalOAuthProvider({
+    ownerToken,
+    logger: silentLogger,
+    attempts: new AttemptLimiter({ maxFailures: 3, windowMs: 15 * 60 * 1000 }),
+  });
+
+/** Submits the owner token on the consent page and returns the response. */
+const consent = async (provider: LocalOAuthProvider, token?: string, ip?: string): Promise<FakeResponse> => {
+  const res = new FakeResponse(token, ip);
+  await provider.authorize(client, params(), res.asExpress());
+  return res;
+};
 
 /** Runs the consent step and returns the issued authorization code. */
 const grantCode = async (provider: LocalOAuthProvider, over: Partial<AuthorizationParams> = {}): Promise<string> => {
@@ -159,6 +178,43 @@ describe('authorize', () => {
     await makeProvider('').authorize(client, params(), res.asExpress());
 
     expect(res.redirectedTo).toContain('code=');
+  });
+});
+
+describe('authorize: wrong owner tokens', () => {
+  it('locks the address out after too many wrong tokens, even for the right one', async () => {
+    const provider = makeProvider();
+    for (const guess of ['one', 'two', 'three']) expect((await consent(provider, guess)).status_).toBe(200);
+
+    const locked = await consent(provider, OWNER_TOKEN);
+
+    expect(locked.status_).toBe(429);
+    expect(locked.headers['retry-after']).toBe('900');
+    expect(locked.body).toContain('Too many wrong tokens from this address. Try again in 15 minutes.');
+    expect(locked.redirectedTo).toBeNull();
+  });
+
+  it('lets the address try again once the window has passed', async () => {
+    const provider = makeProvider();
+    for (const guess of ['one', 'two', 'three']) await consent(provider, guess);
+
+    vi.advanceTimersByTime(15 * 60 * 1000);
+
+    expect((await consent(provider, OWNER_TOKEN)).redirectedTo).toContain('code=');
+  });
+
+  it('does not lock out another address', async () => {
+    const provider = makeProvider();
+    for (const guess of ['one', 'two', 'three']) await consent(provider, guess);
+
+    expect((await consent(provider, OWNER_TOKEN, '198.51.100.20')).redirectedTo).toContain('code=');
+  });
+
+  it('does not count opening the page as a guess', async () => {
+    const provider = makeProvider();
+    for (let i = 0; i < 5; i += 1) await consent(provider);
+
+    expect((await consent(provider, OWNER_TOKEN)).redirectedTo).toContain('code=');
   });
 });
 

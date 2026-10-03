@@ -16,6 +16,7 @@ import type { SourceInspector, SourceTarget } from '../../../src/domain/ports/so
 import type { Settings } from '../../../src/domain/settings.js';
 import type { Shortcut } from '../../../src/domain/shortcut.js';
 import type { SourceProposal } from '../../../src/domain/source-proposal.js';
+import { AttemptLimiter } from '../../../src/infrastructure/auth/attempt-limiter.js';
 import { YamlConfigStore } from '../../../src/infrastructure/config/yaml-config-store.js';
 import { YamlSecretStore } from '../../../src/infrastructure/config/yaml-secret-store.js';
 import { installConsole, type ConsoleDeps } from '../../../src/presentation/console/routes.js';
@@ -34,7 +35,7 @@ const silentLogger: Logger = {
 };
 
 const SETTINGS: Settings = {
-  server: { host: '127.0.0.1', port: 8765, logLevel: 'warn' },
+  server: { host: '127.0.0.1', port: 8765, logLevel: 'warn', trustedProxies: 1 },
   management: { cli: true },
   auth: { mode: 'none', token: '', publicUrl: '' },
   console: { enabled: true },
@@ -47,6 +48,7 @@ const PROJECTS = 'https://api.example.com/v1/projects';
 
 let base: string;
 let stop: () => Promise<void>;
+let baseDeps: ConsoleDeps;
 let secrets: YamlSecretStore;
 let inspected: SourceTarget[];
 let savedSettings: Settings[];
@@ -90,7 +92,7 @@ beforeEach(async () => {
     },
   };
 
-  const deps = {
+  baseDeps = {
     management: new ManagementService(
       new YamlConfigStore(join(root, 'apps'), join(root, 'backups')),
       inspector,
@@ -103,6 +105,7 @@ beforeEach(async () => {
     shortcuts: {},
     logger: silentLogger,
     ownerToken: '',
+    attempts: new AttemptLimiter({ maxFailures: 3, windowMs: 60_000 }),
     reload: async () => {},
     settings: SETTINGS,
     settingsStore: {
@@ -122,6 +125,11 @@ beforeEach(async () => {
     ),
   } as unknown as ConsoleDeps;
 
+  await serve(baseDeps);
+});
+
+/** Serves the console with these deps on a fresh port. */
+async function serve(deps: ConsoleDeps): Promise<void> {
   const app = express();
   app.use(express.json());
   installConsole(app, deps);
@@ -129,7 +137,7 @@ beforeEach(async () => {
   await new Promise<void>((resolve) => server.once('listening', () => resolve()));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   stop = () => new Promise<void>((resolve) => server.close(() => resolve()));
-});
+}
 
 afterEach(async () => {
   await stop();
@@ -169,6 +177,72 @@ const urlApp = (location: Record<string, unknown>, label = 'Projects') => ({
 
 const firstApp = async (): Promise<AppBody> =>
   (await call<{ apps: AppBody[] }>('GET', '/console/api/apps')).json.apps[0] as AppBody;
+
+describe('sign-in', () => {
+  const OWNER_TOKEN = 'owner-secret';
+
+  // The limiter in the base deps allows three wrong tokens per window.
+  beforeEach(async () => {
+    await stop();
+    await serve({ ...baseDeps, ownerToken: OWNER_TOKEN });
+  });
+
+  const signIn = (token: string, headers: Record<string, string> = {}): Promise<globalThis.Response> =>
+    fetch(`${base}/console/api/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: JSON.stringify({ token }),
+    });
+
+  it('refuses a wrong token', async () => {
+    const response = await signIn('guess');
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('locks the address out after too many wrong tokens, even for the right one', async () => {
+    for (const guess of ['one', 'two', 'three']) expect((await signIn(guess)).status).toBe(401);
+
+    const locked = await signIn(OWNER_TOKEN);
+
+    expect(locked.status).toBe(429);
+    expect(Number(locked.headers.get('retry-after'))).toBeGreaterThan(0);
+    expect(((await locked.json()) as { error: string }).error).toMatch(/Too many wrong tokens.*1 minute\./);
+    expect(locked.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('does not count an empty box as a guess', async () => {
+    for (let i = 0; i < 5; i += 1) expect((await signIn('')).status).toBe(401);
+
+    expect((await signIn(OWNER_TOKEN)).status).toBe(200);
+  });
+
+  it('clears the count when the right token arrives', async () => {
+    for (const guess of ['one', 'two']) await signIn(guess);
+    expect((await signIn(OWNER_TOKEN)).status).toBe(200);
+    for (const guess of ['three', 'four']) await signIn(guess);
+
+    expect((await signIn(OWNER_TOKEN)).status).toBe(200);
+  });
+
+  it('marks the session cookie Secure when the browser came over https', async () => {
+    const response = await signIn(OWNER_TOKEN, { 'x-forwarded-proto': 'https' });
+
+    const cookie = response.headers.get('set-cookie') ?? '';
+    expect(cookie).toMatch(/^stackvoice_console=/);
+    expect(cookie).toContain('; Secure');
+    expect(cookie).toContain('; HttpOnly');
+    expect(cookie).toContain('; SameSite=Strict');
+  });
+
+  it('leaves Secure off over plain http, where a browser would not keep the cookie', async () => {
+    const response = await signIn(OWNER_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('set-cookie')).not.toContain('Secure');
+  });
+});
 
 describe('keys', () => {
   it('stores a key and lists its name, never its value', async () => {
@@ -334,6 +408,12 @@ describe('settings: data sources', () => {
     expect(saved.status).toBe(200);
     expect(saved.json.restartRequired).toBe(true);
     expect(savedSettings[0]?.sources).toEqual({ allowPrivateNetwork: true, dataDir: 'exports' });
+  });
+
+  it('keeps the proxy count, which the page has no field for', async () => {
+    await call('PUT', '/console/api/settings', body({ dataDir: 'data', allowPrivateNetwork: false }));
+
+    expect(savedSettings[0]?.server.trustedProxies).toBe(1);
   });
 
   it.each(['config', 'config/data', '..', '../elsewhere', '.', '/etc', 'C:/Users'])(

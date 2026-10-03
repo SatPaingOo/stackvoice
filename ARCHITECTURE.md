@@ -295,9 +295,8 @@ StackVoice/
   authorization server supports only dynamic registration, in memory.
 - In `token` mode the simulator's API is open: it calls `/mcp` with the token on
   the visitor's behalf, so anyone with the link can run the read-only tools.
-- Nothing limits repeated guesses at the owner token on the console sign-in or
-  the OAuth consent screen.
-- The console's session cookie is not marked `Secure`, even behind HTTPS.
+- Wrong owner tokens are counted per address in memory. A guesser with many
+  addresses gets ten guesses from each, and a restart clears every count.
 
 ---
 
