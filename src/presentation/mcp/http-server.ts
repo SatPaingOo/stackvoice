@@ -117,8 +117,12 @@ export function createHttpServer(deps: HttpServerDeps): {
     listen(): Promise<HttpServer> {
       const { host, port } = deps.settings.server;
       return new Promise((resolve, reject) => {
-        const server = app.listen(port, host, () => resolve(server));
-        server.once('error', reject);
+        // Express 5 calls this with the error when the port cannot be bound. Treating
+        // every call as success logged "listening" and then exited quietly with code 0.
+        const server = app.listen(port, host, (error?: Error) => {
+          if (error === undefined) resolve(server);
+          else reject(error);
+        });
       });
     },
   };
