@@ -161,6 +161,19 @@ describe('authorize', () => {
     expect(res.redirectedTo).toBeNull();
   });
 
+  it('keeps the authorization parameters on the page it shows again after a posted wrong token', async () => {
+    const res = new FakeResponse('wrong');
+    // A browser posts the form: the parameters arrive in the body, the query is empty.
+    res.req.query = {};
+    res.req.body = { client_id: 'c', response_type: 'code', owner_token: 'wrong' };
+
+    await makeProvider().authorize(client, params(), res.asExpress());
+
+    expect(res.body).toContain('<input type="hidden" name="client_id" value="c">');
+    expect(res.body).toContain('<input type="hidden" name="response_type" value="code">');
+    expect(res.body).not.toContain('value="wrong"');
+  });
+
   it('redirects with a code and preserves state once approved', async () => {
     const res = new FakeResponse(OWNER_TOKEN);
 

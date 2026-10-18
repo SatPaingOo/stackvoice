@@ -57,6 +57,19 @@ interface Refusal {
   readonly retryAfterMs: number;
 }
 
+/**
+ * The authorization parameters as the request carried them: in the query when
+ * the page is first opened, in the body once the consent form is posted. Read
+ * from the query alone, a page shown again after a wrong token would post
+ * nothing back but the token.
+ */
+function carriedParameters(res: Response): Record<string, unknown> {
+  return {
+    ...((res.req.query ?? {}) as Record<string, unknown>),
+    ...((res.req.body ?? {}) as Record<string, unknown>),
+  };
+}
+
 /** In-memory client registry. Self-hosted, single owner: a database would be ceremony. */
 class MemoryClientsStore implements OAuthRegisteredClientsStore {
   private readonly clients = new Map<string, OAuthClientInformationFull>();
@@ -111,7 +124,7 @@ export class LocalOAuthProvider implements OAuthServerProvider {
       res
         .status(refusal.status)
         .type('html')
-        .send(renderConsentPage(client, res.req.query, refusal.problem));
+        .send(renderConsentPage(client, carriedParameters(res), refusal.problem));
       return;
     }
 
