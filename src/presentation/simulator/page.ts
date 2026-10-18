@@ -160,6 +160,8 @@ const SIMULATOR_CSS = `
            font: 12.5px var(--mono); color: var(--muted); }
   .trace b { color: var(--ink-soft); font-weight: 600; }
   .trace.err .dot { background: var(--bad); }
+  .view { display: block; width: min(88%, 620px); height: 96px; border: 1px solid var(--line); border-radius: 14px;
+          background: var(--panel); box-shadow: var(--shadow); }
 
   .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
           background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(12px);
@@ -218,6 +220,56 @@ const SIMULATOR_SCRIPT = `
     if (cls) node.className = cls;
     if (text !== undefined) node.textContent = text;
     return node;
+  }
+
+  // ---- answer card (MCP Apps host) -------------------------------------------
+
+  // The view a tool offers runs in a sandboxed iframe with an opaque origin and
+  // the spec's restrictive default policy: no network, nothing loaded from outside.
+  // It talks to this page only through postMessage, as JSON-RPC.
+  var VIEW_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src data:; connect-src 'none'";
+
+  function showView(view, args) {
+    var frame = document.createElement('iframe');
+    frame.className = 'view';
+    frame.title = 'Answer card';
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.srcdoc = view.html.replace(/<head>/i, '<head><meta http-equiv="Content-Security-Policy" content="' + VIEW_CSP + '">');
+
+    function post(message) {
+      if (frame.contentWindow) frame.contentWindow.postMessage(message, '*');
+    }
+
+    window.addEventListener('message', function (event) {
+      if (event.source !== frame.contentWindow) return;
+      var message = event.data;
+      if (!message || message.jsonrpc !== '2.0') return;
+      if (message.method === 'ui/initialize') {
+        var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        post({ jsonrpc: '2.0', id: message.id, result: {
+          protocolVersion: '2026-01-26',
+          hostInfo: { name: 'StackVoice simulator', version: '1.0.0' },
+          hostCapabilities: {},
+          hostContext: {
+            theme: dark ? 'dark' : 'light',
+            displayMode: 'inline',
+            availableDisplayModes: ['inline'],
+            containerDimensions: { maxHeight: 420 },
+            platform: 'web',
+            locale: navigator.language
+          }
+        } });
+      } else if (message.method === 'ui/notifications/initialized') {
+        post({ jsonrpc: '2.0', method: 'ui/notifications/tool-input', params: { arguments: args } });
+        post({ jsonrpc: '2.0', method: 'ui/notifications/tool-result', params: view.result });
+      } else if (message.method === 'ui/notifications/size-changed' && message.params && message.params.height) {
+        frame.style.height = Math.min(420, Math.ceil(message.params.height)) + 'px';
+      } else if (message.id !== undefined && message.method) {
+        // Links, follow-up messages and display modes are not offered by this host.
+        post({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: 'Not supported by this host' } });
+      }
+    });
+    return frame;
   }
 
   // ---- state ---------------------------------------------------------------
@@ -462,6 +514,7 @@ const SIMULATOR_SCRIPT = `
       .then(function (turn) {
         pending.innerHTML = '';
         pending.appendChild(make('div', 'bubble', turn.spoken));
+        if (turn.view) pending.appendChild(showView(turn.view, turn.trace ? turn.trace.args : {}));
         if (turn.trace) {
           var line = make('div', 'trace' + (turn.trace.isError ? ' err' : ''));
           line.appendChild(make('span', 'dot ok'));

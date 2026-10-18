@@ -29,6 +29,7 @@ let endpoint: string;
 const opened: string[] = [];
 const closed: string[] = [];
 const live = new Map<string, StreamableHTTPServerTransport>();
+const advertised: Record<string, unknown>[] = [];
 
 beforeEach(async () => {
   opened.length = 0;
@@ -65,6 +66,21 @@ beforeEach(async () => {
     mcp.registerTool('ping', { description: 'Answers pong.' }, async () => ({
       content: [{ type: 'text', text: 'pong' }],
     }));
+    // A tool with an MCP Apps view, and the view itself.
+    mcp.registerTool(
+      'cards',
+      { description: 'Answers with a view.', _meta: { ui: { resourceUri: 'ui://test/card' } } },
+      async () => ({
+        content: [{ type: 'text', text: 'Two entries.' }],
+        structuredContent: { items: [{ key: 'a' }, { key: 'b' }] },
+      }),
+    );
+    mcp.registerResource('card', 'ui://test/card', { mimeType: 'text/html;profile=mcp-app' }, async (uri) => ({
+      contents: [{ uri: uri.href, mimeType: 'text/html;profile=mcp-app', text: '<!doctype html><p>card</p>' }],
+    }));
+    mcp.server.oninitialized = () => {
+      advertised.push(mcp.server.getClientCapabilities() ?? {});
+    };
     await mcp.connect(transport);
     await transport.handleRequest(req, res, req.body);
   });
@@ -95,6 +111,36 @@ describe('McpLoopbackClient', () => {
 
     expect(outcome.spoken).toBe('pong');
     expect(outcome.isError).toBe(false);
+  });
+
+  it('fetches the view a tool links to, with the result the view will be given', async () => {
+    const client = new McpLoopbackClient({ endpoint, bearerToken: null, logger: silentLogger });
+
+    const outcome = await client.callTool('cards', {});
+
+    expect(outcome.view).toEqual({
+      resourceUri: 'ui://test/card',
+      html: '<!doctype html><p>card</p>',
+      result: {
+        content: [{ type: 'text', text: 'Two entries.' }],
+        structuredContent: { items: [{ key: 'a' }, { key: 'b' }] },
+      },
+    });
+  });
+
+  it('offers no view for a tool without one', async () => {
+    const client = new McpLoopbackClient({ endpoint, bearerToken: null, logger: silentLogger });
+
+    expect((await client.callTool('ping', {})).view).toBeNull();
+  });
+
+  it('tells the server it can show MCP Apps views', async () => {
+    const client = new McpLoopbackClient({ endpoint, bearerToken: null, logger: silentLogger });
+    advertised.length = 0;
+
+    await client.callTool('ping', {});
+
+    expect(JSON.stringify(advertised)).toContain('io.modelcontextprotocol/ui');
   });
 
   it('ends the session it opened, so questions do not pile up sessions on the server', async () => {

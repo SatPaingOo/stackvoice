@@ -75,7 +75,7 @@ export class ToolRunner {
     const label = this.deps.registry.get(appId).label;
     return {
       spoken: shapeSearchResults(label, items, params),
-      structured: { items: [...items] },
+      structured: { items: [...items], app: { id: appId, label } },
     };
   }
 
@@ -93,14 +93,18 @@ export class ToolRunner {
   private async runRead(appId: string, args: Readonly<Record<string, unknown>>): Promise<ToolOutput> {
     const key = text(args['key']);
     const label = this.deps.registry.get(appId).label;
+    const app = { id: appId, label };
     if (key === undefined) {
-      return { spoken: `Tell me which entry from your ${label} you mean.`, structured: { found: false, item: null } };
+      return {
+        spoken: `Tell me which entry from your ${label} you mean.`,
+        structured: { found: false, item: null, app },
+      };
     }
 
     const item = await this.deps.read.read(appId, key);
     return {
       spoken: item === null ? `Your ${label} has no entry with that key.` : shapeItem(item),
-      structured: { found: item !== null, item },
+      structured: { found: item !== null, item, app },
     };
   }
 

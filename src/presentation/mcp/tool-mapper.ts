@@ -9,6 +9,7 @@ import { MAX_SLOT_LENGTH } from '../../domain/flow.js';
 import { SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX } from '../../domain/item.js';
 import type { Logger } from '../../domain/ports/logger.js';
 import type { ToolSpec } from '../../domain/tool-spec.js';
+import { ANSWER_CARD_TOOL_META } from './answer-card.js';
 
 export interface ToolMapperDeps {
   readonly runner: ToolRunner;
@@ -33,6 +34,9 @@ const itemShape = {
   region: z.string().nullable(),
   url: z.string().nullable(),
 };
+
+/** Which app an answer came from, so a screen can title it. */
+const appShape = { id: z.string(), label: z.string() };
 
 const sourceHealthShape = {
   sourceId: z.string(),
@@ -102,6 +106,7 @@ export class ToolMapper {
         inputSchema: {
           app: z.string().optional().describe('The id of one app to ask about. Leave it out to hear about every app.'),
         },
+        _meta: ANSWER_CARD_TOOL_META,
       },
       async (args) =>
         this.guard(spec.name, async () => {
@@ -132,7 +137,8 @@ export class ToolMapper {
             .default(SEARCH_LIMIT_DEFAULT)
             .describe('How many entries to return, at most ' + String(SEARCH_LIMIT_MAX) + '.'),
         },
-        outputSchema: { items: z.array(z.object(itemShape)) },
+        outputSchema: { items: z.array(z.object(itemShape)), app: z.object(appShape) },
+        _meta: ANSWER_CARD_TOOL_META,
       },
       async (args) =>
         this.guard(spec.name, async () => {
@@ -154,7 +160,8 @@ export class ToolMapper {
         inputSchema: {
           key: z.string().min(1).describe('The key of the entry, as returned by the matching search tool.'),
         },
-        outputSchema: { found: z.boolean(), item: z.object(itemShape).nullable() },
+        outputSchema: { found: z.boolean(), item: z.object(itemShape).nullable(), app: z.object(appShape) },
+        _meta: ANSWER_CARD_TOOL_META,
       },
       async (args) =>
         this.guard(spec.name, async () => {

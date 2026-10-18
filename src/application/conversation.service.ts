@@ -1,4 +1,4 @@
-import type { ToolCaller } from '../domain/ports/tool-caller.js';
+import type { ToolCaller, ToolView } from '../domain/ports/tool-caller.js';
 import type { AppRegistryService } from './app-registry.service.js';
 import { IntentPlanner, type PlannerApp, type PlannerContext, type PlannerShortcut } from './intent-planner.js';
 import type { ShortcutRegistryService } from './shortcut-registry.service.js';
@@ -21,6 +21,8 @@ export interface Turn {
   readonly trace: TurnTrace | null;
   /** Carried into the next turn so "tell me more" works. */
   readonly context: PlannerContext;
+  /** What a screen would show beside the answer, when the tool offers a view. */
+  readonly view: ToolView | null;
 }
 
 /**
@@ -43,7 +45,7 @@ export class ConversationService {
     const plan = this.planner.plan(request.utterance, apps, request.context, this.plannerShortcuts());
 
     if (plan.kind === 'unclear') {
-      return { spoken: plan.spoken, trace: null, context: request.context };
+      return { spoken: plan.spoken, trace: null, context: request.context, view: null };
     }
 
     const outcome = await this.caller.callTool(plan.call.tool, plan.call.args);
@@ -61,6 +63,7 @@ export class ConversationService {
       // previous app's key behind, so "tell me more" looked the wrong entry up
       // in the wrong app.
       context: nextContext(plan.appId, outcome.structured, request.context),
+      view: outcome.view,
     };
   }
 
