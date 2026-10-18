@@ -395,7 +395,9 @@ experience.
 
 ## Gallery images
 
-Seven 2400x1600 PNGs (3:2, as Devpost suggests) in `../StackVoice-video/gallery`:
+Eight 2400x1600 PNGs (3:2, as Devpost suggests) in `../StackVoice-video/gallery`:
 the landing page, the simulator with three answers and their tool calls, the
 apps page, the add dialog with its guesses, the shortcut builder's blocks and
-Try it, and "what's new" before and after a new idea arrives.
+Try it, "what's new" before and after a new idea arrives, and Claude Code
+running the "ideas about" shortcut and answering from it. The last is Claude
+Code's own terminal output, recorded and drawn as it stood.
