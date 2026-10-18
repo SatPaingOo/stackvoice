@@ -236,7 +236,7 @@ classes. Details, key decisions and known issues are in
 | [MANAGEMENT.md](./MANAGEMENT.md) | The console and CLI, and the safety rules behind both |
 | [CODING_STANDARDS.md](./CODING_STANDARDS.md) | Where this project's rules differ from the defaults |
 | [FRICTION_LOG.md](./FRICTION_LOG.md) | Where Amazon's tooling fought the build |
-| [docs/devpost-submission.md](./docs/devpost-submission.md) | Draft text for the hackathon submission and the demo video outline |
+| [docs/devpost-submission.md](./docs/devpost-submission.md) | Draft text for the hackathon submission, and what the demo video shows |
 | [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) | A ready plan for a hosted copy on a free Render service, not used for the submission |
 
 ## Development

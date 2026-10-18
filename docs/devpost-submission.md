@@ -15,7 +15,7 @@ official rules as checked on 2026-10-04.
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
-| Demo video | To record; see the outline below |
+| Demo video | Recorded 2026-10-18 (2:25); upload it, then put the link here. See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
@@ -116,22 +116,35 @@ The submission period began 2026-08-31 10:15 PDT.
 | [eventpulse](https://github.com/SatPaingOo/eventpulse) | 2026-09-03 | A separate project, used only as demo data |
 | [information-hub](https://github.com/SatPaingOo/information-hub) | 2026-08-13, before the period | A separate project, used only as demo data. Not part of this entry |
 
-## Demo video outline
+## Demo video
 
-Under 3 minutes, in English, public on YouTube or Vimeo. The rules require
-footage of the project working, and forbid third-party trademarks and copyrighted
-music without permission. Say on screen that the Alexa+ experience is simulated.
+Recorded on 2026-10-18 from the production build, driven by a script rather
+than by hand: 2 minutes 25 seconds, 1920x1080, with captions burned in and the
+simulator's spoken answers as the only sound. The recorder, the build script
+and the files live outside this repository, in `../StackVoice-video`. Upload it
+to YouTube or Vimeo as public; the rules require one or the other.
 
-| Time | Show | Say |
+| Time | Scene | What it shows |
 |---|---|---|
-| 0:00–0:15 | The landing page | "My assistant can search the internet, but not my own data." |
-| 0:15–0:50 | The simulator: "Is my stack healthy?", "What did you find about AI in my library?", "Tell me more" | That this is a simulated Alexa+ client calling a real MCP server; point at the tool call under each answer |
-| 0:50–1:30 | The console: add a source you own, such as a CSV in the data folder or eventpulse; fix one guess by clicking a column; save | "No spec, no code. Paste it, check it, save." |
-| 1:30–2:15 | The shortcut builder: "news about {topic}" with an If; Try it; then ask it by voice | That the slot becomes a tool input a real assistant fills |
-| 2:15–2:40 | The tool list in an MCP client showing the `topic` input; the OAuth metadata endpoint | Spec 2025-11-25, Streamable HTTP, OAuth 2.1 with PKCE |
-| 2:40–2:55 | The repository | Self-hosted, $0, MIT |
+| 0:00 | Landing page | The idea, and how sources reach the assistant |
+| 0:09 | Console | Adding `video-ideas.csv` from the data folder: every guess with an example, the missing date fixed by clicking a column, the read tool switched on, saved |
+| 0:34 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more", each with the tool call under the answer |
+| 1:13 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
+| 1:56 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
+| 2:09 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
+| 2:18 | End card | The repository address, MIT, self-hosted, $0 |
 
-Keep news sites, other companies' logos and their headlines off screen.
+What the rules ask of it, and how it answers:
+
+- **The simulated experience is clear.** Both simulator scenes carry a
+  "Simulated Alexa+ experience" label, and a caption says it is a real MCP
+  client calling the server.
+- **No third-party trademarks or music.** The data searched on screen is a CSV
+  of the author's own video ideas. The landing page is cut before its example
+  names a news site, and the library and market apps, whose records name other
+  companies, are not searched. There is no music.
+- **The answers' voice** is Windows' built-in Zira voice, standing in for the
+  browser's speech, which the recording cannot capture.
 
 ## Testing instructions
 
@@ -329,5 +342,9 @@ experience.
    stops being listenable, and how tool descriptions are used to route a
    request. StackVoice had to guess at both. **Nice-to-have.**
 
-## Still to write
-- **Gallery images** for the project page.
+## Gallery images
+
+Six 2400x1600 PNGs (3:2, as Devpost suggests) in `../StackVoice-video/gallery`:
+the landing page, the simulator with three answers and their tool calls, the
+apps page, the add dialog with its guesses, and the shortcut builder's blocks and
+Try it.
