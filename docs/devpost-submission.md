@@ -274,48 +274,48 @@ because an authorization code flow needs a person at a browser.
 
 ## Product feedback
 
-Draft for the required product feedback field. Change anything that does not
-match your own experience before submitting.
+Draft for the required product feedback field, rewritten on 2026-10-19 to say
+plainly that no Amazon developer tool could be used. Confirm the last answer,
+which is the author's own call, before submitting.
 
-**What I used, and for what.** The Alexa+ MCP Toolkit documentation, meaning the
-overview, the quickstart and the account linking page, told me which transport,
-auth and latency requirements the server had to meet. The open MCP spec
-2025-11-25 and the MCP TypeScript SDK are what the server is built on. The
-hackathon's simulated Alexa+ path is how the project is demonstrated, because
-the Toolkit is a preview open to select partners only. I did not run the
-`alexa-ai` CLI or link a device.
+**Which tools, APIs and SDKs I used, and for what.** None of Amazon's, in
+practice. The Alexa+ MCP Toolkit, its CLI and its web simulator are a preview for
+select partners, so there was nothing an entrant could install or call.
+StackVoice is built on the open MCP specification 2025-11-25 and the MCP
+TypeScript SDK, to the requirements on the Toolkit's public overview and
+quickstart pages, and it is demonstrated through the hackathon's simulated
+Alexa+ path. I never ran the `alexa-ai` CLI or linked a device.
 
-**What worked well.** Building to the open MCP standard meant any MCP client
-could test the server, so nothing Alexa-specific stood in the way of the core.
-The quickstart is concrete about Streamable HTTP, PKCE with S256, the metadata
-endpoint, the 401 challenge and the 500 ms budget. Allowing a simulated Alexa+
-experience let an entrant without Toolkit access take part at all.
+**What worked well.**
+- The open standard. Any MCP client could test the server, so nothing
+  Alexa-specific stood in the way of building the core.
+- The public quickstart is concrete about what a server must do: Streamable
+  HTTP, PKCE with S256, the metadata endpoint, the 401 challenge and the 500 ms
+  budget.
+- Accepting a simulated experience, and the FAQ saying so plainly, let an entrant
+  without access take part at all.
 
 **What needs work.**
-- The track description did not link the MCP Toolkit pages, which took a week
-  to find.
-- Requirements are spread across pages. Auth and latency appear only in the
-  quickstart, and the fact that Alexa+ links only to a statically registered
-  OAuth client appears only on the account linking page. MCP spec 2025-11-25
-  allows that, but the MCP SDK's own authorization router registers clients
-  dynamically, so a server built from it cannot be linked until that page is
-  found.
-- There is no guidance on writing tools for a voice surface: how long a result
-  can be before it stops being listenable, or how descriptions are used to route.
-- The pages I worked from, the Toolkit overview and quickstart, gave US
-  availability as the limit. That the tools are a preview for select partners
-  only, with no way for a hackathon entrant to get access, I learned from the
-  hackathon FAQ, which says the setup pages often leave it out.
-- Without access, routing, spoken answers and real latency could not be
-  checked against Alexa+ itself.
+- Access. An entrant has no way to try an add-on with Alexa+, even text-only, so
+  routing, spoken answers and real latency were never checked against Alexa+
+  itself.
+- Who can use the tools. The setup pages gave US availability as the limit; that
+  the tools are partner-only came from the hackathon FAQ, which notes the setup
+  pages often leave it out.
+- Requirements in one place. The client registration Alexa+ needs, a
+  pre-registered OAuth client, is stated only on the account linking page, while
+  the MCP SDK's own authorization router registers clients dynamically. The
+  track description did not link the Toolkit pages at all.
+- Guidance for voice. Nothing says how long a tool result can be before it stops
+  being listenable, or how tool descriptions are used to route a request.
 
-**Onboarding.** The open-standard half was quick: the server answered over
-Streamable HTTP with OAuth on the first day of coding. The Alexa-specific half
-was slow, because each hard requirement had to be found on a different page.
+**Onboarding (zero to hello world).** On Alexa+ there was no hello world, since
+access is partner-only. On the open standard it was quick: the server answered
+over Streamable HTTP, with OAuth, on the first day of building.
 
-**Would I build with it again?** Yes for MCP as the way to give an assistant
-hands. For Alexa+ itself, once the Toolkit opens beyond its partner preview and
-its requirements are on one page.
+**Would I build with these again?** Yes for MCP, as the way to give an assistant
+hands on one's own data. For Alexa+, yes once an entrant can actually try an
+add-on and its requirements are on one page.
 
 ## Open Source mini challenge
 
