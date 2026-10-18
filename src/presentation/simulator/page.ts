@@ -89,7 +89,7 @@ function buildSuggestions(apps: readonly SimulatorAppSummary[], shortcutPhrases:
     suggestions.push(`What's my ${phrase}?`);
   }
   if (searchable[1] !== undefined) {
-    suggestions.push(`Anything on Iran in my ${searchable[1].label.toLowerCase()}?`);
+    suggestions.push(`Anything on gold in my ${searchable[1].label.toLowerCase()}?`);
   }
   suggestions.push('Tell me more');
   return suggestions;
