@@ -33,7 +33,7 @@ mine.
 StackVoice is a self-hosted MCP server that gives the assistant you already talk
 to hands on your own data. It is not a wrapper around one API. A wrapper exposes
 an API it was written for, as it is; StackVoice starts from whatever data you
-have, with no spec, and adds four things a wrapper does not.
+have, with no spec, and adds five things a wrapper does not.
 
 - **Any source becomes tools, with no spec and no code.** Paste an RSS or Atom
   feed, a JSON API, a CSV or published Google Sheet, a GitHub repository, or a
@@ -49,6 +49,9 @@ have, with no spec, and adds four things a wrapper does not.
   app, check the answer with If and Otherwise, and Say something. The slot
   becomes an input the assistant fills, and Try it shows every block that ran.
   Six fixed blocks, so there is no user code to sandbox.
+- **A card for a screen.** Results also link to an MCP Apps view, so a host
+  with a screen can show the entries behind the spoken answer. The simulator
+  shows it under each answer, acting as an MCP Apps host.
 - **It remembers across conversations.** "What's new?" means since you last
   asked: StackVoice keeps the newest entry it reported for each app, across
   conversations and restarts, and counts only what arrived after it.
@@ -77,8 +80,12 @@ the answer.
 - Shortcut flows as six fixed blocks and an interpreter, with no user code.
 - "What's new" as one remembered date per app, in a small file that survives a
   restart.
+- The answer card as an MCP Apps view (spec 2026-01-26), written without the SDK:
+  the view and the simulator's host side speak the extension's JSON-RPC over
+  `postMessage`, and the view runs in a sandboxed iframe that loads nothing
+  from the network.
 - A console built from framework-free TypeScript component classes.
-- 673 unit tests and 38 browser tests on 2026-10-18.
+- 679 unit tests and 39 browser tests on 2026-10-19.
 
 ### Challenges we ran into
 
@@ -117,7 +124,8 @@ sentences and not an array, only showed up by building a client and listening.
 
 - Onboarding to real Alexa+ once the MCP Toolkit opens beyond its partner preview.
 - Statically registered OAuth clients, which Alexa+ account linking requires.
-- Cards and MCP Apps, so an answer can show on a screen as well as be heard.
+- Trying the answer card in other MCP Apps hosts, and on Alexa+ devices with a
+  screen once that is possible.
 - Reading more than one source per app.
 - Pages and answers in Burmese as well as English.
 

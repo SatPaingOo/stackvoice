@@ -110,10 +110,10 @@ the questions a person asks the same way every day.
 
 | Criterion | How StackVoice meets it |
 |---|---|
-| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; state that survives conversations and restarts; clean layers; 673 unit and 38 browser tests on 2026-10-18 |
-| Design | One box for any source, with every guess shown on real data; a shortcut builder that works like phone shortcuts; spoken answers; landing page, console and simulator that read as one product from phone to desktop |
+| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; state that survives conversations and restarts; an MCP Apps view for screens; clean layers; 679 unit and 39 browser tests on 2026-10-19 |
+| Design | One box for any source, an answer card a screen can show beside the spoken answer, with every guess shown on real data; a shortcut builder that works like phone shortcuts; spoken answers; landing page, console and simulator that read as one product from phone to desktop |
 | Potential Impact | Anyone with a feed, a sheet or an API can use it, not only developers; self-hosted at $0; keys never leave the server |
-| Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads. Against the rules' Alexa+ examples: shortcuts are workflows across apps with conditions, a conversation keeps context ("tell me more"), and `whats_new` keeps state across sessions. Cards, MCP Apps, Agent Skills and purchasing are not built, so the pitch leads with why it is not a basic wrapper |
+| Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads. Against the rules' Alexa+ examples: shortcuts are workflows across apps with conditions, a conversation keeps context ("tell me more"), `whats_new` keeps state across sessions, and results come with an MCP Apps card for a screen. Purchasing is not built, and Agent Skills are the track's other path rather than a feature; the pitch leads with why it is not a basic wrapper |
 
 ## 5. Cost model
 
@@ -151,6 +151,7 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 | 6.1 — Tooling | 2026-09-13 | ESLint with the layer rule, Prettier, Vitest 5; testing instructions checked from a fresh clone |
 | 6.2 — Hardening for hosting | 2026-10-04 | Simulator sessions closed after each call; a port that cannot be bound fails the start; wrong-token lockout and a Secure session cookie; history checked for secrets; dependency advisories cleared; deploy plan written |
 | 6.3 — What's new | 2026-10-18 | `whats_new`: what arrived since the owner last asked, remembered across conversations and restarts; demo video and gallery |
+| 6.4 — Answer card | 2026-10-19 | An MCP Apps view (spec 2026-01-26) linked from search, read and `whats_new`, shown by the simulator as an MCP Apps host; written without the SDK |
 
 ### Remaining
 
@@ -218,4 +219,4 @@ auth built as OAuth 2.1 (2026-09-12); SDK Streamable HTTP server support confirm
 
 ---
 
-Last reviewed: 2026-10-18
+Last reviewed: 2026-10-19

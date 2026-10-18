@@ -28,6 +28,9 @@
   tools for it.
 - **Answers are spoken, not dumped.** A speaker cannot read a JSON array aloud.
   Every tool result comes back as a sentence or two a person can listen to.
+- **A card for a screen.** Search, read and "what's new" results also link to
+  an MCP Apps view, so a host with a screen can show the entries behind the
+  spoken answer. The simulator shows it under each answer.
 - **It remembers what it told you.** "What's new?" means since you last asked,
   across conversations and restarts: StackVoice keeps the newest entry it
   reported for each app and counts only what arrived after it.
@@ -256,7 +259,7 @@ npm run build     # compile both into dist/
 Lint also enforces the dependency rule: code in `src/domain` and
 `src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
-On 2026-10-18, 673 unit tests and 38 browser tests passed.
+On 2026-10-19, 679 unit tests and 39 browser tests passed.
 
 ## Cost model
 
@@ -270,6 +273,8 @@ stay on your server.
 - **Not run on a real Alexa+ device.** The Alexa+ MCP Toolkit is a preview open to select partners only. The
   server meets the Toolkit's published transport and auth requirements, but the
   end-to-end proof is the simulator, not a device.
+- **The answer card has only been tried in the simulator,** which acts as an
+  MCP Apps host. Whether Alexa+ renders MCP Apps views is not public.
 - **The simulator's understanding is rules, not a model.** It matches phrasings
   and shortcut phrases in English. On a real device, the assistant does that part.
 - **Read-only.** Nothing is ever written back to a source.

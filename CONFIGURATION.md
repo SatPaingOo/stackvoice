@@ -212,6 +212,15 @@ again.
 Each shortcut `name` → one tool `{snake_case(name)}` that runs its blocks (§7.5). Each `{slot}` in its
 phrases becomes a required text input on that tool.
 
+### The answer card (MCP Apps)
+
+`{id}_search`, `{id}_read` and `whats_new` also link their results to a view,
+`ui://stackvoice/answer-card`, following the MCP Apps extension (spec
+2026-01-26). A host with a screen that supports MCP Apps fetches it with
+`resources/read` and shows the entries behind the spoken answer: titles, dates,
+topics and summaries. A host without MCP Apps ignores it and keeps the text.
+The card loads nothing from the network and needs no configuration.
+
 Tool descriptions are **generated from the app's `label`/`description`** so the
 assistant knows *when* to call them ("Use when the user asks about their
 deep-dive library, e.g. 'what did you find about AI this week?'").

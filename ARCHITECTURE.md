@@ -130,7 +130,7 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; tokens in memory |
 | `auth/attempt-limiter.ts` · `secret-compare.ts` | — | Wrong owner tokens counted per client address, one counter for the console sign-in, `/mcp` and the consent screen; owner tokens compared in constant time over SHA-256 digests |
 | `state/json-seen-store.ts` | SeenStore | `config/seen.json`, written atomically; a missing or damaged file reads as empty |
-| `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint |
+| `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint. It says it can show MCP Apps views, and fetches the view a tool links to |
 | `logging/pino.logger.ts` | Logger | Structured JSON |
 | `system-clock.ts` | — | The one place that reads the time |
 
@@ -138,13 +138,13 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 
 | Face | Files | Responsibility |
 |---|---|---|
-| MCP server | `mcp/http-server.ts`, `mcp/server-factory.ts`, `mcp/tool-mapper.ts` | Streamable HTTP sessions and the three auth modes; one `McpServer` per session from the catalog; `ToolSpec` to a registration with zod input and output schemas, a shortcut's slots becoming required inputs; the one place an error becomes a tool result |
+| MCP server | `mcp/http-server.ts`, `mcp/server-factory.ts`, `mcp/tool-mapper.ts`, `mcp/answer-card.ts` | Streamable HTTP sessions and the three auth modes; one `McpServer` per session from the catalog; `ToolSpec` to a registration with zod input and output schemas, a shortcut's slots becoming required inputs; the one place an error becomes a tool result; the answer card, an MCP Apps view that search, read and `whats_new` results link to |
 | CLI | `cli.ts`, `cli/commands.ts` | Management from a terminal |
 | Web design system | `web/theme.ts`, `web/layout.ts`, `web/components-css.ts` | Shared tokens, page shell and component styles, so every page reads as one product |
 | Landing | `web/landing.ts` | The idea in ten seconds, with live numbers from the running stack |
 | Web console | `console/routes.ts` and one page file per route | JSON API over `ManagementService` and the stores, plus server-rendered page frames |
 | Web client | `web/client/`, compiled by `tsconfig.client.json` to `dist/public`, served at `/assets` | Browser components as classes with no framework: `Modal`, `ConfirmDialog`, form controls, and per-screen forms such as `AppFormModal`. Each screen's entry file is its composition root. Forms depend on gateway interfaces such as `AppsGateway`, never on `fetch`. A new source type is a new `LocationEditor`; a new kind of block is one editor class chosen in `createBlockEditor`, and an If gets its branches from a `FlowContext`, so no editor imports another |
-| Simulator | `simulator/routes.ts`, `simulator/page.ts` | The simulated Alexa+ page; drives the server through the loopback MCP client |
+| Simulator | `simulator/routes.ts`, `simulator/page.ts` | The simulated Alexa+ page; drives the server through the loopback MCP client, and acts as an MCP Apps host for the answer card |
 
 ## 4. Multi-app design
 
@@ -241,7 +241,7 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
 | presentation | Console API and sign-in, the auth guard on `/mcp`, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
 | end-to-end | Every page, the add-app and shortcut-builder dialogs, simulator voice and conversation | Playwright against the real server in the installed Edge, on a scratch copy of the config |
 
-On 2026-10-18, 673 unit tests and 38 browser tests passed.
+On 2026-10-19, 679 unit tests and 39 browser tests passed.
 
 ## 10. Directory structure
 
@@ -285,6 +285,7 @@ StackVoice/
 | Console browser code as framework-free TypeScript classes | React or another framework | No new dependency and no bundler; one extra `tsc` project gives types and components |
 | Server-rendered page frames with client dialogs | A single-page app with a client router | Every page stays linkable and reloadable with no router, and the landing page reads without script; only the forms need to be interactive |
 | "What's new" remembered as one date per app, in a file | Remembering each entry seen; keeping it in memory | One date per app is enough to count what is newer, stays tiny however large a feed grows, and survives a restart, which a judge or a real owner would expect of "since I last asked" |
+| The MCP Apps view written by hand, without the `ext-apps` SDK | The official `ext-apps` package | Its current version needs MCP SDK 2 and zod 4, and moving the server to them days before the deadline was not worth the risk. The wire protocol is a few JSON-RPC messages over `postMessage`, which the spec shows without an SDK |
 | One wrong-token counter per address, shared by every door that takes the owner token | A counter per door; a rate-limit library | All three doors check the same secret, so separate counters would triple a guesser's attempts. The counting is a few lines with no new dependency |
 
 ## 12. Known issues (2026-10-04)
@@ -304,9 +305,15 @@ StackVoice/
   authorization server supports only dynamic registration, in memory.
 - In `token` mode the simulator's API is open: it calls `/mcp` with the token on
   the visitor's behalf, so anyone with the link can run the read-only tools.
+- The simulator renders the answer card in an iframe sandboxed to an opaque
+  origin, with the spec's default content policy. The MCP Apps spec asks a web
+  host to go through a sandbox proxy on a separate origin instead; the
+  simulator does not. The card itself has only been tried in the simulator,
+  not in another MCP Apps host, and whether Alexa+ renders MCP Apps is not
+  public.
 - Wrong owner tokens are counted per address in memory. A guesser with many
   addresses gets ten guesses from each, and a restart clears every count.
 
 ---
 
-Last reviewed: 2026-10-18
+Last reviewed: 2026-10-19
