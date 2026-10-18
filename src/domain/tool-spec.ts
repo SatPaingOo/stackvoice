@@ -3,7 +3,7 @@
  * config; the MCP layer maps them onto SDK registrations. Nothing here knows
  * about the MCP SDK or JSON Schema.
  */
-export type ToolVerb = 'search' | 'read' | 'status' | 'stack_status' | 'shortcut';
+export type ToolVerb = 'search' | 'read' | 'status' | 'stack_status' | 'whats_new' | 'shortcut';
 
 export interface ToolSpec {
   readonly name: string;

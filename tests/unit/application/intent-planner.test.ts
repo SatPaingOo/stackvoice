@@ -94,7 +94,34 @@ describe('search intents', () => {
   });
 
   it('asks for the latest when the question has no subject left', () => {
-    expect(call(planner.plan('what is new?', apps)).args).toEqual({ limit: 3 });
+    expect(call(planner.plan('what is the latest?', apps)).args).toEqual({ limit: 3 });
+  });
+});
+
+describe('IntentPlanner: what is new since last time', () => {
+  it.each(["What's new?", 'what is new', 'Anything new since I last asked?', 'anything new since last time'])(
+    'asks whats_new about every app for "%s"',
+    (said) => {
+      expect(call(planner.plan(said, apps))).toEqual({ tool: 'whats_new', args: {} });
+    },
+  );
+
+  it('narrows whats_new to the app the person named', () => {
+    expect(call(planner.plan("What's new in my market intelligence?", apps))).toEqual({
+      tool: 'whats_new',
+      args: { app: 'markets' },
+    });
+  });
+
+  it('takes a lead-in only as whole words, so "show" inside "showdown" leaves the subject alone', () => {
+    expect(call(planner.plan('gold showdown', apps)).args).toEqual({ query: 'gold showdown', limit: 3 });
+  });
+
+  it('still searches when the question has a subject', () => {
+    expect(call(planner.plan('anything new about gold', apps))).toEqual({
+      tool: 'library_search',
+      args: { query: 'gold', limit: 3 },
+    });
   });
 });
 

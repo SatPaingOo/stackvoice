@@ -25,7 +25,10 @@ export class ToolCatalogService {
       },
     ];
 
-    for (const app of apps.filter((candidate) => candidate.enabled)) {
+    const enabled = apps.filter((candidate) => candidate.enabled);
+    if (enabled.length > 0) specs.push(whatsNewSpec(enabled));
+
+    for (const app of enabled) {
       for (const verb of app.enabledVerbs()) {
         specs.push(this.specFor(app, verb));
       }
@@ -99,6 +102,27 @@ export class ToolCatalogService {
       phrases: [],
     };
   }
+}
+
+/** The one tool that remembers between conversations: what the owner was already told. */
+function whatsNewSpec(apps: readonly AppDefinition[]): ToolSpec {
+  const ids = apps.map((app) => app.id);
+  const example = apps[0] === undefined ? '' : ` or "what's new in my ${apps[0].label}?"`;
+  return {
+    name: 'whats_new',
+    title: "What's new",
+    description: `Tell the user what is new in their own data since they last asked: for each app, how many entries arrived after the newest one they were already told about, and the newest titles. StackVoice remembers what it told them across conversations and restarts. Use when the user asks "what's new?", "anything new since last time?"${example}. Pass app to ask about one app: ${orList(ids)}.`,
+    verb: 'whats_new',
+    appId: null,
+    shortcutName: null,
+    slots: [],
+    phrases: [],
+  };
+}
+
+function orList(words: readonly string[]): string {
+  if (words.length <= 1) return words[0] ?? '';
+  return `${words.slice(0, -1).join(', ')} or ${words[words.length - 1] as string}`;
 }
 
 function titleCase(name: string): string {

@@ -53,6 +53,7 @@ describe('shortcuts in the catalog', () => {
 
     expect(catalog.generate(apps, [shortcut('morning brief')]).map((spec) => spec.name)).toEqual([
       'stack_status',
+      'whats_new',
       'library_search',
       'morning_brief',
     ]);
@@ -113,6 +114,7 @@ describe('ToolCatalogService.generate', () => {
   it('namespaces one tool per enabled verb', () => {
     expect(names([app('library', { search: true, read: true, status: true })])).toEqual([
       'stack_status',
+      'whats_new',
       'library_search',
       'library_read',
       'library_status',
@@ -129,7 +131,14 @@ describe('ToolCatalogService.generate', () => {
       app('markets', { search: false, read: false, status: true }),
     ];
 
-    expect(names(apps)).toEqual(['stack_status', 'library_search', 'library_read', 'library_status', 'markets_status']);
+    expect(names(apps)).toEqual([
+      'stack_status',
+      'whats_new',
+      'library_search',
+      'library_read',
+      'library_status',
+      'markets_status',
+    ]);
   });
 
   it('builds the description from the app label and description, so the assistant knows when to call it', () => {
@@ -146,7 +155,21 @@ describe('ToolCatalogService.generate', () => {
 
     expect(specs.map((s) => [s.name, s.appId, s.verb])).toEqual([
       ['stack_status', null, 'stack_status'],
+      ['whats_new', null, 'whats_new'],
       ['library_search', 'library', 'search'],
     ]);
+  });
+
+  it('offers whats_new once there is an app, naming the app ids it accepts', () => {
+    const spec = catalog
+      .generate([
+        app('library', { search: true, read: false, status: false }),
+        app('markets', { search: false, read: false, status: true }),
+      ])
+      .find((candidate) => candidate.name === 'whats_new');
+
+    expect(spec?.verb).toBe('whats_new');
+    expect(spec?.description).toContain('since they last asked');
+    expect(spec?.description).toContain('library or markets');
   });
 });

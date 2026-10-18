@@ -39,6 +39,9 @@ blob-report/
 
 # server-side secrets such as API keys, never committed
 config/secrets.yml
+# what the owner has been told, for "what's new"; state, not config
+config/seen.json
+config/seen.json.tmp
 # Your own data files for file sources; never pushed by accident.
 /data/
 tests/e2e/.work/

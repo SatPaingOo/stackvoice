@@ -58,6 +58,33 @@ const STATUS_WORDS = [
 
 const FOLLOW_UP_WORDS = ['more', 'detail', 'details', 'full', 'whole thing', 'expand', 'go on', 'read it'];
 
+/** Asking what arrived since last time. Matched against normalised text, where "what's" is "what s". */
+const NEW_WORDS = [
+  'what s new',
+  'whats new',
+  'what is new',
+  'anything new',
+  'something new',
+  'since i last',
+  'since last time',
+  'since we last',
+];
+
+/** What a "what's new" question says besides the app and the filler. None of it is a subject. */
+const SINCE_WORDS = new Set([
+  's',
+  'since',
+  'last',
+  'time',
+  'asked',
+  'ask',
+  'checked',
+  'check',
+  'we',
+  'lately',
+  'today',
+]);
+
 /** Phrases people put in front of the thing they actually want. */
 const LEAD_INS = [
   'what happened in',
@@ -185,6 +212,16 @@ export class IntentPlanner {
           appId: app.id,
         };
       }
+    }
+
+    // "What's new?" with no subject means since the owner last asked, which only whats_new remembers.
+    // With a subject, "anything new about gold" is a search like any other.
+    if (containsAny(text, NEW_WORDS) && subjectOf(text, apps) === '') {
+      return {
+        kind: 'call',
+        call: { tool: 'whats_new', args: named === null ? {} : { app: named.id } },
+        appId: named?.id ?? null,
+      };
     }
 
     if (containsAny(text, STATUS_WORDS)) {
@@ -324,14 +361,22 @@ function containsAny(text: string, needles: readonly string[]): boolean {
   );
 }
 
+function subjectOf(text: string, apps: readonly PlannerApp[]): string {
+  return extractQuery(text, apps)
+    .split(' ')
+    .filter((word) => word !== '' && !SINCE_WORDS.has(word))
+    .join(' ');
+}
+
 /** Strips the lead-in, the app name and filler, leaving the subject. */
 function extractQuery(text: string, apps: readonly PlannerApp[]): string {
   let rest = text;
 
+  // Whole words only: "ask" must not match inside "asked", nor "show" inside "showdown".
   for (const lead of LEAD_INS) {
-    const at = rest.indexOf(lead);
-    if (at !== -1) {
-      rest = rest.slice(at + lead.length);
+    const match = new RegExp(`\\b${escapeRegExp(lead)}\\b`).exec(rest);
+    if (match !== null) {
+      rest = rest.slice(match.index + lead.length);
       break;
     }
   }

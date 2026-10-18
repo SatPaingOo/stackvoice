@@ -3,9 +3,10 @@ import { SEARCH_LIMIT_DEFAULT } from '../domain/item.js';
 import type { AppRegistryService } from './app-registry.service.js';
 import type { HealthService } from './health.service.js';
 import type { ReadService } from './read.service.js';
-import { shapeAppHealth, shapeItem, shapeSearchResults, shapeStackHealth } from './response-shaper.js';
+import { shapeAppHealth, shapeItem, shapeSearchResults, shapeStackHealth, shapeWhatsNew } from './response-shaper.js';
 import type { SearchService } from './search.service.js';
 import type { StatusService } from './status.service.js';
+import type { WhatsNewService } from './whats-new.service.js';
 
 export interface ToolOutput {
   /** What the assistant says. Already shaped for speech. */
@@ -19,10 +20,12 @@ export interface ToolRunnerDeps {
   readonly read: ReadService;
   readonly status: StatusService;
   readonly health: HealthService;
+  readonly whatsNew: WhatsNewService;
   readonly now: () => Date;
 }
 
 const GLOBAL_TOOL = 'stack_status';
+const WHATS_NEW_TOOL = 'whats_new';
 const VERBS = ['search', 'read', 'status'] as const;
 type Verb = (typeof VERBS)[number];
 
@@ -44,6 +47,9 @@ export class ToolRunner {
     if (toolName === GLOBAL_TOOL) {
       const health = await this.deps.health.reportStack();
       return { spoken: shapeStackHealth(health), structured: asRecord(health) };
+    }
+    if (toolName === WHATS_NEW_TOOL) {
+      return this.runWhatsNew(args);
     }
 
     const parsed = this.parse(toolName);
@@ -70,6 +76,17 @@ export class ToolRunner {
     return {
       spoken: shapeSearchResults(label, items, params),
       structured: { items: [...items] },
+    };
+  }
+
+  private async runWhatsNew(args: Readonly<Record<string, unknown>>): Promise<ToolOutput> {
+    const report = await this.deps.whatsNew.report(text(args['app']));
+    const only = report.apps.length === 1 ? report.apps[0] : undefined;
+    // About one app, the new entries come back as items, so "tell me more" can follow the newest.
+    const items = only?.kind === 'new' ? only.items : only?.kind === 'first' ? [only.newest] : [];
+    return {
+      spoken: shapeWhatsNew(report, this.deps.now()),
+      structured: { ...asRecord(report), items: [...items] },
     };
   }
 

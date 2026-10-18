@@ -5,8 +5,11 @@ import {
   humanizeSince,
   listPhrase,
   shapeStackHealth,
+  shapeWhatsNew,
   toSpoken,
 } from '../../../src/application/response-shaper.js';
+import type { WhatsNewEntry } from '../../../src/application/whats-new.service.js';
+import type { Item } from '../../../src/domain/item.js';
 import type { AppHealth, StackHealth } from '../../../src/domain/health.js';
 
 const app = (appId: string, ok: boolean): AppHealth => ({
@@ -106,5 +109,74 @@ describe('shapeStackHealth', () => {
   it('stays inside the spoken-word budget for a large stack', () => {
     const apps = Array.from({ length: 30 }, (_, i) => app(`app-${i}`, true));
     expect(shapeStackHealth(health(apps)).split(' ').length).toBeLessThanOrEqual(45);
+  });
+});
+
+describe('shapeWhatsNew', () => {
+  const now = new Date('2026-10-19T10:00:00Z');
+  const since = '2026-10-18T10:00:00.000Z';
+  const entry = (key: string, date: string): Item => ({
+    key,
+    title: key,
+    summary: null,
+    date,
+    topic: null,
+    region: null,
+    url: null,
+  });
+  const report = (...apps: WhatsNewEntry[]) => ({ appId: apps.length === 1 ? 'x' : null, apps });
+
+  it('about one app, says when the owner last asked and reads the new titles', () => {
+    const spoken = shapeWhatsNew(
+      report({
+        kind: 'new',
+        appId: 'ideas',
+        label: 'Video ideas',
+        items: [entry('Passkeys explained', '2026-10-19'), entry('Free hosting', '2026-10-18')],
+        atLeast: false,
+        since,
+      }),
+      now,
+    );
+
+    expect(spoken).toBe(
+      'Since you last asked yesterday, 2 new entries in your Video ideas: Passkeys explained and Free hosting.',
+    );
+  });
+
+  it('says plainly when nothing is new, and when tracking starts', () => {
+    expect(shapeWhatsNew(report({ kind: 'none', appId: 'ideas', label: 'Video ideas', since }), now)).toBe(
+      'Nothing new in your Video ideas since you last asked, yesterday.',
+    );
+    expect(
+      shapeWhatsNew(
+        report({ kind: 'first', appId: 'ideas', label: 'Video ideas', newest: entry('Passkeys', '2026-10-16') }),
+        now,
+      ),
+    ).toBe(
+      'From now on I will keep track of what is new in your Video ideas. The newest is Passkeys, from October 16.',
+    );
+  });
+
+  it('about every app, gives each one a clause and only its newest title', () => {
+    const spoken = shapeWhatsNew(
+      report(
+        {
+          kind: 'new',
+          appId: 'feed',
+          label: 'Market intelligence',
+          items: Array.from({ length: 10 }, (_, i) => entry(`Event ${i}`, '2026-10-19')),
+          atLeast: true,
+          since,
+        },
+        { kind: 'none', appId: 'ideas', label: 'Video ideas', since },
+        { kind: 'none', appId: 'library', label: 'Deep-dive library', since },
+      ),
+      now,
+    );
+
+    expect(spoken).toBe(
+      '10 or more new entries in your Market intelligence, the newest Event 0. Nothing new in your Video ideas and Deep-dive library.',
+    );
   });
 });

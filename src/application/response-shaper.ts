@@ -1,5 +1,6 @@
 import type { AppHealth, StackHealth } from '../domain/health.js';
 import type { Item, SearchParams } from '../domain/item.js';
+import type { WhatsNewEntry, WhatsNewReport } from './whats-new.service.js';
 
 /**
  * Turns read models into text a voice assistant can speak.
@@ -120,6 +121,62 @@ export function shapeAppHealth(appLabel: string, health: AppHealth, now: Date): 
       ? ''
       : `${holds === '' ? ' Data is' : ', fresh to'} ${describeDate(source.lastDataDate)}`;
   return toSpoken(`Your ${appLabel} is healthy.${ran}${holds}${fresh}${holds === '' && fresh === '' ? '' : '.'}`);
+}
+
+/**
+ * "What's new" as a spoken answer.
+ *
+ * About one app it says when the owner last asked and reads up to three new
+ * titles. About all of them it gives each app one short clause, the newest title
+ * only, so a busy feed cannot crowd the others out of the word budget.
+ */
+export function shapeWhatsNew(report: WhatsNewReport, now: Date): string {
+  if (report.apps.length === 0) return toSpoken('You have no apps yet, so there is nothing new to tell.');
+
+  const only = report.apps.length === 1 ? report.apps[0] : undefined;
+  if (only !== undefined) return toSpoken(oneApp(only, now));
+
+  const told = report.apps.filter((entry) => entry.kind === 'new').map((entry) => `${manyClause(entry)}.`);
+  const firsts = report.apps.filter((entry) => entry.kind === 'first').map((entry) => entry.label);
+  const quiet = report.apps.filter((entry) => entry.kind === 'none').map((entry) => entry.label);
+  const missing = report.apps.filter((entry) => entry.kind === 'unavailable').map((entry) => entry.label);
+
+  const sentences = [...told];
+  if (quiet.length > 0) sentences.push(`Nothing new in your ${listPhrase(quiet)}.`);
+  if (firsts.length > 0) sentences.push(`From now on I will keep track of your ${listPhrase(firsts)}.`);
+  if (missing.length > 0) sentences.push(`I could not reach your ${listPhrase(missing)}.`);
+  if (sentences.length === 0) return toSpoken('None of your apps has dated entries, so I cannot tell what is new.');
+  return toSpoken(sentences.join(' '));
+}
+
+function oneApp(entry: WhatsNewEntry, now: Date): string {
+  switch (entry.kind) {
+    case 'first':
+      return `From now on I will keep track of what is new in your ${entry.label}. The newest is ${trimTitle(entry.newest.title)}, from ${describeDate(entry.newest.date ?? '')}.`;
+    case 'new': {
+      const titles = entry.items.slice(0, 3).map((item) => trimTitle(item.title));
+      return `Since you last asked ${humanizeSince(new Date(entry.since), now)}, ${countNew(entry)} in your ${entry.label}: ${listPhrase(titles)}.`;
+    }
+    case 'none':
+      return `Nothing new in your ${entry.label} since you last asked, ${humanizeSince(new Date(entry.since), now)}.`;
+    case 'undated':
+      return `Your ${entry.label} has no dates, so I cannot tell what is new.`;
+    case 'unavailable':
+      return `I could not reach your ${entry.label}: ${entry.reason}.`;
+  }
+}
+
+function manyClause(entry: Extract<WhatsNewEntry, { kind: 'new' }>): string {
+  const newest = entry.items[0];
+  const title = newest === undefined ? '' : `, the newest ${trimTitle(newest.title)}`;
+  return `${countNew(entry)} in your ${entry.label}${title}`;
+}
+
+/** "1 new entry", "3 new entries", "10 or more new entries". */
+function countNew(entry: Extract<WhatsNewEntry, { kind: 'new' }>): string {
+  const count = entry.items.length;
+  if (entry.atLeast) return `${count} or more new entries`;
+  return count === 1 ? '1 new entry' : `${count} new entries`;
 }
 
 /** Turns an ISO-ish date into something speakable, without reading digits aloud. */

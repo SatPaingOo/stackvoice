@@ -58,6 +58,8 @@ export class ToolMapper {
     switch (spec.verb) {
       case 'stack_status':
         return this.registerNoArgs(server, spec);
+      case 'whats_new':
+        return this.registerWhatsNew(server, spec);
       case 'status':
         return this.registerNoArgs(server, spec, {
           appId: z.string(),
@@ -83,6 +85,27 @@ export class ToolMapper {
       async () =>
         this.guard(spec.name, async () => {
           const output = await this.deps.runner.run(spec.name);
+          return {
+            content: [{ type: 'text', text: output.spoken }],
+            ...(output.structured === null ? {} : { structuredContent: output.structured }),
+          };
+        }),
+    );
+  }
+
+  private registerWhatsNew(server: McpServer, spec: ToolSpec): void {
+    server.registerTool(
+      spec.name,
+      {
+        title: spec.title,
+        description: spec.description,
+        inputSchema: {
+          app: z.string().optional().describe('The id of one app to ask about. Leave it out to hear about every app.'),
+        },
+      },
+      async (args) =>
+        this.guard(spec.name, async () => {
+          const output = await this.deps.runner.run(spec.name, args as Record<string, unknown>);
           return {
             content: [{ type: 'text', text: output.spoken }],
             ...(output.structured === null ? {} : { structuredContent: output.structured }),

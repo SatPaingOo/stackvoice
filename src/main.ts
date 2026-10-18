@@ -13,6 +13,7 @@ import { SearchService } from './application/search.service.js';
 import { StatusService } from './application/status.service.js';
 import { ToolCatalogService } from './application/tool-catalog.service.js';
 import { ToolRunner } from './application/tool-runner.service.js';
+import { WhatsNewService } from './application/whats-new.service.js';
 import { StackVoiceError } from './domain/errors.js';
 import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
@@ -32,6 +33,7 @@ import { HttpClient } from './infrastructure/http/http-client.js';
 import { TtlCache } from './infrastructure/http/ttl-cache.js';
 import { PinoLogger } from './infrastructure/logging/pino.logger.js';
 import { McpLoopbackClient } from './infrastructure/mcp/mcp-loopback-client.js';
+import { JsonSeenStore } from './infrastructure/state/json-seen-store.js';
 import { SystemClock } from './infrastructure/system-clock.js';
 import { createHttpServer } from './presentation/mcp/http-server.js';
 import { ToolMapper } from './presentation/mcp/tool-mapper.js';
@@ -55,6 +57,7 @@ async function main(): Promise<void> {
   const settingsPath = resolve(cwd(), argv[2] ?? 'config/settings.yml');
   const appsDir = resolve(cwd(), argv[3] ?? 'config/apps');
   const shortcutsPath = resolve(appsDir, '..', 'shortcuts.yml');
+  const seenPath = resolve(appsDir, '..', 'seen.json');
 
   const settingsStore = new YamlSettingsStore(settingsPath);
   const settings = await settingsStore.load();
@@ -101,8 +104,19 @@ async function main(): Promise<void> {
   const status = new StatusService(registry, readerFactory);
   const health = new HealthService(VERSION, clock, registry, status);
   const catalog = new ToolCatalogService();
-  const runner = new ToolRunner({ registry, search, read, status, health, now: () => clock.now() });
-  const shortcutService = new ShortcutService(runner, logger, () => clock.now());
+  const now = (): Date => clock.now();
+  const seen = new JsonSeenStore(seenPath);
+  const whatsNew = new WhatsNewService({ registry, search, store: seen, now, record: true });
+  const runner = new ToolRunner({ registry, search, read, status, health, whatsNew, now });
+  const shortcutService = new ShortcutService(runner, logger, now);
+  // The console's Try it asks the real tools but saves nothing, so "what's new"
+  // there peeks without marking anything as told.
+  const peek = new WhatsNewService({ registry, search, store: seen, now, record: false });
+  const tryShortcuts = new ShortcutService(
+    new ToolRunner({ registry, search, read, status, health, whatsNew: peek, now }),
+    logger,
+    now,
+  );
 
   // presentation
   const mapper = new ToolMapper({ runner, shortcuts, shortcutService, logger });
@@ -167,7 +181,7 @@ async function main(): Promise<void> {
         settingsStore,
         secrets,
         assetsDir,
-        shortcutRunner: shortcutService,
+        shortcutRunner: tryShortcuts,
       }
     : null;
 
