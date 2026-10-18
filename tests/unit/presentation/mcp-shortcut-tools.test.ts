@@ -122,6 +122,15 @@ describe('shortcut tools over MCP', () => {
     expect(result.content).toEqual([{ type: 'text', text: 'Found 1 about gold: Gold rises.' }]);
   });
 
+  it('puts the answer in the structured result too, beside the tool calls', async () => {
+    const result = await client.callTool({ name: 'news_about_topic', arguments: { topic: 'gold' } });
+
+    expect(result.structuredContent).toMatchObject({
+      spoken: 'Found 1 about gold: Gold rises.',
+      steps: [{ tool: 'library_search', ok: true }],
+    });
+  });
+
   it('refuses a call without the slot instead of running the flow about nothing', async () => {
     const outcome = await client
       .callTool({ name: 'news_about_topic', arguments: {} })

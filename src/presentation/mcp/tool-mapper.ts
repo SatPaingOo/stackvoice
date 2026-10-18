@@ -185,6 +185,7 @@ export class ToolMapper {
       title: spec.title,
       description: spec.description,
       outputSchema: {
+        spoken: z.string(),
         steps: z.array(z.object({ tool: z.string(), spoken: z.string(), ok: z.boolean() })),
       },
     };
@@ -217,9 +218,12 @@ export class ToolMapper {
         shortcut.slots.map((slot) => [slot, typeof args[slot] === 'string' ? (args[slot] as string) : '']),
       );
       const result = await this.deps.shortcutService.run(shortcut, inputs);
+      // The answer goes in the structured result too: a client that reads only
+      // structuredContent, as Claude Code does, would otherwise get the tool calls
+      // without what the shortcut says.
       return {
         content: [{ type: 'text', text: result.spoken }],
-        structuredContent: { steps: [...result.steps] },
+        structuredContent: { spoken: result.spoken, steps: [...result.steps] },
       };
     });
   }
