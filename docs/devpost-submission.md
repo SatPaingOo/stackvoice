@@ -15,7 +15,7 @@ official rules as checked on 2026-10-04.
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
-| Demo video | Recorded 2026-10-18 (2:50); upload it, then put the link here. See Demo video below |
+| Demo video | Recorded 2026-10-19 (2:51); upload it, then put the link here. See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
@@ -141,8 +141,8 @@ The submission period began 2026-08-31 10:15 PDT.
 
 ## Demo video
 
-Recorded on 2026-10-18 from the production build, driven by a script rather
-than by hand: 2 minutes 50 seconds, 1920x1080, with captions burned in and the
+Recorded on 2026-10-19 from the production build, driven by a script rather
+than by hand: 2 minutes 51 seconds, 1920x1080, with captions burned in and the
 simulator's spoken answers as the only sound. The recorder, the build script
 and the files live outside this repository, in `../StackVoice-video`. Upload it
 to YouTube or Vimeo as public; the rules require one or the other.
@@ -150,13 +150,13 @@ to YouTube or Vimeo as public; the rules require one or the other.
 | Time | Scene | What it shows |
 |---|---|---|
 | 0:00 | Landing page | The idea, and how sources reach the assistant |
-| 0:09 | Console | Adding `video-ideas.csv` from the data folder: every guess with an example, the missing date fixed by clicking a column, the read tool switched on, saved |
-| 0:35 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more", each with the tool call under the answer |
-| 1:12 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
-| 1:55 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
-| 2:08 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea |
-| 2:38 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
-| 2:45 | End card | The repository address, MIT, self-hosted, $0 |
+| 0:08 | Console | Adding `video-ideas.csv` from the data folder: every guess with an example, the missing date fixed by clicking a column, the read tool switched on, saved |
+| 0:35 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more"; the search and the read each show an MCP Apps card with the entries, and every answer its tool call |
+| 1:13 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
+| 1:56 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
+| 2:10 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea, with its card |
+| 2:39 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
+| 2:46 | End card | The repository address, MIT, self-hosted, $0 |
 
 What the rules ask of it, and how it answers:
 
