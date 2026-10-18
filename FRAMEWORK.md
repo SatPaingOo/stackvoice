@@ -19,7 +19,7 @@ The rules carry an update dated 2026-09-16 to the code repository requirement.
 | A working MCP server, spec 2025-11-25 or later, over Streamable HTTP, **or** a simulated Alexa+ experience. The FAQ confirms that a web page acting as a real MCP client (initialize, tools/list and tools/call over Streamable HTTP) satisfies it, and calls an existing AI assistant app calling the same server a bonus | Both: a real server, and a simulator that calls it as an MCP client | done |
 | The required technology imported and called at runtime, not only named | `@modelcontextprotocol/sdk` server and client, called in `src/` | done |
 | A GitHub repository with all source, assets and run instructions. Since 2026-09-16 it may be public with an open-source license visible at the top, **or** private and shared with testing@devpost.com and six Amazon GitHub accounts named in the rules | MIT, detected by GitHub. The Open Source mini challenge needs a public repository, so it goes public at submission. Its whole history was checked for secrets on 2026-10-04 and none were found | **open** |
-| A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission. On the simulated path it must clearly show the simulated experience | Recorded 2026-10-18: 2:25, captioned, the simulator scenes labelled as simulated; see [docs/devpost-submission.md](./docs/devpost-submission.md). Not uploaded yet | **open** |
+| A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission. On the simulated path it must clearly show the simulated experience | Recorded 2026-10-18: 2:50, captioned, the simulator scenes labelled as simulated; see [docs/devpost-submission.md](./docs/devpost-submission.md). Not uploaded yet | **open** |
 | A text description, the primary track and any mini challenge | Draft in docs/devpost-submission.md; Alexa+ track, Open Source mini challenge | drafted |
 | Open Source mini challenge: contribution URL, project repository URL, GitHub username, and what was done, how it works and why it matters | Drafted in docs/devpost-submission.md. The rules call it "a new, additional open-source project"; whether the entry's own repository counts is to be asked (risk 7 in §8) | drafted |
 | Product feedback on every Amazon tool, API or SDK used, answering five set questions | Draft in docs/devpost-submission.md, to be checked against the author's own experience | drafted |
@@ -110,10 +110,10 @@ the questions a person asks the same way every day.
 
 | Criterion | How StackVoice meets it |
 |---|---|
-| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; clean layers; 651 unit and 38 browser tests on 2026-10-04 |
+| Tech Implementation | Real MCP server on the official SDK, spec 2025-11-25, Streamable HTTP; OAuth 2.1 authorization server with PKCE (S256); tools and their input schemas generated from config; format detection from content; a network guard against server-side request forgery; a lockout on repeated wrong tokens; a flow interpreter with a trace; state that survives conversations and restarts; clean layers; 673 unit and 38 browser tests on 2026-10-18 |
 | Design | One box for any source, with every guess shown on real data; a shortcut builder that works like phone shortcuts; spoken answers; landing page, console and simulator that read as one product from phone to desktop |
 | Potential Impact | Anyone with a feed, a sheet or an API can use it, not only developers; self-hosted at $0; keys never leave the server |
-| Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads. Against the rules' Alexa+ examples: shortcuts are workflows across apps with conditions, and a conversation keeps context ("tell me more"). State across sessions, cards and MCP Apps are not built, so the pitch must not let it read as a basic wrapper |
+| Quality of the Idea | The assistant people already own, given hands on their own data, plus voice shortcuts in their own words; neighbours start from API specs and return raw payloads. Against the rules' Alexa+ examples: shortcuts are workflows across apps with conditions, a conversation keeps context ("tell me more"), and `whats_new` keeps state across sessions. Cards, MCP Apps, Agent Skills and purchasing are not built, so the pitch leads with why it is not a basic wrapper |
 
 ## 5. Cost model
 
@@ -150,6 +150,7 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 | 6 — Docs and pitch | 2026-09-13 | Docs match the product; pitch and submission draft written |
 | 6.1 — Tooling | 2026-09-13 | ESLint with the layer rule, Prettier, Vitest 5; testing instructions checked from a fresh clone |
 | 6.2 — Hardening for hosting | 2026-10-04 | Simulator sessions closed after each call; a port that cannot be bound fails the start; wrong-token lockout and a Secure session cookie; history checked for secrets; dependency advisories cleared; deploy plan written |
+| 6.3 — What's new | 2026-10-18 | `whats_new`: what arrived since the owner last asked, remembered across conversations and restarts; demo video and gallery |
 
 ### Remaining
 

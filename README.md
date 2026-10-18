@@ -28,6 +28,9 @@
   tools for it.
 - **Answers are spoken, not dumped.** A speaker cannot read a JSON array aloud.
   Every tool result comes back as a sentence or two a person can listen to.
+- **It remembers what it told you.** "What's new?" means since you last asked,
+  across conversations and restarts: StackVoice keeps the newest entry it
+  reported for each app and counts only what arrived after it.
 - **Shortcuts you build from blocks,** like shortcuts on a phone. Say it your way
   with slots such as "news about {topic}", then Ask a tool, check the answer with
   If and Otherwise, and Say something. Each slot becomes an input the assistant
@@ -78,7 +81,7 @@ Every page adapts from a phone to a desktop and needs no CDN.
 
 Open **http://127.0.0.1:8765/simulator** and ask:
 
-> "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more" · "News about AI"
+> "Is my stack healthy?" · "What did you find about AI in my library?" · "Tell me more" · "News about AI" · "What's new?"
 
 - **Push to talk.** Tap the microphone, ask one question, hear the answer.
 - **Conversation.** Tap *Start a conversation* and keep talking. It listens,
@@ -253,7 +256,7 @@ npm run build     # compile both into dist/
 Lint also enforces the dependency rule: code in `src/domain` and
 `src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
-On 2026-10-04, 651 unit tests and 38 browser tests passed.
+On 2026-10-18, 673 unit tests and 38 browser tests passed.
 
 ## Cost model
 

@@ -14,6 +14,7 @@ config/
 ├─ settings.yml        # server behavior (one file)
 ├─ shortcuts.yml       # flows: one tool that runs blocks
 ├─ secrets.yml         # API keys; git-ignored, created when a key is saved
+├─ seen.json           # what the owner has been told, for whats_new; git-ignored
 ├─ backups/            # what every write replaced; git-ignored
 └─ apps/
    ├─ library.yml      # one app = one file (name must equal app id)
@@ -193,7 +194,20 @@ For an enabled app `{id}` with a single source:
 | read | `{id}_read` | `key` (record id or URL) | full record, spoken-friendly |
 | status | `{id}_status` | — | per-app health: last run, last data date, counts, errors |
 
-Global: `stack_status()` — one summary across all apps.
+Global tools:
+
+| Tool | Input | What it does |
+|---|---|---|
+| `stack_status` | — | One health summary across all apps |
+| `whats_new` | `app?` (an app id) | What arrived since the owner last asked: per app, the entries dated after the newest one already reported, and the newest titles. Offered once at least one app is enabled |
+
+`whats_new` is the one tool with memory. For each app it keeps the date of the
+newest entry it reported and when, in `config/seen.json`, so "what's new?" means
+"since I last asked" across conversations and restarts. The first time it asks
+about an app it starts tracking it and names the newest entry. An app whose
+entries carry no dates is never called new. The console's **Try it** runs it
+without moving the mark, and deleting the file only makes it start tracking
+again.
 
 Each shortcut `name` → one tool `{snake_case(name)}` that runs its blocks (§7.5). Each `{slot}` in its
 phrases becomes a required text input on that tool.

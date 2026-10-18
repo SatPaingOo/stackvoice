@@ -15,7 +15,7 @@ official rules as checked on 2026-10-04.
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
-| Demo video | Recorded 2026-10-18 (2:25); upload it, then put the link here. See Demo video below |
+| Demo video | Recorded 2026-10-18 (2:50); upload it, then put the link here. See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
@@ -31,42 +31,54 @@ mine.
 ### What it does
 
 StackVoice is a self-hosted MCP server that gives the assistant you already talk
-to hands on your own data.
+to hands on your own data. It is not a wrapper around one API. A wrapper exposes
+an API it was written for, as it is; StackVoice starts from whatever data you
+have, with no spec, and adds four things a wrapper does not.
 
-- **Paste any source.** An RSS or Atom feed, a JSON API, a CSV or published
-  Google Sheet, a GitHub repository, or a file on the server. StackVoice reads the
-  content, finds the records, guesses the title, summary, date and link, and
-  shows each guess with a real sample. Fix a guess by clicking a column. Save, and
-  the assistant has `search`, `read` and `status` tools for it.
-- **Hear the answer.** Tool results come back as a sentence or two, with dates
-  said as "yesterday", because a speaker cannot read a JSON array aloud.
-- **Build voice shortcuts.** Like shortcuts on a phone: write "news about
-  {topic}", add blocks to Ask a tool, check the answer with If and Otherwise, and
-  Say something. The slot becomes an input the assistant fills. Try it before
-  saving and see every block that ran.
-- **Keep keys safe.** API keys stay on the server and are referenced by name.
-  The browser never sees one again.
+- **Any source becomes tools, with no spec and no code.** Paste an RSS or Atom
+  feed, a JSON API, a CSV or published Google Sheet, a GitHub repository, or a
+  file on the server. StackVoice reads the content, finds the records, guesses
+  the title, summary, date and link, and shows each guess with a real sample.
+  Fix a guess by clicking a column. Save, and the assistant has `search`, `read`
+  and `status` tools for it, with no restart.
+- **Answers made for listening.** A speaker cannot read a JSON array aloud. Every
+  tool result comes back as a sentence or two, at most three titles, with dates
+  said as "yesterday".
+- **Workflows across your apps, built in your own words.** Like shortcuts on a
+  phone: write "news about {topic}", then add blocks that Ask any tool from any
+  app, check the answer with If and Otherwise, and Say something. The slot
+  becomes an input the assistant fills, and Try it shows every block that ran.
+  Six fixed blocks, so there is no user code to sandbox.
+- **It remembers across conversations.** "What's new?" means since you last
+  asked: StackVoice keeps the newest entry it reported for each app, across
+  conversations and restarts, and counts only what arrived after it.
+
+API keys stay on the server and are referenced by name; the browser never sees
+one again.
 
 The project is demonstrated through a simulated Alexa+ page, because the Alexa+
 MCP Toolkit is a preview open to select partners only, so no entrant can
-connect a server to Alexa+. The simulator is a real MCP client: it
-calls the server over Streamable HTTP, as a device would, and shows each tool
-call under the answer.
+connect a server to Alexa+. The simulator is a real MCP client: it calls the
+server over Streamable HTTP, as a device would, and shows each tool call under
+the answer.
 
 ### How we built it
 
 - TypeScript on Node.js, with the official MCP TypeScript SDK, implementing MCP
   spec 2025-11-25 over Streamable HTTP.
 - Clean architecture with ports and adapters. The core has no I/O and no SDK;
-  GitHub, links, files, YAML and OAuth are adapters behind interfaces.
+  GitHub, links, files, YAML, OAuth and the remembered state are adapters
+  behind interfaces.
 - A built-in OAuth 2.1 authorization server with PKCE (S256), metadata discovery
   and a 401 challenge, because the Alexa+ MCP Toolkit requires it.
 - One reader for every source type that detects the format from the body, plus a
   network guard, because a pasted link is a request the server makes on the
   user's behalf.
 - Shortcut flows as six fixed blocks and an interpreter, with no user code.
+- "What's new" as one remembered date per app, in a small file that survives a
+  restart.
 - A console built from framework-free TypeScript component classes.
-- 651 unit tests and 38 browser tests on 2026-10-04.
+- 673 unit tests and 38 browser tests on 2026-10-18.
 
 ### Challenges we ran into
 
@@ -91,6 +103,8 @@ call under the answer.
   one paste.
 - "News about {topic}" works by voice end to end: phrase, slot, flow, spoken
   answer, over real MCP.
+- "What's new?" tomorrow tells you only what arrived since today, even after the
+  server restarted.
 - An honest demo. Nothing is mocked, and every answer shows the call behind it.
 
 ### What we learned
@@ -103,6 +117,7 @@ sentences and not an array, only showed up by building a client and listening.
 
 - Onboarding to real Alexa+ once the MCP Toolkit opens beyond its partner preview.
 - Statically registered OAuth clients, which Alexa+ account linking requires.
+- Cards and MCP Apps, so an answer can show on a screen as well as be heard.
 - Reading more than one source per app.
 - Pages and answers in Burmese as well as English.
 
@@ -119,7 +134,7 @@ The submission period began 2026-08-31 10:15 PDT.
 ## Demo video
 
 Recorded on 2026-10-18 from the production build, driven by a script rather
-than by hand: 2 minutes 25 seconds, 1920x1080, with captions burned in and the
+than by hand: 2 minutes 50 seconds, 1920x1080, with captions burned in and the
 simulator's spoken answers as the only sound. The recorder, the build script
 and the files live outside this repository, in `../StackVoice-video`. Upload it
 to YouTube or Vimeo as public; the rules require one or the other.
@@ -128,11 +143,12 @@ to YouTube or Vimeo as public; the rules require one or the other.
 |---|---|---|
 | 0:00 | Landing page | The idea, and how sources reach the assistant |
 | 0:09 | Console | Adding `video-ideas.csv` from the data folder: every guess with an example, the missing date fixed by clicking a column, the read tool switched on, saved |
-| 0:34 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more", each with the tool call under the answer |
-| 1:13 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
-| 1:56 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
-| 2:09 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
-| 2:18 | End card | The repository address, MIT, self-hosted, $0 |
+| 0:35 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more", each with the tool call under the answer |
+| 1:12 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
+| 1:55 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
+| 2:08 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea |
+| 2:38 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
+| 2:45 | End card | The repository address, MIT, self-hosted, $0 |
 
 What the rules ask of it, and how it answers:
 
@@ -344,7 +360,7 @@ experience.
 
 ## Gallery images
 
-Six 2400x1600 PNGs (3:2, as Devpost suggests) in `../StackVoice-video/gallery`:
+Seven 2400x1600 PNGs (3:2, as Devpost suggests) in `../StackVoice-video/gallery`:
 the landing page, the simulator with three answers and their tool calls, the
-apps page, the add dialog with its guesses, and the shortcut builder's blocks and
-Try it.
+apps page, the add dialog with its guesses, the shortcut builder's blocks and
+Try it, and "what's new" before and after a new idea arrives.

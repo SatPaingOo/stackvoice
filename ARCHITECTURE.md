@@ -82,6 +82,7 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `ports/secret-store.ts` | `get · names · set · remove`. There is deliberately no way to list values |
 | `ports/settings-store.ts` | `load · save` |
 | `ports/shortcut-store.ts` | `list · save` |
+| `ports/seen-store.ts` | `load · save`: per app, the newest entry date already reported and when |
 | `ports/tool-caller.ts` | `callTool(name, args)`: how the simulator reaches the server |
 | `ports/logger.ts` | Structured `debug · info · warn · error` and child scopes |
 
@@ -102,6 +103,7 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `flow-values.ts` | What a flow's variables hold, and the functions that read them for templates and conditions |
 | `intent-planner.ts` | The simulator's stand-in for the assistant: matches phrasings and shortcut phrases to a tool call. Rules, not a model |
 | `conversation.service.ts` | One simulated turn: plan, call through the ToolCaller port, speak, carry context |
+| `whats-new.service.ts` | "What's new since I last asked": counts the entries dated after the newest one already reported, per app, and moves the mark unless it is only peeking |
 
 ### infrastructure/ — adapters
 
@@ -127,6 +129,7 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `config/config-watcher.ts` | — | Reloads the registries when a file in `config/apps/` or `config/shortcuts.yml` changes. Saves from the console reload directly |
 | `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; tokens in memory |
 | `auth/attempt-limiter.ts` · `secret-compare.ts` | — | Wrong owner tokens counted per client address, one counter for the console sign-in, `/mcp` and the consent screen; owner tokens compared in constant time over SHA-256 digests |
+| `state/json-seen-store.ts` | SeenStore | `config/seen.json`, written atomically; a missing or damaged file reads as empty |
 | `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint |
 | `logging/pino.logger.ts` | Logger | Structured JSON |
 | `system-clock.ts` | — | The one place that reads the time |
@@ -150,8 +153,8 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 - The **registry** loads every file at startup and fails fast on a broken one,
   naming the file and field.
 - **Tool namespace:** an enabled app exposes `{id}_search`, `{id}_read` and
-  `{id}_status` for each verb its primitives turn on. The global tool is
-  `stack_status`.
+  `{id}_status` for each verb its primitives turn on. The global tools are
+  `stack_status`, and `whats_new` once an app is enabled.
 - **Adding an app** means writing a validated file, through the console, the CLI
   or by hand. The watcher reloads the registry; no restart and no code change.
 - **Several sources:** an app file may list more than one, but the verbs read the
@@ -238,7 +241,7 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
 | presentation | Console API and sign-in, the auth guard on `/mcp`, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
 | end-to-end | Every page, the add-app and shortcut-builder dialogs, simulator voice and conversation | Playwright against the real server in the installed Edge, on a scratch copy of the config |
 
-On 2026-10-04, 651 unit tests and 38 browser tests passed.
+On 2026-10-18, 673 unit tests and 38 browser tests passed.
 
 ## 10. Directory structure
 
@@ -249,13 +252,14 @@ StackVoice/
 │  ├─ shortcuts.yml
 │  ├─ apps/{app}.yml
 │  ├─ secrets.yml            # git-ignored, created when a key is saved
+│  ├─ seen.json              # git-ignored; what whats_new has reported
 │  └─ backups/               # git-ignored
 ├─ data/                     # git-ignored; file sources are read from here only
 ├─ src/
 │  ├─ main.ts · cli.ts       # composition roots
 │  ├─ domain/                # entities · ports · errors
 │  ├─ application/           # use-case services
-│  ├─ infrastructure/        # adapters · auth · config · formats · http · logging · mcp
+│  ├─ infrastructure/        # adapters · auth · config · formats · http · logging · mcp · state
 │  └─ presentation/
 │     ├─ mcp/  cli/  console/  simulator/
 │     └─ web/                # theme, layout, landing
@@ -280,6 +284,7 @@ StackVoice/
 | Shortcut flows as six fixed blocks | User-written scripts or expressions | No code to sandbox, limits that can be checked on save, and a builder a non-developer can use |
 | Console browser code as framework-free TypeScript classes | React or another framework | No new dependency and no bundler; one extra `tsc` project gives types and components |
 | Server-rendered page frames with client dialogs | A single-page app with a client router | Every page stays linkable and reloadable with no router, and the landing page reads without script; only the forms need to be interactive |
+| "What's new" remembered as one date per app, in a file | Remembering each entry seen; keeping it in memory | One date per app is enough to count what is newer, stays tiny however large a feed grows, and survives a restart, which a judge or a real owner would expect of "since I last asked" |
 | One wrong-token counter per address, shared by every door that takes the owner token | A counter per door; a rate-limit library | All three doors check the same secret, so separate counters would triple a guesser's attempts. The counting is a few lines with no new dependency |
 
 ## 12. Known issues (2026-10-04)
@@ -304,4 +309,4 @@ StackVoice/
 
 ---
 
-Last reviewed: 2026-10-04
+Last reviewed: 2026-10-18
