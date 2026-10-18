@@ -15,7 +15,7 @@ official rules as checked on 2026-10-04.
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
-| Demo video | Recorded 2026-10-19 (2:52, narrated); upload it, then put the link here. See Demo video below |
+| Demo video | Recorded 2026-10-19 (2:58, narrated); upload it, then put the link here. See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
@@ -65,6 +65,11 @@ connect a server to Alexa+. The simulator is a real MCP client: it calls the
 server over Streamable HTTP, as a device would, and shows each tool call under
 the answer.
 
+The same server works in an AI assistant people already use. Claude Code
+connected to it as an ordinary MCP client: it registered itself, signed in
+through StackVoice's OAuth 2.1 with PKCE, and ran the "ideas about" shortcut
+when asked for video ideas about AI. The video shows it.
+
 ### How we built it
 
 - TypeScript on Node.js, with the official MCP TypeScript SDK, implementing MCP
@@ -85,7 +90,7 @@ the answer.
   `postMessage`, and the view runs in a sandboxed iframe that loads nothing
   from the network.
 - A console built from framework-free TypeScript component classes.
-- 679 unit tests and 39 browser tests on 2026-10-19.
+- 681 unit tests and 39 browser tests on 2026-10-19.
 
 ### Challenges we ran into
 
@@ -103,6 +108,11 @@ the answer.
   question is now asked exactly once.
 - **Latency.** Alexa+ allows 500 ms. The cache is warmed at startup so a tool call
   rarely waits on GitHub.
+- **A real client finds what your own does not.** Connecting Claude Code turned
+  up two bugs the simulator never hit. A shortcut's spoken answer was missing
+  from its structured result, which Claude Code reads in place of the text. And
+  the consent page, shown again after a wrong owner token, lost the OAuth
+  parameters, so the next approval failed. Both are fixed and covered by tests.
 
 ### Accomplishments that we're proud of
 
@@ -113,6 +123,8 @@ the answer.
 - "What's new?" tomorrow tells you only what arrived since today, even after the
   server restarted.
 - An honest demo. Nothing is mocked, and every answer shows the call behind it.
+- An AI assistant that already exists, Claude Code, signs in through
+  StackVoice's own OAuth server and uses a shortcut built without code.
 
 ### What we learned
 
@@ -123,7 +135,8 @@ sentences and not an array, only showed up by building a client and listening.
 ### What's next
 
 - Onboarding to real Alexa+ once the MCP Toolkit opens beyond its partner preview.
-- Statically registered OAuth clients, which Alexa+ account linking requires.
+- Statically registered OAuth clients, which Alexa+ account linking requires,
+  and registered clients kept across a restart.
 - Trying the answer card in other MCP Apps hosts, and on Alexa+ devices with a
   screen once that is possible.
 - Reading more than one source per app.
@@ -142,7 +155,7 @@ The submission period began 2026-08-31 10:15 PDT.
 ## Demo video
 
 Recorded on 2026-10-19 from the production build, driven by a script rather
-than by hand, then edited with narration: 2 minutes 52 seconds, 1920x1080, in
+than by hand, then edited with narration: 2 minutes 58 seconds, 1920x1080, in
 English. The file to upload is `final/stackvoice-demo-narrated.mp4` in
 `../StackVoice-video`, with `final/stackvoice-demo-narrated.srt` as its English
 subtitles (the narration and the simulator's answers). The recorder, the editing
@@ -158,9 +171,10 @@ version without narration, captions burned in (2:51), is there too as
 | 0:33 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more"; the search and the read each show an MCP Apps card with the entries, and every answer its tool call |
 | 1:15 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
 | 1:52 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
-| 2:06 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea, with its card |
-| 2:35 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
-| 2:45 | End card | The repository address, MIT, self-hosted, $0 |
+| 2:04 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea, with its card |
+| 2:34 | Claude Code | An AI assistant people already use, signed in through StackVoice's OAuth, runs the "ideas about" shortcut with `topic: "AI"` and answers from what it says. The terminal session as it ran, fast-forwarded through the waiting |
+| 2:41 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
+| 2:50 | End card | The repository address, MIT, self-hosted, $0 |
 
 What the rules ask of it, and how it answers:
 
@@ -176,6 +190,9 @@ What the rules ask of it, and how it answers:
 - **The voices** are synthetic. The narration is an English text-to-speech
   voice (edge-tts, Andrew). The answers are Windows' built-in Zira voice,
   standing in for the browser's speech, which the recording cannot capture.
+- **An existing AI assistant app,** which the FAQ calls a nice bonus. The Claude
+  Code scene is a recording of its own terminal output, played back at its
+  recorded pace with the waits shortened. Nothing in it was changed.
 
 ## Testing instructions
 
@@ -263,6 +280,20 @@ curl -i http://127.0.0.1:8765/mcp
 The first lists `S256` as the PKCE method. The second returns `401` with a
 `WWW-Authenticate` header. The simulator stands down in this mode by design,
 because an authorization code flow needs a person at a browser.
+
+### 6. Optional: an AI assistant you already have
+
+Any MCP client works. With Claude Code:
+
+```bash
+claude mcp add --transport http stackvoice http://127.0.0.1:8765/mcp
+```
+
+Ask it "news about AI": it runs the `news_about_topic` shortcut with `topic`
+filled. With the server in `oauth` mode from step 5, run `/mcp` in Claude Code
+and choose Authenticate first: it registers itself, and the consent page in the
+browser asks for the owner token. StackVoice forgets registrations when it
+restarts, so after a restart add the server under a new name.
 
 ### Worth knowing
 

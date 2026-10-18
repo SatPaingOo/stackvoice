@@ -218,6 +218,18 @@ Use `127.0.0.1` rather than `localhost` for a Node.js-based client such as the
 Inspector. The server listens on IPv4 only, and Node.js may resolve `localhost`
 to the IPv6 address first.
 
+An AI assistant people already use works the same way. Claude Code, for one:
+
+```bash
+claude mcp add --transport http stackvoice http://127.0.0.1:8765/mcp
+```
+
+Then ask it about your data, or for a shortcut: "news about AI" runs the
+`news_about_topic` shortcut with `topic` filled. In `oauth` mode, run `/mcp` in
+Claude Code and choose Authenticate: it registers itself, the consent page asks
+for your owner token, and it signs in with PKCE. This was tried with Claude Code
+2.1.299 on 2026-10-19, and the demo video shows it.
+
 For anything beyond localhost, set `auth.mode` in `config/settings.yml`: `token`
 for one shared bearer token, or `oauth` for the full OAuth 2.1 + PKCE flow that
 Alexa+ requires. Ten wrong tokens from one address lock it out for up to 15
@@ -259,7 +271,7 @@ npm run build     # compile both into dist/
 Lint also enforces the dependency rule: code in `src/domain` and
 `src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
-On 2026-10-19, 679 unit tests and 39 browser tests passed.
+On 2026-10-19, 681 unit tests and 39 browser tests passed.
 
 ## Cost model
 
@@ -292,6 +304,9 @@ stay on your server.
   ID Metadata Documents, the spec's other two mechanisms, are not built.
 - **One owner.** Access is one owner token. OAuth tokens live in memory, so a
   restart signs every client out, and the simulator stands down in `oauth` mode.
+  Registered clients are forgotten too: a client that keeps its registration,
+  as Claude Code does, then gets `invalid_client` at the consent step. Adding the
+  server to it again under another name makes it register afresh.
 - **Latency.** Tools answered in 40–180 ms with a warm cache on 2026-09-12. The
   cache is warmed at startup, but a cold fetch from GitHub is slower than the
   Alexa+ budget of 500 ms.
