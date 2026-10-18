@@ -470,9 +470,9 @@ server keeps the config it already validated rather than going dark.
 ## 7.5 Shortcuts — `config/shortcuts.yml`
 
 A shortcut is one tool that runs a flow of blocks, the way a shortcut on a phone
-does. "What's my morning brief" is two questions (what did my library find, and
-is my stack healthy), and a shortcut answers both in one call, in the same order
-every time. Its blocks decide what gets said: ask a tool, check the answer, say
+does. "What's my morning brief" is two questions (what is new in every app since
+I last asked, and is my stack healthy), and a shortcut answers both in one call,
+in the same order every time. Its blocks decide what gets said: ask a tool, check the answer, say
 something, stop.
 
 ```yaml
@@ -536,8 +536,8 @@ answers exactly as it did: each step becomes an Ask block saved as `step1`,
 `step2`, and `{1}`, `{2}` or `{results}` in the reply become a Say. The next save
 writes it as blocks, and the old file is kept in `config/backups/`.
 
-Shortcuts live in their own file because they span apps: `morning brief` calls a
-library tool and a global one, and belongs to neither. A shortcut can never
+Shortcuts live in their own file because they span apps: `morning brief` asks
+`whats_new` about every app and then `stack_status`, and belongs to no one app. A shortcut can never
 shadow a generated tool; if the names collide, the app's own tool wins.
 
 **Easiest way to write one:** the Shortcuts page in the console builds the flow

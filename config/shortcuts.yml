@@ -3,11 +3,10 @@
 
 shortcuts:
   - name: "morning brief"          # becomes the tool morning_brief
-    description: "The latest from your library plus whether the stack is healthy."
+    description: "What is new in every app since you last asked, and whether the stack is healthy."
     enabled: true
     blocks:
-      - ask: "library_search"
-        with: {"limit":2}
+      - ask: "whats_new"
         as: "news"
       - ask: "stack_status"
         as: "health"
