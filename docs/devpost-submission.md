@@ -15,7 +15,7 @@ official rules as checked on 2026-10-04.
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
-| Demo video | Recorded 2026-10-19 (2:51); upload it, then put the link here. See Demo video below |
+| Demo video | Recorded 2026-10-19 (2:52, narrated); upload it, then put the link here. See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
@@ -142,33 +142,40 @@ The submission period began 2026-08-31 10:15 PDT.
 ## Demo video
 
 Recorded on 2026-10-19 from the production build, driven by a script rather
-than by hand: 2 minutes 51 seconds, 1920x1080, with captions burned in and the
-simulator's spoken answers as the only sound. The recorder, the build script
-and the files live outside this repository, in `../StackVoice-video`. Upload it
-to YouTube or Vimeo as public; the rules require one or the other.
+than by hand, then edited with narration: 2 minutes 52 seconds, 1920x1080, in
+English. The file to upload is `final/stackvoice-demo-narrated.mp4` in
+`../StackVoice-video`, with `final/stackvoice-demo-narrated.srt` as its English
+subtitles (the narration and the simulator's answers). The recorder, the editing
+project and the files live outside this repository; see that folder's README.
+Upload it to YouTube or Vimeo as public; the rules require one or the other. A
+version without narration, captions burned in (2:51), is there too as
+`final/stackvoice-demo.mp4`.
 
 | Time | Scene | What it shows |
 |---|---|---|
 | 0:00 | Landing page | The idea, and how sources reach the assistant |
 | 0:08 | Console | Adding `video-ideas.csv` from the data folder: every guess with an example, the missing date fixed by clicking a column, the read tool switched on, saved |
-| 0:35 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more"; the search and the read each show an MCP Apps card with the entries, and every answer its tool call |
-| 1:13 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
-| 1:56 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
-| 2:10 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea, with its card |
-| 2:39 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
-| 2:46 | End card | The repository address, MIT, self-hosted, $0 |
+| 0:33 | Simulator | "Is my stack healthy?", a search of the new app, and "Tell me more"; the search and the read each show an MCP Apps card with the entries, and every answer its tool call |
+| 1:15 | Shortcut builder | "ideas about {topic}": Ask, If with a Say and a Stop, Say; Try it with "gardening" (the If answers) and with "AI"; saved |
+| 1:52 | Simulator | "Ideas about AI" routed to the shortcut, with `topic` filled |
+| 2:06 | Simulator | "What's new in my video ideas?" starts tracking; a new idea is added to the CSV; in a new conversation the same question names only that idea, with its card |
+| 2:35 | The same server in `oauth` mode | Its real authorization server metadata with S256, and a 401 for `/mcp` without a token |
+| 2:45 | End card | The repository address, MIT, self-hosted, $0 |
 
 What the rules ask of it, and how it answers:
 
 - **The simulated experience is clear.** Both simulator scenes carry a
-  "Simulated Alexa+ experience" label, and a caption says it is a real MCP
-  client calling the server.
+  "Simulated Alexa+ experience" label. The narration says a simulated Alexa+
+  client asks over real MCP, and a headline repeats it on screen.
 - **No third-party trademarks or music.** The data searched on screen is a CSV
   of the author's own video ideas. The landing page is cut before its example
   names a news site, and the library and market apps, whose records name other
-  companies, are not searched. There is no music.
-- **The answers' voice** is Windows' built-in Zira voice, standing in for the
-  browser's speech, which the recording cannot capture.
+  companies, are not searched. The music was written for this video by the
+  author's own video tool, ReelSmith; it is not a third-party track, and it is
+  silent while the simulator answers.
+- **The voices** are synthetic. The narration is an English text-to-speech
+  voice (edge-tts, Andrew). The answers are Windows' built-in Zira voice,
+  standing in for the browser's speech, which the recording cannot capture.
 
 ## Testing instructions
 
