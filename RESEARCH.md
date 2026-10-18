@@ -114,6 +114,11 @@ experience* built with any tool, with no MCP-shaped surface required. Real
 Alexa+ access — US-only, device-gated — is therefore **not** on the critical
 path. Judges evaluate via the public repo and a demo video under 3 minutes.
 
+**Update 2026-10-18.** The hackathon FAQ says the Toolkit, its CLI and its web
+simulator are a preview for select partners only, with no way for a
+participant to get access, and that individual setup pages often leave this
+out. The limit is the partner gate, not only the region recorded above.
+
 ## 4. Prior art on the config-driven axis (missed in pass 1)
 
 | Project | What it does | Overlap with StackVoice |

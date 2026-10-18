@@ -16,7 +16,7 @@ official rules as checked on 2026-10-04.
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
 | Demo video | To record; see the outline below |
-| Try it | To host; see DEPLOY_PLAN.md |
+| Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
 
@@ -48,7 +48,8 @@ to hands on your own data.
   The browser never sees one again.
 
 The project is demonstrated through a simulated Alexa+ page, because the Alexa+
-MCP Toolkit is available in the US only. The simulator is a real MCP client: it
+MCP Toolkit is a preview open to select partners only, so no entrant can
+connect a server to Alexa+. The simulator is a real MCP client: it
 calls the server over Streamable HTTP, as a device would, and shows each tool
 call under the answer.
 
@@ -100,7 +101,7 @@ sentences and not an array, only showed up by building a client and listening.
 
 ### What's next
 
-- Onboarding to real Alexa+ once the MCP Toolkit is available where I can use it.
+- Onboarding to real Alexa+ once the MCP Toolkit opens beyond its partner preview.
 - Statically registered OAuth clients, which Alexa+ account linking requires.
 - Reading more than one source per app.
 - Pages and answers in Burmese as well as English.
@@ -134,9 +135,9 @@ Keep news sites, other companies' logos and their headlines off screen.
 
 ## Testing instructions
 
-Text for the form's testing instructions field. There is no hosted server yet, so
-these run StackVoice locally. When it is hosted, put the link and the console
-token at the top and keep the rest.
+Text for the form's testing instructions field. They run StackVoice locally: the
+hackathon FAQ says a locally runnable public repository plus the demo video is
+enough, and hosting is not required.
 
 ### Run it
 
@@ -224,8 +225,8 @@ because an authorization code flow needs a person at a browser.
 - Use `127.0.0.1` rather than `localhost`. The server listens on IPv4 only, and
   Node.js-based clients such as the MCP Inspector may resolve `localhost` to the
   IPv6 address first and fail to connect.
-- StackVoice has not run on a real Alexa+ device; the Alexa+ MCP Toolkit is
-  US-only. The simulator is the demonstration.
+- StackVoice has not run on a real Alexa+ device; the Alexa+ MCP Toolkit is a
+  preview open to select partners only. The simulator is the demonstration.
 - Voice uses the browser's own speech service, which may send audio to Google in
   Chrome or Microsoft in Edge.
 - The demo apps call GitHub without a key. GitHub allows 60 such requests an
@@ -244,14 +245,14 @@ overview, the quickstart and the account linking page, told me which transport,
 auth and latency requirements the server had to meet. The open MCP spec
 2025-11-25 and the MCP TypeScript SDK are what the server is built on. The
 hackathon's simulated Alexa+ path is how the project is demonstrated, because
-the Toolkit and Alexa+ are available in the US only. I did not run the `alexa-ai`
-CLI or link a device.
+the Toolkit is a preview open to select partners only. I did not run the
+`alexa-ai` CLI or link a device.
 
 **What worked well.** Building to the open MCP standard meant any MCP client
 could test the server, so nothing Alexa-specific stood in the way of the core.
 The quickstart is concrete about Streamable HTTP, PKCE with S256, the metadata
 endpoint, the 401 challenge and the 500 ms budget. Allowing a simulated Alexa+
-experience let an entrant outside the US take part at all.
+experience let an entrant without Toolkit access take part at all.
 
 **What needs work.**
 - The track description did not link the MCP Toolkit pages, which took a week
@@ -264,16 +265,20 @@ experience let an entrant outside the US take part at all.
   found.
 - There is no guidance on writing tools for a voice surface: how long a result
   can be before it stops being listenable, or how descriptions are used to route.
-- There is no way to try an add-on outside the US, so routing, spoken answers and
-  real latency could not be checked.
+- The pages I worked from, the Toolkit overview and quickstart, gave US
+  availability as the limit. That the tools are a preview for select partners
+  only, with no way for a hackathon entrant to get access, I learned from the
+  hackathon FAQ, which says the setup pages often leave it out.
+- Without access, routing, spoken answers and real latency could not be
+  checked against Alexa+ itself.
 
 **Onboarding.** The open-standard half was quick: the server answered over
 Streamable HTTP with OAuth on the first day of coding. The Alexa-specific half
 was slow, because each hard requirement had to be found on a different page.
 
 **Would I build with it again?** Yes for MCP as the way to give an assistant
-hands. For Alexa+ itself, once the Toolkit can be tried where I live and its
-requirements are on one page.
+hands. For Alexa+ itself, once the Toolkit opens beyond its partner preview and
+its requirements are on one page.
 
 ## Open Source mini challenge
 
@@ -309,20 +314,20 @@ Optional field. Each request needs a description, why it matters to this
 project, and a priority. Draft; change anything that does not match your own
 experience.
 
-1. **A way to try MCP add-ons with Alexa+ outside the US.** Even a text-only
-   test console would do. Without one, routing, spoken answers and real latency
-   could not be checked, and the project is shown through a simulator.
+1. **A way to try MCP add-ons with Alexa+ outside the partner preview.** Even a
+   text-only test console would do. Without one, routing, spoken answers and
+   real latency could not be checked, and the project is shown through a
+   simulator.
    **Critical.**
-2. **Every add-on requirement on one page.** Transport, OAuth with PKCE, the
-   client registration mechanism, the full list of Alexa redirect URIs and the
-   500 ms budget are split between the quickstart and the account linking page
-   today. The registration requirement was found after the authorization server
-   was built. **Important.**
+2. **Every add-on requirement on one page.** That the tools are a partner-only
+   preview, the transport, OAuth with PKCE, the client registration mechanism,
+   the full list of Alexa redirect URIs and the 500 ms budget are spread across
+   the docs home page, the quickstart and the account linking page today. The
+   registration requirement was found after the authorization server was
+   built, and the partner gate only from the hackathon FAQ. **Important.**
 3. **Guidance on tool results for voice.** How long a result can be before it
    stops being listenable, and how tool descriptions are used to route a
    request. StackVoice had to guess at both. **Nice-to-have.**
 
 ## Still to write
-- **The hosted link and console token**, added to the testing instructions once
-  the server is hosted.
 - **Gallery images** for the project page.

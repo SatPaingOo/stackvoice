@@ -1,5 +1,10 @@
 # StackVoice — Deploy plan (hosted demo for judges)
 
+> **Not used for the submission.** On 2026-10-18 the hackathon FAQ said a
+> locally runnable public repository plus the demo video is enough, and that
+> hosting is not required. This plan is kept in case a hosted copy is wanted
+> later; nothing below has been deployed.
+
 A public HTTPS copy of StackVoice that judges can use from submission until the
 judging period ends on 2026-11-20, at $0. The rules require free testing access
 until then, with credentials if anything is private.

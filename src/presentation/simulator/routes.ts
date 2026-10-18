@@ -20,7 +20,8 @@ const MAX_UTTERANCE_LENGTH = 400;
  * The simulated Alexa+ surface.
  *
  * The hackathon rules accept a simulated experience in place of a real Alexa+
- * integration, which matters because the MCP Toolkit is US-only. This is that
+ * integration, which matters because the MCP Toolkit is a partner-only preview
+ * that no hackathon entrant can connect to. This is that
  * surface: it speaks to the same MCP server over the same transport a device
  * would use, and shows each tool call as it happens so the mechanism is visible
  * rather than claimed.

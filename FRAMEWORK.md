@@ -2,21 +2,21 @@
 
 **Ask your own stuff, not the internet.**
 
-Status: **built, preparing submission** (2026-10-04). The MCP server, OAuth,
+Status: **built, preparing submission** (2026-10-18). The MCP server, OAuth,
 simulator, console, CLI, universal sources and shortcut flows are done, and the
-server is hardened for hosting. Hosting, the demo video and the Devpost
-submission remain.
+server is hardened. The demo video and the Devpost submission remain. Hosting
+was dropped on 2026-10-18, when the hackathon FAQ said it is not required.
 
 ---
 
-## 1. Verified constraints (official rules, re-checked 2026-10-04)
+## 1. Verified constraints (official rules re-checked 2026-10-04, FAQ read 2026-10-18)
 
-Source: the hackathon's official rules, updates and dates pages on Devpost. The
-rules carry an update dated 2026-09-16 to the code repository requirement.
+Source: the hackathon's official rules, updates, dates and FAQ pages on Devpost.
+The rules carry an update dated 2026-09-16 to the code repository requirement.
 
-| Requirement | What StackVoice does | State on 2026-10-04 |
+| Requirement | What StackVoice does | State on 2026-10-18 |
 |---|---|---|
-| A working MCP server, spec 2025-11-25 or later, over Streamable HTTP, **or** a simulated Alexa+ experience | Both: a real server, and a simulator that calls it as an MCP client | done |
+| A working MCP server, spec 2025-11-25 or later, over Streamable HTTP, **or** a simulated Alexa+ experience. The FAQ confirms that a web page acting as a real MCP client (initialize, tools/list and tools/call over Streamable HTTP) satisfies it, and calls an existing AI assistant app calling the same server a bonus | Both: a real server, and a simulator that calls it as an MCP client | done |
 | The required technology imported and called at runtime, not only named | `@modelcontextprotocol/sdk` server and client, called in `src/` | done |
 | A GitHub repository with all source, assets and run instructions. Since 2026-09-16 it may be public with an open-source license visible at the top, **or** private and shared with testing@devpost.com and six Amazon GitHub accounts named in the rules | MIT, detected by GitHub. The Open Source mini challenge needs a public repository, so it goes public at submission. Its whole history was checked for secrets on 2026-10-04 and none were found | **open** |
 | A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission. On the simulated path it must clearly show the simulated experience | Outline in [docs/devpost-submission.md](./docs/devpost-submission.md) | **open** |
@@ -24,15 +24,15 @@ rules carry an update dated 2026-09-16 to the code repository requirement.
 | Open Source mini challenge: contribution URL, project repository URL, GitHub username, and what was done, how it works and why it matters | Drafted in docs/devpost-submission.md. The rules call it "a new, additional open-source project"; whether the entry's own repository counts is to be asked (risk 7 in §8) | drafted |
 | Product feedback on every Amazon tool, API or SDK used, answering five set questions | Draft in docs/devpost-submission.md, to be checked against the author's own experience | drafted |
 | Optional: feature requests, each with why it matters and a priority (Critical, Important or Nice-to-have) | Draft in docs/devpost-submission.md | drafted |
-| The project available to judges free of charge until the judging period ends, "via code repository and demo video", with credentials if anything is private. Judges need not test it, and may judge on the description, images and video alone | Run instructions in the repository. A free Render service in `token` mode is planned in [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) so judges can try it without installing; not deployed | **open** |
+| The project available to judges free of charge until the judging period ends, "via code repository and demo video", with credentials if anything is private. Judges need not test it, and may judge on the description, images and video alone. The FAQ: "a locally runnable public repo plus your demo video is enough", hosting is not required, and a server need not stay running after submission | Run instructions in the repository, checked from a fresh clone. Not hosted; [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) stays as a ready plan | done |
 | Disclosure of work that existed before the submission period | information-hub predates it; see docs/devpost-submission.md | drafted |
 | All materials in English | Code, docs and pages are English | done |
 | Friction log, for up to a 10% bonus, recommended by Amazon's team in Stage 1 and applied in Stage 2 | Three entries in FRICTION_LOG.md, more drafted for review | in progress |
 
-**Dates.** Submissions 2026-08-31 10:15 PDT to **2026-10-23 12:00 PDT**. The
-rules give the judging period as 2026-11-09 to 2026-11-20; the dates page still
-shows it starting 2026-10-26, and the rules prevail where they differ. Either
-way, the hosted demo must stay up until 2026-11-20. Winners announced on or
+**Dates.** Submissions 2026-08-31 10:15 PDT to **2026-10-23 12:00 PDT**, which
+is 2026-10-24 01:30 in Myanmar. The rules and the FAQ give the judging period
+as 2026-11-09 to 2026-11-20; the dates page still shows it starting
+2026-10-26, and the rules prevail where they differ. Winners announced on or
 around 2026-12-03. Amazon holds office hours on 2026-10-06 at 10:30 PDT and
 2026-10-19 at 09:00 PDT.
 
@@ -57,8 +57,9 @@ unless it is hosted on AWS.
 North Korea, any other country comprehensively sanctioned by the US Treasury's
 Office of Foreign Assets Control, and anyone where US or local law prohibits
 taking part or receiving a prize. Myanmar is not named, and US sanctions on it
-target listed people and entities rather than the whole country. That is not
-the same as confirmed eligibility; see risk 1 in §8.
+target listed people and entities rather than the whole country. The FAQ
+repeats the same rule. That is not the same as confirmed eligibility; see
+risk 1 in §8.
 
 ## 2. Concept & pitch (revised 2026-09-13)
 
@@ -117,13 +118,10 @@ the questions a person asks the same way every day.
 ## 5. Cost model
 
 Everything $0: Node.js and the MCP SDK are open source, the demo data is public,
-speech uses browser APIs, and the demo video is recorded locally. Hosting must
-also be $0 and must stay up until judging ends on 2026-11-20. A Cloudflare Tunnel
-from a personal computer would need that computer on for two months, so the plan
-is a free Render web service (DEPLOY_PLAN.md). It sleeps after 15 minutes without
-visitors and wakes on the next one, which takes about a minute. The hackathon
-offers $150 in AWS credits on request (§1), which only matter if it is hosted
-on AWS.
+speech uses browser APIs, and the demo video is recorded locally. Judges run it
+from the repository, so there is no hosting cost. If a hosted copy is wanted
+later, DEPLOY_PLAN.md describes a free Render web service. The hackathon offers
+$150 in AWS credits on request (§1), which only matter if it is hosted on AWS.
 
 ## 6. Docs map
 
@@ -157,10 +155,10 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 
 | Stage | Window | Milestone | Done when |
 |---|---|---|---|
-| **7 — Host** | 2026-10-04 to 10-11 | Render free web service, HTTPS, `token` mode, demo apps loaded (DEPLOY_PLAN.md) | A judge can open `/simulator` from a link, and `/console` with the token from the testing instructions |
-| **8 — Friction log + product feedback** | to 2026-10-15 | Friction entries for every Amazon tool actually used; the required product feedback text | Both sections ready to paste into the form |
-| **9 — Demo video** | 2026-10-05 to 10-15 | Under 3 minutes, English, public, following docs/devpost-submission.md | Uploaded and linked |
-| **10 — Submit** | 2026-10-19 to 10-20 | Repository made public; Devpost form complete | Submitted, with 10-21 to 10-23 as buffer |
+| ~~7 — Host~~ | Dropped 2026-10-18 | Not required, per the FAQ | — |
+| **8 — Friction log + product feedback** | to 2026-10-20 | Friction entries for every Amazon tool actually used; the required product feedback text | Both sections ready to paste into the form |
+| **9 — Demo video** | 2026-10-18 to 10-20 | Under 3 minutes, English, public, following docs/devpost-submission.md | Uploaded and linked |
+| **10 — Submit** | 2026-10-21 | Repository made public; Devpost form complete | Submitted, with 10-22 and 10-23 as buffer |
 
 **History of scope changes.**
 
@@ -172,24 +170,26 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 - **2026-09-13:** sources went beyond GitHub, and shortcuts became flows. Both
   follow from the same claim: anyone, with whatever data they have, in their own
   words.
+- **2026-10-18:** hosting was dropped. The FAQ says a locally runnable public
+  repository plus the demo video is enough, and the days left went to the video.
 
-## 8. Open risks (revised 2026-10-04)
+## 8. Open risks (revised 2026-10-18)
 
 1. **Eligibility (high).** Myanmar is not named among excluded places, but the
    rules also exclude anyone US law bars from receiving a prize. US sanctions on
    Myanmar target listed people and entities rather than the whole country, which
    suggests participation is allowed, but only Devpost can confirm it and say how
-   a prize would be paid. Ask Devpost support before Stage 9, or at the office
-   hours on 2026-10-06.
-2. **Hosting must last until 2026-11-20 (high).** A tunnel from a personal
-   computer will not. The simulator stands down in `oauth` mode, so the hosted
-   demo runs in `token` mode, and the console's token goes in the testing
-   instructions. The free Render service sleeps after 15 minutes without
-   visitors, and the wrong-token lockout depends on `server.trusted_proxies`
-   matching Render's proxy, which DEPLOY_PLAN.md §4 checks after the first
-   deploy.
-3. **Real Alexa+ untested (medium).** The Toolkit is US-only. The rules accept a
-   simulated experience; the README and the video say plainly that it is one.
+   a prize would be paid. The FAQ repeats the rule without naming Myanmar. Ask
+   at the office hours on 2026-10-19 (22:30 in Myanmar), the last before the
+   deadline.
+2. **Judges must run it themselves (medium).** With no hosted copy, a judge who
+   tests it clones the repository and runs `npm ci` and `npm run dev`. The
+   testing instructions were checked from a fresh clone on 2026-09-13, and the
+   video has to carry the demonstration for judges who do not run it.
+3. **Real Alexa+ untested (medium).** The Toolkit is a preview for select
+   partners only, and the FAQ says no participant can connect a server to
+   Alexa+. The rules accept a simulated experience; the README and the video
+   say plainly that it is one.
    Found on 2026-10-04: Alexa+ account linking needs a statically registered
    OAuth client, which StackVoice does not support, so a real device could not
    link to it yet.
@@ -199,21 +199,22 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 5. **Differentiation (medium).** Config-driven MCP servers exist, and the rules
    call a basic MCP wrapper around an existing API obvious. Pitch the three
    separators in §2, never config-driven alone.
-6. **A public simulator on the hosted server (low).** Anyone with the link can
-   ask about the demo data. The data is already public and every tool is
-   read-only, but the hosted settings must keep private network access off.
+6. **A public simulator, if it is ever hosted (low).** Anyone with the link
+   could ask about the demo data. The data is already public and every tool is
+   read-only, but hosted settings must keep private network access off.
 7. **Open Source mini challenge (medium).** The rules ask for "a new,
    additional open-source project" or a contribution to a public repository,
    alongside the primary track entry, with a contribution URL and a project
    repository URL. Whether the entry's own new repository counts is unclear.
-   The rules ask for ambiguity to be raised in writing; ask Devpost with the
-   eligibility question. If it does not count, the fallback is a real
-   contribution to a public repository that the build depended on.
+   The FAQ does not answer it. The rules ask for ambiguity to be raised in
+   writing; ask Devpost with the eligibility question. If it does not count,
+   the fallback is a real contribution to a public repository that the build
+   depended on.
 
 Resolved: Alexa+ docs found and the simulated path confirmed (2026-09-12); remote
 auth built as OAuth 2.1 (2026-09-12); SDK Streamable HTTP server support confirmed
-(2026-09-12).
+(2026-09-12); hosting found not to be required (FAQ, 2026-10-18).
 
 ---
 
-Last reviewed: 2026-10-04
+Last reviewed: 2026-10-18

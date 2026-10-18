@@ -9,10 +9,12 @@
 > self-hosted MCP server that closes that gap. Paste a source, and the assistant
 > can search it, read from it and check on it, in your words and out loud.
 >
-> **Before the features, the caveats.** The Alexa+ MCP Toolkit is available in
-> the US only, so StackVoice has not been run on a real Alexa+ device. It is
+> **Before the features, the caveats.** The Alexa+ MCP Toolkit is a preview
+> open to select partners only, so no hackathon entrant can connect a server to
+> Alexa+, and StackVoice has not been run on a real Alexa+ device. It is
 > demonstrated through a simulated Alexa+ page that calls the real server as an
-> ordinary MCP client over Streamable HTTP, which the hackathon rules accept.
+> ordinary MCP client over Streamable HTTP, which the hackathon rules and FAQ
+> accept.
 > Speech on that page uses the browser's own speech service, which may send your
 > voice to Google in Chrome or Microsoft in Edge. Your records stay on your
 > server; the assistant receives only the answers it asks for.
@@ -235,7 +237,7 @@ classes. Details, key decisions and known issues are in
 | [CODING_STANDARDS.md](./CODING_STANDARDS.md) | Where this project's rules differ from the defaults |
 | [FRICTION_LOG.md](./FRICTION_LOG.md) | Where Amazon's tooling fought the build |
 | [docs/devpost-submission.md](./docs/devpost-submission.md) | Draft text for the hackathon submission and the demo video outline |
-| [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) | How the hosted demo for judges is set up on a free Render service |
+| [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) | A ready plan for a hosted copy on a free Render service, not used for the submission |
 
 ## Development
 
@@ -262,7 +264,7 @@ stay on your server.
 
 ## Limitations
 
-- **Not run on a real Alexa+ device.** The Alexa+ MCP Toolkit is US-only. The
+- **Not run on a real Alexa+ device.** The Alexa+ MCP Toolkit is a preview open to select partners only. The
   server meets the Toolkit's published transport and auth requirements, but the
   end-to-end proof is the simulator, not a device.
 - **The simulator's understanding is rules, not a model.** It matches phrasings
