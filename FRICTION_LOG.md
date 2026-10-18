@@ -87,3 +87,57 @@ a design change) · `minor` (annoying, worked around quickly).
   definitions and sample results, and a short "writing tools for voice" page.
   The transport is the easy half; nobody's first MCP server returns speakable
   results, and every entrant in this track is solving that alone.
+
+### 2026-10-04 — Alexa+ client registration is stated only on the account linking page
+
+- **Task:** Check that StackVoice's OAuth 2.1 server is ready for Alexa+ account
+  linking.
+- **Steps taken:** Built the authorization server with the MCP TypeScript SDK's
+  authorization router, which registers clients through Dynamic Client
+  Registration at `/register`. Then read the Alexa+ MCP Toolkit quickstart and
+  the "Account Linking for MCP Add-ons" page.
+- **Expected:** The Toolkit overview or quickstart, which already state the
+  transport, PKCE and latency requirements, would also say which client
+  registration mechanism Alexa+ uses. MCP spec 2025-11-25 allows three:
+  pre-registration, Client ID Metadata Documents, and Dynamic Client
+  Registration.
+- **Actual:** Only the account linking page says "Static client registration —
+  Dynamic Client Registration (DCR) isn't supported." Alexa+ needs a client ID
+  and secret created by hand on the authorization server, every Alexa redirect
+  URI registered, and refresh tokens. Pre-registration is allowed by the spec,
+  so the requirement is reasonable, but it was found after the server was built
+  around the SDK's dynamic registration.
+- **Severity:** major
+- **Workaround:** None yet. StackVoice's authorization server supports only
+  dynamic registration and keeps clients in memory, so pre-registered clients
+  are recorded as a known gap, and the submission uses the simulated Alexa+ path
+  the rules allow.
+- **Suggestion for Amazon:** State the registration mechanism in the Toolkit
+  overview and quickstart, beside the transport and PKCE requirements, and
+  publish the full list of Alexa redirect URIs there, so a developer can set up
+  the client before the first linking attempt.
+
+### 2026-10-18 — The Alexa+ add-on tools are a partner-only preview, and the setup pages did not say so
+
+- **Task:** Test StackVoice end to end against Alexa+, including the 500 ms
+  latency budget the quickstart sets.
+- **Steps taken:** On 2026-09-12 read the MCP Toolkit overview and quickstart,
+  which gave onboarding through the `alexa-ai` CLI and US availability. Looked
+  for a developer sandbox, test console or simulator that an entrant could use.
+  On 2026-10-18 read the hackathon FAQ.
+- **Expected:** The setup pages would say who can use the tools, so an entrant
+  could plan around it from the start.
+- **Actual:** The FAQ says the Category SDK, MCP Toolkit, CLI and Web Simulator
+  are a preview for select partners only, with no way for hackathon participants
+  to get access, and that individual setup pages often leave this out. The pages
+  read in September gave US availability as the limit, not the partner gate.
+  Routing, spoken answers and the 500 ms budget as Alexa+ measures it could not
+  be checked.
+- **Severity:** major
+- **Workaround:** Built a simulated Alexa+ client that calls the server over the
+  same Streamable HTTP transport, as the rules and the FAQ allow, and measured
+  latency there: 40 to 180 ms per tool with a warm cache on 2026-09-12.
+- **Suggestion for Amazon:** Put the partner-only status at the top of every
+  Toolkit setup page, and offer hackathon entrants a test console for MCP
+  add-ons, even text-only, so they can see how Alexa+ routes to their tools and
+  how long each call takes.

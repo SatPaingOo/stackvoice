@@ -27,7 +27,7 @@ The rules carry an update dated 2026-09-16 to the code repository requirement.
 | The project available to judges free of charge until the judging period ends, "via code repository and demo video", with credentials if anything is private. Judges need not test it, and may judge on the description, images and video alone. The FAQ: "a locally runnable public repo plus your demo video is enough", hosting is not required, and a server need not stay running after submission | Run instructions in the repository, checked from a fresh clone. Not hosted; [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) stays as a ready plan | done |
 | Disclosure of work that existed before the submission period | information-hub predates it; see docs/devpost-submission.md | drafted |
 | All materials in English | Code, docs and pages are English | done |
-| Friction log, for up to a 10% bonus, recommended by Amazon's team in Stage 1 and applied in Stage 2 | Three entries in FRICTION_LOG.md, more drafted for review | in progress |
+| Friction log, for up to a 10% bonus, recommended by Amazon's team in Stage 1 and applied in Stage 2 | Five entries in FRICTION_LOG.md, to paste into the form's optional friction log field | done |
 
 **Dates.** Submissions 2026-08-31 10:15 PDT to **2026-10-23 12:00 PDT**, which
 is 2026-10-24 01:30 in Myanmar. The rules and the FAQ give the judging period
