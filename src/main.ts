@@ -18,6 +18,7 @@ import { StackVoiceError } from './domain/errors.js';
 import type { DataSourceReader } from './domain/ports/data-source-reader.js';
 import { ReaderFactory } from './infrastructure/adapters/adapter-factory.js';
 import { AttemptLimiter } from './infrastructure/auth/attempt-limiter.js';
+import { JsonOAuthStateFile } from './infrastructure/auth/oauth-state-file.js';
 import { GithubRepoAdapter } from './infrastructure/adapters/github-repo.adapter.js';
 import { GithubRepoInspector } from './infrastructure/adapters/github-repo.inspector.js';
 import { CompositeSourceInspector } from './infrastructure/adapters/composite.inspector.js';
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
   const appsDir = resolve(cwd(), argv[3] ?? 'config/apps');
   const shortcutsPath = resolve(appsDir, '..', 'shortcuts.yml');
   const seenPath = resolve(appsDir, '..', 'seen.json');
+  const oauthPath = resolve(appsDir, '..', 'oauth.json');
 
   const settingsStore = new YamlSettingsStore(settingsPath);
   const settings = await settingsStore.load();
@@ -196,6 +198,7 @@ async function main(): Promise<void> {
     simulator,
     console: console_,
     attempts,
+    oauthState: new JsonOAuthStateFile(oauthPath),
   });
   const server = await http_.listen();
 

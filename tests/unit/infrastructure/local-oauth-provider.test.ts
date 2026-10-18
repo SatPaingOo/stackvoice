@@ -3,17 +3,19 @@ import { createHash, randomBytes } from 'node:crypto';
 import {
   InvalidGrantError,
   InvalidRequestError,
+  InvalidScopeError,
   InvalidTargetError,
   InvalidTokenError,
 } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import type { AuthorizationParams } from '@modelcontextprotocol/sdk/server/auth/provider.js';
-import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/shared/auth.js';
+import type { OAuthClientInformationFull, OAuthTokens } from '@modelcontextprotocol/sdk/shared/auth.js';
 import type { Response } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Logger } from '../../../src/domain/ports/logger.js';
 import { AttemptLimiter } from '../../../src/infrastructure/auth/attempt-limiter.js';
 import { LocalOAuthProvider } from '../../../src/infrastructure/auth/local-oauth-provider.js';
+import type { OAuthState, OAuthStatePort } from '../../../src/infrastructure/auth/oauth-state-file.js';
 
 const silentLogger: Logger = {
   info: () => {},
@@ -102,12 +104,48 @@ const consent = async (provider: LocalOAuthProvider, token?: string, ip?: string
 };
 
 /** Runs the consent step and returns the issued authorization code. */
-const grantCode = async (provider: LocalOAuthProvider, over: Partial<AuthorizationParams> = {}): Promise<string> => {
+const grantCode = async (
+  provider: LocalOAuthProvider,
+  over: Partial<AuthorizationParams> = {},
+  to: OAuthClientInformationFull = client,
+): Promise<string> => {
   const res = new FakeResponse(OWNER_TOKEN);
-  await provider.authorize(client, params(over), res.asExpress());
+  await provider.authorize(to, params(over), res.asExpress());
   const url = new URL(res.redirectedTo as string);
   return url.searchParams.get('code') as string;
 };
+
+/** Registers a client the way dynamic client registration does. */
+const register = async (provider: LocalOAuthProvider, name = 'Claude Code'): Promise<OAuthClientInformationFull> => {
+  const registerClient = provider.clientsStore.registerClient;
+  if (registerClient === undefined) throw new Error('the provider takes no registrations');
+  return registerClient({ redirect_uris: [REDIRECT], client_name: name });
+};
+
+/** Signs a registered client in: consent, then the code exchanged for tokens. */
+const signIn = async (provider: LocalOAuthProvider, to: OAuthClientInformationFull): Promise<OAuthTokens> =>
+  provider.exchangeAuthorizationCode(to, await grantCode(provider, {}, to));
+
+/** What a state file would hold, kept in memory, so a test can restart the provider over it. */
+class MemoryState implements OAuthStatePort {
+  saved: OAuthState = { clients: [], refreshTokens: [] };
+
+  async load(): Promise<OAuthState> {
+    return structuredClone(this.saved);
+  }
+
+  async save(state: OAuthState): Promise<void> {
+    this.saved = structuredClone(state);
+  }
+}
+
+const withState = (state: OAuthStatePort): LocalOAuthProvider =>
+  new LocalOAuthProvider({
+    ownerToken: OWNER_TOKEN,
+    logger: silentLogger,
+    attempts: new AttemptLimiter({ maxFailures: 3, windowMs: 15 * 60 * 1000 }),
+    state,
+  });
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -119,17 +157,17 @@ afterEach(() => {
 });
 
 describe('client registration', () => {
-  it('issues an id and stores the client', () => {
+  it('issues an id and stores the client', async () => {
     const provider = makeProvider();
 
-    const registered = provider.clientsStore.registerClient({ redirect_uris: [REDIRECT] });
+    const registered = await register(provider);
 
     expect(registered.client_id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(provider.clientsStore.getClient(registered.client_id)?.redirect_uris).toEqual([REDIRECT]);
+    expect((await provider.clientsStore.getClient(registered.client_id))?.redirect_uris).toEqual([REDIRECT]);
   });
 
-  it('does not know an unregistered client', () => {
-    expect(makeProvider().clientsStore.getClient('nope')).toBeUndefined();
+  it('does not know an unregistered client', async () => {
+    expect(await makeProvider().clientsStore.getClient('nope')).toBeUndefined();
   });
 });
 
@@ -357,5 +395,116 @@ describe('refresh tokens', () => {
     await expect(
       provider.exchangeRefreshToken({ ...client, client_id: 'other' }, first.refresh_token as string),
     ).rejects.toBeInstanceOf(InvalidGrantError);
+  });
+
+  it('expires a refresh token after thirty days', async () => {
+    const provider = makeProvider();
+    const first = await provider.exchangeAuthorizationCode(client, await grantCode(provider));
+
+    vi.advanceTimersByTime(30 * 24 * 60 * 60 * 1000 + 1000);
+
+    await expect(provider.exchangeRefreshToken(client, first.refresh_token as string)).rejects.toThrowError(/expired/);
+  });
+
+  it('can narrow the scopes on a refresh, never widen them', async () => {
+    const provider = makeProvider();
+    const first = await provider.exchangeAuthorizationCode(client, await grantCode(provider));
+
+    await expect(
+      provider.exchangeRefreshToken(client, first.refresh_token as string, ['stackvoice:read', 'stackvoice:write']),
+    ).rejects.toBeInstanceOf(InvalidScopeError);
+  });
+
+  it('keeps only the five newest refresh tokens of a client that signs in again and again', async () => {
+    const provider = makeProvider();
+    const signIns: OAuthTokens[] = [];
+    for (let n = 0; n < 6; n++)
+      signIns.push(await provider.exchangeAuthorizationCode(client, await grantCode(provider)));
+
+    await expect(provider.exchangeRefreshToken(client, signIns[0]?.refresh_token as string)).rejects.toBeInstanceOf(
+      InvalidGrantError,
+    );
+    await expect(provider.exchangeRefreshToken(client, signIns[5]?.refresh_token as string)).resolves.toBeDefined();
+  });
+
+  it('revokes only a token issued to the client asking', async () => {
+    const provider = makeProvider();
+    const tokens = await provider.exchangeAuthorizationCode(client, await grantCode(provider));
+
+    await provider.revokeToken({ ...client, client_id: 'other' }, { token: tokens.refresh_token as string });
+
+    await expect(provider.exchangeRefreshToken(client, tokens.refresh_token as string)).resolves.toBeDefined();
+  });
+});
+
+describe('across a restart', () => {
+  it('still knows a client that registered before it', async () => {
+    const state = new MemoryState();
+    const before = withState(state);
+    const registered = await register(before);
+    await before.flush();
+
+    const after = withState(state);
+
+    expect((await after.clientsStore.getClient(registered.client_id))?.client_name).toBe('Claude Code');
+  });
+
+  it('signs a client back in with its refresh token; its access token is refused', async () => {
+    const state = new MemoryState();
+    const before = withState(state);
+    const registered = await register(before);
+    const tokens = await signIn(before, registered);
+    await before.flush();
+
+    const after = withState(state);
+
+    await expect(after.verifyAccessToken(tokens.access_token)).rejects.toBeInstanceOf(InvalidTokenError);
+    const renewed = await after.exchangeRefreshToken(registered, tokens.refresh_token as string);
+    await expect(after.verifyAccessToken(renewed.access_token)).resolves.toMatchObject({
+      clientId: registered.client_id,
+    });
+  });
+
+  it('keeps refresh tokens on disk only as digests', async () => {
+    const state = new MemoryState();
+    const provider = withState(state);
+    const tokens = await signIn(provider, await register(provider));
+    await provider.flush();
+
+    const onDisk = JSON.stringify(state.saved);
+    const refresh = tokens.refresh_token as string;
+
+    expect(onDisk).not.toContain(refresh);
+    expect(onDisk).not.toContain(tokens.access_token);
+    expect(onDisk).toContain(createHash('sha256').update(refresh).digest('hex'));
+  });
+
+  it('forgets the client unused for longest once a hundred have registered, with its tokens', async () => {
+    const state = new MemoryState();
+    const provider = withState(state);
+    const first = await register(provider, 'first');
+    const tokens = await signIn(provider, first);
+    for (let n = 0; n < 100; n++) {
+      vi.advanceTimersByTime(1000);
+      await register(provider, `client ${String(n)}`);
+    }
+    await provider.flush();
+
+    expect(await provider.clientsStore.getClient(first.client_id)).toBeUndefined();
+    expect(state.saved.clients).toHaveLength(100);
+    await expect(provider.exchangeRefreshToken(first, tokens.refresh_token as string)).rejects.toBeInstanceOf(
+      InvalidGrantError,
+    );
+  });
+
+  it('starts empty, and still takes registrations, when the state cannot be read', async () => {
+    const broken: OAuthStatePort = {
+      load: () => Promise.reject(new Error('unreadable')),
+      save: () => Promise.resolve(),
+    };
+    const provider = withState(broken);
+
+    expect(await provider.clientsStore.getClient('anything')).toBeUndefined();
+    expect((await register(provider)).client_id).toBeTruthy();
   });
 });

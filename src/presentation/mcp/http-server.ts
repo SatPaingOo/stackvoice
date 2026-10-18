@@ -10,6 +10,7 @@ import express, { type Request, type RequestHandler, type Response } from 'expre
 import type { Settings } from '../../domain/settings.js';
 import { describeLockout, retryAfterSeconds, type AttemptLimiter } from '../../infrastructure/auth/attempt-limiter.js';
 import { LocalOAuthProvider } from '../../infrastructure/auth/local-oauth-provider.js';
+import type { OAuthStatePort } from '../../infrastructure/auth/oauth-state-file.js';
 import { sameSecret } from '../../infrastructure/auth/secret-compare.js';
 import { installConsole, type ConsoleDeps } from '../console/routes.js';
 import { installSimulator, type SimulatorDeps } from '../simulator/routes.js';
@@ -29,6 +30,8 @@ export interface HttpServerDeps extends McpServerDeps {
   readonly console: ConsoleDeps | null;
   /** Wrong owner tokens per address, shared with the console's sign-in. */
   readonly attempts: AttemptLimiter;
+  /** Where `oauth` mode keeps registered clients and refresh tokens across restarts; absent, in memory only. */
+  readonly oauthState?: OAuthStatePort;
 }
 
 /**
@@ -151,7 +154,12 @@ function installAuth(app: express.Express, deps: HttpServerDeps): RequestHandler
     return sharedTokenGuard(auth.token, deps);
   }
 
-  const provider = new LocalOAuthProvider({ ownerToken: auth.token, logger: deps.logger, attempts: deps.attempts });
+  const provider = new LocalOAuthProvider({
+    ownerToken: auth.token,
+    logger: deps.logger,
+    attempts: deps.attempts,
+    ...(deps.oauthState === undefined ? {} : { state: deps.oauthState }),
+  });
   const issuer = new URL(auth.publicUrl);
 
   app.use(

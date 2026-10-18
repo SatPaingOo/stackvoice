@@ -127,7 +127,8 @@ in the composition roots, `src/main.ts` and `src/cli.ts`.
 | `config/secret-headers.ts` | — | Fills `{{secret:NAME}}` into a request at the last moment, in memory |
 | `config/*.schema.ts` | — | zod schemas for every file |
 | `config/config-watcher.ts` | — | Reloads the registries when a file in `config/apps/` or `config/shortcuts.yml` changes. Saves from the console reload directly |
-| `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; tokens in memory |
+| `auth/local-oauth-provider.ts` · `consent-page.ts` | — | OAuth 2.1 authorization server with PKCE (S256) and dynamic client registration; access tokens and codes in memory |
+| `auth/oauth-state-file.ts` | — | `config/oauth.json`: registered clients and refresh tokens, the tokens as SHA-256 digests, so a restart signs no one out |
 | `auth/attempt-limiter.ts` · `secret-compare.ts` | — | Wrong owner tokens counted per client address, one counter for the console sign-in, `/mcp` and the consent screen; owner tokens compared in constant time over SHA-256 digests |
 | `state/json-seen-store.ts` | SeenStore | `config/seen.json`, written atomically; a missing or damaged file reads as empty |
 | `mcp/mcp-loopback-client.ts` | ToolCaller | A real MCP SDK client pointed at the server's own endpoint. It says it can show MCP Apps views, and fetches the view a tool links to |
@@ -241,7 +242,7 @@ so every face inherits them. Full list: MANAGEMENT.md §3.
 | presentation | Console API and sign-in, the auth guard on `/mcp`, MCP tool registration and slot inputs, browser-side helpers | Express on a random port with real stores; the SDK's in-memory transport |
 | end-to-end | Every page, the add-app and shortcut-builder dialogs, simulator voice and conversation | Playwright against the real server in the installed Edge, on a scratch copy of the config |
 
-On 2026-10-19, 679 unit tests and 39 browser tests passed.
+On 2026-10-19, 696 unit tests and 39 browser tests passed.
 
 ## 10. Directory structure
 
@@ -291,7 +292,7 @@ StackVoice/
 ## 12. Known issues (2026-10-04)
 
 - The verbs read only an app's first source.
-- OAuth tokens live in memory, and the simulator stands down in `oauth` mode.
+- The simulator stands down in `oauth` mode.
 - User-facing strings are hardcoded English. The project canon asks for i18n keys
   with English and Burmese values.
 - The simulator's intent planner is English phrasing rules and misreads questions
@@ -302,7 +303,7 @@ StackVoice/
   answers show the address with every query value hidden.
 - Alexa+ account linking needs a statically registered OAuth client with a
   secret, all of Alexa's redirect URIs, and refresh tokens. The local
-  authorization server supports only dynamic registration, in memory.
+  authorization server supports only dynamic registration.
 - In `token` mode the simulator's API is open: it calls `/mcp` with the token on
   the visitor's behalf, so anyone with the link can run the read-only tools.
 - The simulator renders the answer card in an iframe sandboxed to an opaque

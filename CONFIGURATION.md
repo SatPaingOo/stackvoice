@@ -112,8 +112,17 @@ to authenticate.
 
 Because StackVoice is self-hosted there is no identity provider to delegate to
 and only one user — you. The consent screen therefore asks for `auth.token`
-rather than a username and password. Tokens live in memory: restarting the
-server signs every client out.
+rather than a username and password.
+
+Clients that register themselves, and the refresh tokens they hold, are kept in
+`config/oauth.json`, so a restart signs no one out. After a restart a client's
+access token is refused, and its refresh token gets it a new one; access tokens
+and authorization codes never leave memory. Refresh tokens last 30 days, rotate
+on every use, and are stored only as SHA-256 digests. At most 100 clients are
+kept, the one unused for longest going first, and each keeps its five newest
+refresh tokens. The file is git-ignored: a client that registered with a client
+secret keeps it there. To sign every client out, stop the server and delete
+`config/oauth.json`.
 
 ### Wrong tokens and proxies
 

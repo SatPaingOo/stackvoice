@@ -78,7 +78,8 @@ when asked for video ideas about AI. The video shows it.
   GitHub, links, files, YAML, OAuth and the remembered state are adapters
   behind interfaces.
 - A built-in OAuth 2.1 authorization server with PKCE (S256), metadata discovery
-  and a 401 challenge, because the Alexa+ MCP Toolkit requires it.
+  and a 401 challenge, because the Alexa+ MCP Toolkit requires it. Registered
+  clients and refresh tokens, stored as digests, survive a restart.
 - One reader for every source type that detects the format from the body, plus a
   network guard, because a pasted link is a request the server makes on the
   user's behalf.
@@ -90,7 +91,7 @@ when asked for video ideas about AI. The video shows it.
   `postMessage`, and the view runs in a sandboxed iframe that loads nothing
   from the network.
 - A console built from framework-free TypeScript component classes.
-- 681 unit tests and 39 browser tests on 2026-10-19.
+- 696 unit tests and 39 browser tests on 2026-10-19.
 
 ### Challenges we ran into
 
@@ -109,10 +110,13 @@ when asked for video ideas about AI. The video shows it.
 - **Latency.** Alexa+ allows 500 ms. The cache is warmed at startup so a tool call
   rarely waits on GitHub.
 - **A real client finds what your own does not.** Connecting Claude Code turned
-  up two bugs the simulator never hit. A shortcut's spoken answer was missing
-  from its structured result, which Claude Code reads in place of the text. And
-  the consent page, shown again after a wrong owner token, lost the OAuth
-  parameters, so the next approval failed. Both are fixed and covered by tests.
+  up three problems the simulator never hit. A shortcut's spoken answer was
+  missing from its structured result, which Claude Code reads in place of the
+  text. The consent page, shown again after a wrong owner token, lost the OAuth
+  parameters, so the next approval failed. And a restart forgot every
+  registered client while Claude Code kept its registration, so it could not
+  sign in again. Registered clients and refresh tokens now outlive a restart,
+  and all three are covered by tests.
 
 ### Accomplishments that we're proud of
 
@@ -135,8 +139,7 @@ sentences and not an array, only showed up by building a client and listening.
 ### What's next
 
 - Onboarding to real Alexa+ once the MCP Toolkit opens beyond its partner preview.
-- Statically registered OAuth clients, which Alexa+ account linking requires,
-  and registered clients kept across a restart.
+- Statically registered OAuth clients, which Alexa+ account linking requires.
 - Trying the answer card in other MCP Apps hosts, and on Alexa+ devices with a
   screen once that is possible.
 - Reading more than one source per app.
@@ -292,8 +295,8 @@ claude mcp add --transport http stackvoice http://127.0.0.1:8765/mcp
 Ask it "news about AI": it runs the `news_about_topic` shortcut with `topic`
 filled. With the server in `oauth` mode from step 5, run `/mcp` in Claude Code
 and choose Authenticate first: it registers itself, and the consent page in the
-browser asks for the owner token. StackVoice forgets registrations when it
-restarts, so after a restart add the server under a new name.
+browser asks for the owner token. A restart of StackVoice does not sign it out:
+the registration and the refresh token are kept in `config/oauth.json`.
 
 ### Worth knowing
 

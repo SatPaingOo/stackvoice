@@ -109,9 +109,9 @@ a design change) · `minor` (annoying, worked around quickly).
   around the SDK's dynamic registration.
 - **Severity:** major
 - **Workaround:** None yet. StackVoice's authorization server supports only
-  dynamic registration and keeps clients in memory, so pre-registered clients
-  are recorded as a known gap, and the submission uses the simulated Alexa+ path
-  the rules allow.
+  dynamic registration (since 2026-10-19 its clients outlive a restart), so
+  pre-registered clients are recorded as a known gap, and the submission uses
+  the simulated Alexa+ path the rules allow.
 - **Suggestion for Amazon:** State the registration mechanism in the Toolkit
   overview and quickstart, beside the transport and PKCE requirements, and
   publish the full list of Alexa redirect URIs there, so a developer can set up

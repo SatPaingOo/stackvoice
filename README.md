@@ -271,7 +271,7 @@ npm run build     # compile both into dist/
 Lint also enforces the dependency rule: code in `src/domain` and
 `src/application` cannot import an outer layer, an SDK or a Node.js built-in.
 
-On 2026-10-19, 681 unit tests and 39 browser tests passed.
+On 2026-10-19, 696 unit tests and 39 browser tests passed.
 
 ## Cost model
 
@@ -300,13 +300,12 @@ stay on your server.
   client registered by hand on the authorization server, with a client secret,
   every Alexa redirect URI and refresh tokens. StackVoice supports only Dynamic
   Client Registration, which MCP spec 2025-11-25 keeps for backwards
-  compatibility, and keeps clients in memory. Pre-registered clients and Client
+  compatibility. Pre-registered clients and Client
   ID Metadata Documents, the spec's other two mechanisms, are not built.
-- **One owner.** Access is one owner token. OAuth tokens live in memory, so a
-  restart signs every client out, and the simulator stands down in `oauth` mode.
-  Registered clients are forgotten too: a client that keeps its registration,
-  as Claude Code does, then gets `invalid_client` at the consent step. Adding the
-  server to it again under another name makes it register afresh.
+- **One owner.** Access is one owner token, and the simulator stands down in
+  `oauth` mode. Registered clients and their refresh tokens survive a restart in
+  `config/oauth.json`; deleting that file while the server is stopped signs
+  every client out.
 - **Latency.** Tools answered in 40–180 ms with a warm cache on 2026-09-12. The
   cache is warmed at startup, but a cold fetch from GitHub is slower than the
   Alexa+ budget of 500 ms.

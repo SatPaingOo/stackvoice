@@ -138,8 +138,10 @@ freshness is the newest date among their records.
   visitor is counted on their own (CONFIGURATION.md §2).
 - Owner tokens are compared in constant time, over hashes of equal length.
 - In `oauth` mode the consent screen asks for the owner token, because a
-  self-hosted server has one user and no identity provider. Tokens are held in
-  memory, so a restart signs every client out.
+  self-hosted server has one user and no identity provider. Registered clients
+  and refresh tokens are kept in `config/oauth.json`, refresh tokens as SHA-256
+  digests, so a restart signs no one out; deleting the file while the server is
+  stopped signs everyone out. Access tokens and codes stay in memory.
 - Keys live in `config/secrets.yml`, written readable by its owner only, or in
   `STACKVOICE_SECRET_*` environment variables. App files hold references only.
 - Logs never include tokens, key values, file contents or the values a tool was
