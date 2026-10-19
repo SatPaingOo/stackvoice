@@ -209,35 +209,68 @@ public repository plus the demo video is enough, and hosting is not required.
 Text for the required product feedback field. The author never used the Alexa+
 developer tools, because they are partner-only, and the answers say so.
 
-**Which developer tools, APIs and SDKs did you use, and for what?** None of
-Amazon's. The Alexa+ MCP Toolkit, its CLI and its web simulator are a preview
-for select partners, so I could not use them. StackVoice is built on the open
-MCP specification 2025-11-25 and the MCP TypeScript SDK, and it is shown through
-the hackathon's simulated Alexa+ path.
+**Which developer tools, APIs and SDKs did you use, and for what?** No Amazon
+tool, API or SDK: the Alexa+ MCP Toolkit, its CLI and its web simulator are a
+preview for select partners, so I could not use them. What the project did use:
 
-**What worked well?** The hackathon accepting a simulated Alexa+ experience, and
-the FAQ saying so clearly, which made it possible to take part without access.
-Building on the open MCP standard meant the server could be tested with any MCP
-client.
+- Amazon's documentation: the Alexa+ MCP Toolkit overview and quickstart and
+  the "Account Linking for MCP Add-ons" page, to build the server to the
+  requirements Alexa+ states (Streamable HTTP, OAuth 2.1 with PKCE, the 500 ms
+  budget), and the hackathon FAQ, to confirm the simulated path.
+- The open Model Context Protocol (spec 2025-11-25) and the official MCP
+  TypeScript SDK, for the Streamable HTTP server, the tools, and the OAuth
+  authorization server with dynamic client registration.
+- A simulated Alexa+ client I built myself, a real MCP client in the browser, as
+  the rules allow.
+- Claude Code as a second MCP client, to check the server against an assistant
+  I did not write.
+
+**What worked well?**
+
+- Alexa+ documentation: once found, the quickstart is concrete. Transport,
+  OAuth 2.1 with PKCE (S256), the metadata endpoint and the 500 ms budget are
+  stated as hard requirements, so the server could be built to them without
+  guessing. The account linking page is just as specific about what a client
+  needs.
+- The hackathon FAQ: it says plainly that a simulated Alexa+ experience is
+  accepted and what that means, which made it possible to take part without
+  access to the tools.
+- MCP TypeScript SDK: Streamable HTTP and the authorization router (metadata,
+  dynamic registration, PKCE checks, the 401 challenge) worked from the start
+  and were reliable in testing. Building on the open standard meant the server
+  could be tested with any MCP client, Claude Code included.
 
 **What needs work?**
-- Access. An entrant has no way to try an add-on with Alexa+, even text-only, so
-  nothing in this project was checked against Alexa+ itself.
-- Who can use the tools. That they are partner-only was not clear from the setup
-  pages; it became clear from the hackathon FAQ.
-- Requirements in one place. What a server must meet for Alexa+, such as the
-  pre-registered OAuth client that account linking needs, is spread across
-  several pages.
 
-**How was your onboarding experience?** There was none on Alexa+: access is
-partner-only, so I never reached a hello world with it.
+- Access (tool limitation): an entrant has no way to try an add-on with Alexa+,
+  not even a text-only console, so routing, spoken answers and the 500 ms
+  budget could not be checked against Alexa+ itself.
+- Who can use the tools (docs): the partner-only status is on the add-ons home
+  page but missing from the setup pages, and it became clear to me only from the
+  hackathon FAQ.
+- Requirements spread across pages (docs sections): the Toolkit overview does
+  not mention authentication, OAuth 2.1 with PKCE and the 500 ms budget appear
+  only in the quickstart, and that account linking needs a statically
+  registered client ("Dynamic Client Registration (DCR) isn't supported")
+  appears only on the account linking page. My server was built around dynamic
+  registration before I found it, so pre-registered clients are still a gap.
+- Discoverability: the Alexa+ track on the hackathon page did not link the
+  Toolkit docs, so the first week was designed against the open MCP spec alone.
+
+**How was your onboarding experience?** For Alexa+ there was none: access is
+partner-only, so I never reached a hello world with Alexa+. Onboarding was the
+documentation alone, and getting from zero to a complete list of requirements
+took longer than it should have, because they are spread over three pages that
+the track did not link. On the open MCP side, hello world was quick: a Streamable
+HTTP server answering its first tool call on the first day of building.
 
 **Would you build with these devices and services again?** (The form asks for
 Yes or No, then why.) Yes, once I can use them. I cannot judge the Alexa+ tools
 themselves yet, because I never got to use them. But voice is where my own data
-is most useful to me, and building on the open MCP standard means StackVoice
-already works with MCP clients today. Connecting it to Alexa+ is the first thing
-on its roadmap once entrants can.
+is most useful to me, and what Alexa+ asks of a server builds on the open MCP
+standard StackVoice already uses. Connecting it to Alexa+ is the first thing on
+its roadmap once entrants can, and the first thing I would ask for is a way to
+test an add-on without partner access.
 
 ## Open Source mini challenge
 
