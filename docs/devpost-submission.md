@@ -326,13 +326,35 @@ Not applicable: StackVoice uses no AWS services. It runs on the owner's own
 machine.
 
 **Which AI tools have you leveraged while working on this project?** Claude
-Code, Anthropic's AI coding assistant, was my main tool. I used it to research
-the hackathon rules and the MCP specification, plan the architecture, write and
-test most of the code, and draft the docs. I set the direction, made the product
-decisions and checked the results. Claude Code also appears in the demo as an
-MCP client calling StackVoice. For the demo video, the narration is edge-tts, a
-free neural text-to-speech voice, and the video was edited with ReelSmith, my
-own video tool, driven by Claude Code. No AI model generated any image or video.
+Code, Anthropic's AI coding assistant running Claude models, was my main tool,
+used throughout:
+
+- Research: the hackathon rules, FAQ and updates, the MCP specification and the
+  Alexa+ MCP Toolkit docs, and a survey of similar projects before deciding what
+  to build.
+- Building: planning the architecture and writing most of the TypeScript code,
+  the 696 unit tests and the 39 browser tests, and reviewing the server's
+  security (the network guard, the wrong-token lockout, OAuth).
+- Docs: the README, the try-it guide, the architecture and configuration docs,
+  the friction log and the drafts for this form.
+- The demo video: scripts that record the real app with Playwright, then the
+  edit in ReelSmith, my own video tool, which Claude Code drives through its MCP
+  server.
+- Testing as a client: Claude Code also connected to StackVoice as an MCP client
+  over OAuth, which found three bugs my own simulator never hit. That session is
+  in the video.
+
+My part was the direction and the decisions: what StackVoice is for, what to
+build and what to cut, what can honestly be claimed, and checking the results,
+such as watching the video and deciding what was pushed. The repository's
+CODING_STANDARDS.md and my own written working rules tell the agent how to
+write, test and commit, so its work keeps to the same standards in every
+session.
+
+Other AI in the project: the video's narration is edge-tts, a free neural
+text-to-speech voice, and the simulator uses the browser's own speech
+recognition and voices (Web Speech API). No AI model generated any image or
+video: every picture is a real screen of the running app.
 
 **Describe the level of learning you derived from the project.** A lot, mostly
 about building for voice and for MCP clients I do not control:
