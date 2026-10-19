@@ -2,7 +2,30 @@
 
 **Turns your own feeds, APIs, spreadsheets, repositories and files into tools a voice assistant can call, and answers in sentences you can listen to.**
 
-**Status:** working, preparing submission · Amazon *Build, Ship, Shape* hackathon, Alexa+ track (deadline 2026-10-23 12:00 PDT) · last reviewed 2026-10-04
+**Status:** working, preparing submission · Amazon *Build, Ship, Shape* hackathon, Alexa+ track (deadline 2026-10-23 12:00 PDT) · last reviewed 2026-10-19
+
+![The simulator answering "Tell me more": the spoken answer, an MCP Apps card with the entry, and the tool call behind it](docs/images/simulator.png)
+
+## Try it in five minutes
+
+You need Node.js 22 (22.12 or later) or 24, and Git.
+
+```bash
+git clone https://github.com/SatPaingOo/stackvoice.git
+cd stackvoice
+npm ci
+npm run dev
+```
+
+Open http://127.0.0.1:8765/simulator and ask, by typing or by voice in Chrome or
+Edge: "Is my stack healthy?", "What did you find about AI in my library?", "Tell
+me more", then "News about AI". Under every answer is the MCP tool call that
+produced it. Then open http://127.0.0.1:8765/console, choose **Add an app**, and
+paste a feed, a CSV or a GitHub repository: the assistant has new tools as soon
+as you save.
+
+The full tour, with shortcuts, the MCP Inspector, OAuth and Claude Code, is in
+[docs/try-it.md](./docs/try-it.md).
 
 > The assistant you already talk to can search the whole web, yet it cannot tell
 > you what is in your own feeds, spreadsheets and data projects. StackVoice is a
@@ -176,6 +199,8 @@ own.
 
 ### Shortcuts
 
+![The shortcut builder: a phrase with a {topic} slot, then Ask, If and Say blocks](docs/images/shortcut-blocks.png)
+
 A shortcut is one tool that runs a flow of blocks. Build one on the console's
 Shortcuts page:
 
@@ -219,6 +244,8 @@ Inspector. The server listens on IPv4 only, and Node.js may resolve `localhost`
 to the IPv6 address first.
 
 An AI assistant people already use works the same way. Claude Code, for one:
+
+![Claude Code running the "ideas about" shortcut through StackVoice and answering from what it says](docs/images/claude-code.png)
 
 ```bash
 claude mcp add --transport http stackvoice http://127.0.0.1:8765/mcp
