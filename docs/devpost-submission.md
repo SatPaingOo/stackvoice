@@ -302,13 +302,25 @@ server-side request forgery, and the flow interpreter.
 
 ## The form's other questions
 
-In the order the form asks them, around the Open Source and product feedback
-answers above.
+Around the Open Source and product feedback answers above.
 
-**Upload a file.** `StackVoice-friction-log.pdf`, made from
-[FRICTION_LOG.md](../FRICTION_LOG.md) by `../StackVoice-video/submission/friction-pdf.mjs`.
-The form has no field of its own for the friction log, and the rules give it up
-to a 10% bonus.
+**Submitter country of residence.** The country you actually live in: it appears
+in the project gallery, and the rules decide eligibility and prize payment by
+residence.
+
+**Which primary track(s)?** Alexa+ only. StackVoice meets its requirement
+through the simulated path: a real MCP server (spec 2025-11-25, Streamable HTTP)
+and a simulated Alexa+ client that calls it.
+
+**Friction log (optional, up to a 10% bonus).** The five entries of
+[FRICTION_LOG.md](../FRICTION_LOG.md) as plain text, under one line that links
+the formatted log and gives the severity scale. Each entry already records the
+task, the steps taken, expected against actual, the severity, the workaround and
+one suggestion, as the field asks.
+
+**Upload a file.** `StackVoice-friction-log.pdf`, the same log as a formatted
+PDF, made by `../StackVoice-video/submission/friction-pdf.mjs`. Optional: the
+friction log field above carries the text.
 
 **Is your project new or existing prior to August 31, 2026?** New.
 
