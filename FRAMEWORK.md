@@ -158,8 +158,8 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 | Stage | Window | Milestone | Done when |
 |---|---|---|---|
 | ~~7 — Host~~ | Dropped 2026-10-18 | Not required, per the FAQ | — |
-| **8 — Friction log + product feedback** | to 2026-10-20 | Friction entries for every Amazon tool actually used; the required product feedback text | Both sections ready to paste into the form |
-| **9 — Demo video** | 2026-10-18 to 10-20 | Under 3 minutes, English, public, following docs/devpost-submission.md | Uploaded and linked |
+| ~~8 — Friction log + product feedback~~ | Done 2026-10-18 | Five friction entries; product feedback saying plainly that no Amazon tool could be used | Both ready to paste into the form |
+| **9 — Demo video** | 2026-10-18 to 10-20 | Under 3 minutes, English, public, following docs/devpost-submission.md | Made 2026-10-19 (2:58, narrated, with Claude Code); uploaded and linked |
 | **10 — Submit** | 2026-10-21 | Repository made public; Devpost form complete | Submitted, with 10-22 and 10-23 as buffer |
 
 **History of scope changes.**
