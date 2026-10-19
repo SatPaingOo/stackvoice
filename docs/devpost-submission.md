@@ -14,7 +14,7 @@ official rules as checked on 2026-10-04.
 | Primary track | Alexa+ |
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
-| Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
+| Repository | https://github.com/SatPaingOo/stackvoice (public, MIT) |
 | Demo video | https://youtu.be/che6nlzd_SA (2:58, narrated, public on YouTube since 2026-10-19). See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
