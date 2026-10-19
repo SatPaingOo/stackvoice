@@ -9,6 +9,8 @@ select partners only, so the page at `/simulator` stands in for an Alexa+
 device: it is a real MCP client calling this server over Streamable HTTP. Step 6
 connects an AI assistant you may already have instead.
 
+The demo video shows all of it in under three minutes: [https://youtu.be/che6nlzd_SA](https://youtu.be/che6nlzd_SA).
+
 ## Run it
 
 You need Node.js 22 (22.12 or later) or 24, Git, and an internet connection: the two demo apps

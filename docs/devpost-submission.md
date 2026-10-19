@@ -15,7 +15,7 @@ official rules as checked on 2026-10-04.
 | Mini challenge | Open Source |
 | Built with | TypeScript, Node.js, Model Context Protocol TypeScript SDK, Streamable HTTP, OAuth 2.1, Express, zod, Web Speech API, Playwright |
 | Repository | https://github.com/SatPaingOo/stackvoice (make public before submitting) |
-| Demo video | Recorded 2026-10-19 (2:58, narrated); upload it, then put the link here. See Demo video below |
+| Demo video | https://youtu.be/che6nlzd_SA (2:58, narrated, public on YouTube since 2026-10-19). See Demo video below |
 | Try it | Not hosted: the hackathon FAQ says a locally runnable public repository and the video are enough. Run it with the testing instructions |
 
 ## About the project
@@ -163,7 +163,7 @@ English. The file to upload is `final/stackvoice-demo-narrated.mp4` in
 `../StackVoice-video`, with `final/stackvoice-demo-narrated.srt` as its English
 subtitles (the narration and the simulator's answers). The recorder, the editing
 project and the files live outside this repository; see that folder's README.
-Upload it to YouTube or Vimeo as public; the rules require one or the other. A
+It is public on YouTube at https://youtu.be/che6nlzd_SA, as the rules require (YouTube or Vimeo). A
 version without narration, captions burned in (2:51), is there too as
 `final/stackvoice-demo.mp4`.
 

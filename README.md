@@ -4,6 +4,8 @@
 
 **Status:** working, preparing submission · Amazon *Build, Ship, Shape* hackathon, Alexa+ track (deadline 2026-10-23 12:00 PDT) · last reviewed 2026-10-19
 
+**Demo video (2:58):** [https://youtu.be/che6nlzd_SA](https://youtu.be/che6nlzd_SA)
+
 ![The simulator answering "Tell me more": the spoken answer, an MCP Apps card with the entry, and the tool call behind it](docs/images/simulator.png)
 
 ## Try it in five minutes
