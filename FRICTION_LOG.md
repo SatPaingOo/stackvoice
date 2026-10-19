@@ -1,27 +1,20 @@
 # Friction Log — StackVoice
 
-Amazon grants up to a **10% judging bonus** for a genuine friction log kept
-during development. Per the official rules, each entry should record: the
-specific task, the steps taken, expected vs. actual result, a severity rating,
-the workaround used, and one actionable suggestion.
+Friction met while building StackVoice, a self-hosted MCP server entered in the
+Alexa+ track of the Build, Ship, Shape: Amazon Developer Hackathon. Each entry
+records the task attempted, the steps taken, what was expected and what
+happened, a severity, the workaround used, and one suggestion for Amazon.
 
-**Severity scale:** `blocker` (could not proceed) · `major` (cost > 1 h or forced
-a design change) · `minor` (annoying, worked around quickly).
+**Severity:** `blocker` could not proceed · `major` cost more than an hour or
+forced a design change · `minor` worked around quickly.
 
----
-
-## Entry template
-
-```
-### YYYY-MM-DD — <short title>
-- **Task:**
-- **Steps taken:**
-- **Expected:**
-- **Actual:**
-- **Severity:**
-- **Workaround:**
-- **Suggestion for Amazon:**
-```
+| Date | Friction | Severity |
+|---|---|---|
+| 2026-09-05 | Alexa+ MCP onboarding docs were not discoverable | major |
+| 2026-09-12 | Auth requirement is only stated in the quickstart, not the overview | major |
+| 2026-09-13 | No guidance on what a "self-hosted MCP server" should expose | minor |
+| 2026-10-04 | Alexa+ client registration is stated only on the account linking page | major |
+| 2026-10-18 | The Alexa+ add-on tools are a partner-only preview, and the setup pages did not say so | major |
 
 ---
 
@@ -141,3 +134,18 @@ a design change) · `minor` (annoying, worked around quickly).
   Toolkit setup page, and offer hackathon entrants a test console for MCP
   add-ons, even text-only, so they can see how Alexa+ routes to their tools and
   how long each call takes.
+
+---
+
+## Adding an entry
+
+```
+### YYYY-MM-DD — <short title>
+- **Task:**
+- **Steps taken:**
+- **Expected:**
+- **Actual:**
+- **Severity:**
+- **Workaround:**
+- **Suggestion for Amazon:**
+```

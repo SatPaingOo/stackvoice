@@ -312,15 +312,15 @@ residence.
 through the simulated path: a real MCP server (spec 2025-11-25, Streamable HTTP)
 and a simulated Alexa+ client that calls it.
 
-**Friction log (optional, up to a 10% bonus).** The five entries of
-[FRICTION_LOG.md](../FRICTION_LOG.md) as plain text, under one line that links
-the formatted log and gives the severity scale. Each entry already records the
-task, the steps taken, expected against actual, the severity, the workaround and
-one suggestion, as the field asks.
+**Friction log (optional, up to a 10% bonus).** The field takes a URL:
+https://github.com/SatPaingOo/stackvoice/blob/main/FRICTION_LOG.md. The page
+opens with a summary of the five entries, and each entry records the task, the
+steps taken, expected against actual, the severity, the workaround and one
+suggestion, as the field asks.
 
-**Upload a file.** `StackVoice-friction-log.pdf`, the same log as a formatted
-PDF, made by `../StackVoice-video/submission/friction-pdf.mjs`. Optional: the
-friction log field above carries the text.
+**Upload a file.** `StackVoice-friction-log.pdf`, the same log as a PDF, made by
+`../StackVoice-video/submission/friction-pdf.mjs`. Optional: a copy of the log
+for anyone who reads the submission without opening the link.
 
 **Is your project new or existing prior to August 31, 2026?** New.
 
