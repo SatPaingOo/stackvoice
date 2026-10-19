@@ -21,7 +21,7 @@ The rules carry an update dated 2026-09-16 to the code repository requirement.
 | A GitHub repository with all source, assets and run instructions. Since 2026-09-16 it may be public with an open-source license visible at the top, **or** private and shared with testing@devpost.com and six Amazon GitHub accounts named in the rules | MIT, detected by GitHub. Public since 2026-10-19, as the Open Source mini challenge needs. Its whole history was checked for secrets on 2026-10-04, and the commits since then again on 2026-10-19; none were found | done |
 | A demo video under 3 minutes, public on YouTube or Vimeo, in English, showing the project working, with no third-party trademarks or copyrighted music without permission. On the simulated path it must clearly show the simulated experience | Recorded 2026-10-19: 2:58, narrated in English with subtitles, the simulator scenes labelled as simulated, Claude Code shown calling the same server, music written for it (not a third-party track); see [docs/devpost-submission.md](./docs/devpost-submission.md). Public on YouTube since 2026-10-19: https://youtu.be/che6nlzd_SA | done |
 | A text description, the primary track and any mini challenge | Draft in docs/devpost-submission.md; Alexa+ track, Open Source mini challenge | drafted |
-| Open Source mini challenge: contribution URL, project repository URL, GitHub username, and what was done, how it works and why it matters | Drafted in docs/devpost-submission.md. The rules call it "a new, additional open-source project"; whether the entry's own repository counts is to be asked (risk 7 in §8) | drafted |
+| Open Source mini challenge: contribution URL, project repository URL, GitHub username, and what was done, how it works and why it matters | Drafted in docs/devpost-submission.md. The submission form settles what counts: "Contributions can be a new repo (with open-source license)", and StackVoice is one | drafted |
 | Product feedback on every Amazon tool, API or SDK used, answering five set questions | Written in docs/devpost-submission.md: no Amazon tool could be used, because the Alexa+ tools are partner-only, and the answers say so | done |
 | Optional: feature requests, each with why it matters and a priority (Critical, Important or Nice-to-have) | Draft in docs/devpost-submission.md | drafted |
 | The project available to judges free of charge until the judging period ends, "via code repository and demo video", with credentials if anything is private. Judges need not test it, and may judge on the description, images and video alone. The FAQ: "a locally runnable public repo plus your demo video is enough", hosting is not required, and a server need not stay running after submission | Run instructions in the repository, checked from a fresh clone. Not hosted; [DEPLOY_PLAN.md](./DEPLOY_PLAN.md) stays as a ready plan | done |
@@ -204,18 +204,14 @@ DEPLOY_PLAN.md · docs/devpost-submission.md
 6. **A public simulator, if it is ever hosted (low).** Anyone with the link
    could ask about the demo data. The data is already public and every tool is
    read-only, but hosted settings must keep private network access off.
-7. **Open Source mini challenge (medium).** The rules ask for "a new,
-   additional open-source project" or a contribution to a public repository,
-   alongside the primary track entry, with a contribution URL and a project
-   repository URL. Whether the entry's own new repository counts is unclear.
-   The FAQ does not answer it. The rules ask for ambiguity to be raised in
-   writing; ask Devpost with the eligibility question. If it does not count,
-   the fallback is a real contribution to a public repository that the build
-   depended on.
+7. ~~**Open Source mini challenge.**~~ Resolved 2026-10-19: the submission
+   form says "Contributions can be a new repo (with open-source license)", so
+   StackVoice's own repository, new during the window and MIT, qualifies.
 
 Resolved: Alexa+ docs found and the simulated path confirmed (2026-09-12); remote
 auth built as OAuth 2.1 (2026-09-12); SDK Streamable HTTP server support confirmed
-(2026-09-12); hosting found not to be required (FAQ, 2026-10-18).
+(2026-09-12); hosting found not to be required (FAQ, 2026-10-18); the entry's own
+repository counts for the Open Source mini challenge (submission form, 2026-10-19).
 
 ---
 

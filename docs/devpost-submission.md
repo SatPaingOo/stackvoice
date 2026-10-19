@@ -232,16 +232,20 @@ client.
 **How was your onboarding experience?** There was none on Alexa+: access is
 partner-only, so I never reached a hello world with it.
 
-**Would you build with these devices and services again?** I cannot say yet. I
-never got to use the Alexa+ tools, so I have no experience of them to judge by.
+**Would you build with these devices and services again?** (The form asks for
+Yes or No, then why.) Yes, once I can use them. I cannot judge the Alexa+ tools
+themselves yet, because I never got to use them. But voice is where my own data
+is most useful to me, and building on the open MCP standard means StackVoice
+already works with MCP clients today. Connecting it to Alexa+ is the first thing
+on its roadmap once entrants can.
 
 ## Open Source mini challenge
 
-The rules ask for a contribution URL, the project repository URL, a GitHub
-username, and what was done, how it works and why it matters. They describe the
-challenge as "a new, additional open-source project" or a contribution to a
-public repository, so confirm with Devpost that the entry's own repository
-counts before relying on this (FRAMEWORK.md §8, risk 7).
+Answer **Yes**. The form asks for a contribution URL, the project repository
+URL, a GitHub username, and what was done, how it works and why it matters. It
+also settles what counts: "Contributions can be a new repo (with open-source
+license)". StackVoice is a new repository, first committed during the window
+and licensed MIT.
 
 | Field | Value |
 |---|---|
@@ -262,6 +266,62 @@ sentences for speech. Shortcuts run fixed blocks, never user code.
 access to it without writing a server. The parts are reusable on their own: the
 source inspector, the speakable response shaper, the network guard against
 server-side request forgery, and the flow interpreter.
+
+## The form's other questions
+
+In the order the form asks them, around the Open Source and product feedback
+answers above.
+
+**Upload a file.** `StackVoice-friction-log.pdf`, made from
+[FRICTION_LOG.md](../FRICTION_LOG.md) by `../StackVoice-video/submission/friction-pdf.mjs`.
+The form has no field of its own for the friction log, and the rules give it up
+to a 10% bonus.
+
+**Is your project new or existing prior to August 31, 2026?** New.
+
+**If you are submitting an existing project, explain what you updated.** Not
+applicable: StackVoice is a new project. Its planning notes date from 2026-09-05
+and its first commit from 2026-09-12, and all of its code was written during the
+submission period. Two earlier projects of mine appear in it only as demo data:
+information-hub (created 2026-08-13, before the period) and eventpulse (created
+2026-09-03). Neither is part of this entry.
+
+**Are you submitting for the AWS Builder Mini Challenge?** No.
+
+**AWS Builder Mini Challenge: which AWS services did you incorporate and how?**
+Not applicable: StackVoice uses no AWS services. It runs on the owner's own
+machine.
+
+**Which AI tools have you leveraged while working on this project?** Claude
+Code, Anthropic's AI coding assistant, was my main tool. I used it to research
+the hackathon rules and the MCP specification, plan the architecture, write and
+test most of the code, and draft the docs. I set the direction, made the product
+decisions and checked the results. Claude Code also appears in the demo as an
+MCP client calling StackVoice. For the demo video, the narration is edge-tts, a
+free neural text-to-speech voice, and the video was edited with ReelSmith, my
+own video tool, driven by Claude Code. No AI model generated any image or video.
+
+**Describe the level of learning you derived from the project.** A lot, mostly
+about building for voice and for MCP clients I do not control:
+
+- MCP in depth: the 2025-11-25 spec over Streamable HTTP, tool schemas generated
+  from configuration, and the MCP Apps extension for a card beside the answer.
+- OAuth 2.1 from the server's side: PKCE, metadata discovery, dynamic client
+  registration, refresh token rotation, and what a real client expects of each.
+- Writing for the ear: a correct answer can still be unlistenable, so answers
+  needed a word budget, dates said in words and at most three titles.
+- Security for a server that fetches what people paste: private networks and
+  cloud metadata addresses blocked, through redirects too.
+- Testing with a real client: connecting Claude Code found three bugs my own
+  simulator never hit.
+
+**Did you gain AI value that you can use in your career?** Yes. MCP is how AI
+assistants reach tools and data, and I can now build, secure and test an MCP
+server end to end: OAuth for remote clients, tool results shaped for an
+assistant, and checks against real clients. I also learned to work with an AI
+coding assistant on a whole project, from reading the rules to the tests and the
+demo video, and where my own judgement still has to come in: deciding the
+scope, checking claims, and reviewing what it wrote.
 
 ## Feature requests
 
